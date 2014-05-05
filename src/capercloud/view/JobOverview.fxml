@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.collections.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane id="AnchorPane" prefHeight="600.0" prefWidth="800.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.JobOverviewController">
+  <children>
+    <TabPane fx:id="tpJobOverview" layoutX="36.0" layoutY="131.0" prefHeight="448.0" prefWidth="728.0" tabClosingPolicy="UNAVAILABLE">
+      <tabs>
+        <Tab text="   Job  ">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+              <children>
+                <ComboBox fx:id="cbJobType" layoutX="460.0" layoutY="53.0" prefWidth="156.0" promptText="Select a job type">
+                  <items>
+                    <FXCollections fx:factory="observableArrayList">
+                      <String fx:value="项 1" />
+                      <String fx:value="项 2" />
+                      <String fx:value="项 3" />
+                    </FXCollections>
+                  </items>
+                </ComboBox>
+                <GridPane layoutX="35.0" layoutY="24.0" prefHeight="90.00009999999747" prefWidth="368.0">
+                  <children>
+                    <Label text="Job Name" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                    <Label text="Parent Mass Error" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                    <Label text="Fragment Error" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                    <TextField fx:id="tfJobName" prefWidth="190.0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                    <TextField prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                    <TextField prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                  </children>
+                  <columnConstraints>
+                    <ColumnConstraints hgrow="SOMETIMES" maxWidth="183.0" minWidth="10.0" prefWidth="135.0" />
+                    <ColumnConstraints hgrow="SOMETIMES" maxWidth="233.0" minWidth="10.0" prefWidth="233.0" />
+                  </columnConstraints>
+                  <rowConstraints>
+                    <RowConstraints maxHeight="31.0" minHeight="10.0" prefHeight="31.0" vgrow="SOMETIMES" />
+                    <RowConstraints maxHeight="30.0" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints maxHeight="30.0" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                  </rowConstraints>
+                </GridPane>
+                <Button fx:id="btnRun" layoutX="636.0" layoutY="347.0" mnemonicParsing="false" onAction="#handleRun" text="  Run  " />
+                <TextArea fx:id="console" editable="false" layoutX="35.0" layoutY="148.0" prefHeight="220.0" prefWidth="581.0" wrapText="true" />
+                <Label layoutX="35.0" layoutY="122.0" prefWidth="111.0" text="Log Data" />
+              </children>
+            </AnchorPane>
+          </content>
+        </Tab>
+        <Tab text=" Result ">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+              <children>
+                <TableView fx:id="tvResult" prefHeight="412.0" prefWidth="728.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                  <columns>
+                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="130.0" text="job name" fx:id="tcJobName" />
+                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="560.0" text="result file" fx:id="tcResultPath" />
+                  </columns>
+                </TableView>
+              </children>
+            </AnchorPane>
+          </content>
+        </Tab>
+      </tabs>
+    </TabPane>
+    <Button layoutX="601.0" layoutY="21.0" mnemonicParsing="false" onAction="#handleBrowse" prefWidth="47.0001220703125" text="Add" />
+    <Button layoutX="662.0" layoutY="21.0" mnemonicParsing="false" onAction="#handleClear" text="Clear" />
+    <GridPane layoutX="96.0" layoutY="18.0" prefHeight="91.0" prefWidth="481.0">
+      <children>
+        <TextField fx:id="tfFilepath" editable="false" prefWidth="394.0000915527344" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+        <Label text="Spectrum File(s)" textFill="RED" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+        <Label text="Cloud Settings" textFill="RED" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+        <Label text="Search Settings" textFill="RED" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+        <TextField prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+        <TextField prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+      </children>
+      <columnConstraints>
+        <ColumnConstraints hgrow="SOMETIMES" maxWidth="269.0" minWidth="10.0" prefWidth="113.0" />
+        <ColumnConstraints hgrow="SOMETIMES" maxWidth="415.0" minWidth="10.0" prefWidth="368.0" />
+      </columnConstraints>
+      <rowConstraints>
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      </rowConstraints>
+    </GridPane>
+    <Button layoutX="601.0" layoutY="53.0" mnemonicParsing="false" onAction="#handleAddCloudSettings" text="Add" />
+    <Button layoutX="601.0" layoutY="83.0" mnemonicParsing="false" onAction="#handleAddSearchSettings" text="Add" />
+    <Button layoutX="665.0" layoutY="83.0" mnemonicParsing="false" onAction="#handleLoadSearchSettings" text="load" />
+  </children>
+</AnchorPane>
