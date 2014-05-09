@@ -1,94 +1,219 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import java.lang.*?>
+<?import java.net.*?>
 <?import java.util.*?>
 <?import javafx.collections.*?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane id="AnchorPane" prefHeight="600.0" prefWidth="800.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.JobOverviewController">
+<AnchorPane id="AnchorPane" prefHeight="768.0" prefWidth="1280.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.JobOverviewController">
   <children>
-    <TabPane fx:id="tpJobOverview" layoutX="36.0" layoutY="131.0" prefHeight="448.0" prefWidth="728.0" tabClosingPolicy="UNAVAILABLE">
+    <TabPane fx:id="tpJobOverview" prefHeight="600.0" prefWidth="800.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
       <tabs>
-        <Tab text="   Job  ">
+        <Tab style="" text="File">
           <content>
-            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
-              <children>
-                <ComboBox fx:id="cbJobType" layoutX="460.0" layoutY="53.0" prefWidth="156.0" promptText="Select a job type">
-                  <items>
-                    <FXCollections fx:factory="observableArrayList">
-                      <String fx:value="项 1" />
-                      <String fx:value="项 2" />
-                      <String fx:value="项 3" />
-                    </FXCollections>
-                  </items>
-                </ComboBox>
-                <GridPane layoutX="35.0" layoutY="24.0" prefHeight="90.00009999999747" prefWidth="368.0">
+            <SplitPane dividerPositions="0.6503401360544218" focusTraversable="true" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0">
+              <items>
+                <BorderPane prefHeight="200.0" prefWidth="200.0">
+                  <center>
+                    <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="438.0" prefWidth="1278.0">
+                      <children>
+                        <SplitPane disable="false" dividerPositions="0.46129541864139023, 0.5134281200631912" focusTraversable="true" mouseTransparent="false" prefHeight="505.0" prefWidth="1278.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                          <items>
+                            <AnchorPane maxWidth="1.7976931348623157E308" minHeight="0.0" minWidth="0.0" prefHeight="-1.0" prefWidth="-1.0">
+                              <children>
+                                <BorderPane prefHeight="327.0" prefWidth="585.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                  <center>
+                                    <TableView prefHeight="200.0" prefWidth="200.0">
+                                      <columns>
+                                        <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="270.0" text="File Name" />
+                                        <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="130.0" text="File Size(KB)" />
+                                        <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="167.0" text="Modified Time" />
+                                      </columns>
+                                      <BorderPane.margin>
+                                        <Insets bottom="1.0" left="1.0" right="1.0" />
+                                      </BorderPane.margin>
+                                    </TableView>
+                                  </center>
+                                  <top>
+                                    <HBox id="HBox" alignment="BOTTOM_LEFT" spacing="5.0" BorderPane.alignment="CENTER_LEFT">
+                                      <children>
+                                        <TextField editable="true" prefWidth="271.0">
+                                          <HBox.margin>
+                                            <Insets right="20.0" />
+                                          </HBox.margin>
+                                        </TextField>
+                                        <Button mnemonicParsing="false" text="Browse" />
+                                        <Button mnemonicParsing="false" text="Up" />
+                                        <Button mnemonicParsing="false" text="Refresh" />
+                                        <Button mnemonicParsing="false" text="Delete" />
+                                      </children>
+                                      <BorderPane.margin>
+                                        <Insets bottom="1.0" left="1.0" right="1.0" top="1.0" />
+                                      </BorderPane.margin>
+                                    </HBox>
+                                  </top>
+                                </BorderPane>
+                              </children>
+                            </AnchorPane>
+                            <AnchorPane maxWidth="60.0" minHeight="0.0" minWidth="-Infinity" prefHeight="160.0" prefWidth="60.0">
+                              <children>
+                                <VBox id="VBox" alignment="CENTER" maxWidth="-1.0" minWidth="-1.0" prefHeight="473.0" prefWidth="60.0" spacing="5.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                  <children>
+                                    <Button mnemonicParsing="false" text="&gt;&gt;" />
+                                    <Button mnemonicParsing="false" text="&lt;&lt;" />
+                                  </children>
+                                </VBox>
+                              </children>
+                            </AnchorPane>
+                            <AnchorPane prefHeight="473.0" prefWidth="697.0">
+                              <children>
+                                <BorderPane prefHeight="437.0" prefWidth="591.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                  <center>
+                                    <TableView prefHeight="200.0" prefWidth="200.0">
+                                      <columns>
+                                        <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="270.0" style="" text="File Name" />
+                                        <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="130.0" text="File Size(KB)" />
+                                        <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="200.0" text="Upload Time" />
+                                      </columns>
+                                      <BorderPane.margin>
+                                        <Insets bottom="1.0" left="1.0" right="1.0" />
+                                      </BorderPane.margin>
+                                    </TableView>
+                                  </center>
+                                  <top>
+                                    <HBox id="HBox" alignment="BOTTOM_LEFT" spacing="5.0" BorderPane.alignment="CENTER_LEFT">
+                                      <children>
+                                        <TextField editable="true" prefWidth="271.0">
+                                          <HBox.margin>
+                                            <Insets right="20.0" />
+                                          </HBox.margin>
+                                        </TextField>
+                                        <Button mnemonicParsing="false" text="Up" />
+                                        <Button mnemonicParsing="false" text="Create Bucket" />
+                                        <Button mnemonicParsing="false" text="Edit" />
+                                        <Button mnemonicParsing="false" text="Refresh" />
+                                        <Button mnemonicParsing="false" text="Delete" />
+                                      </children>
+                                      <BorderPane.margin>
+                                        <Insets bottom="1.0" left="1.0" right="1.0" top="1.0" />
+                                      </BorderPane.margin>
+                                    </HBox>
+                                  </top>
+                                </BorderPane>
+                              </children>
+                            </AnchorPane>
+                          </items>
+                        </SplitPane>
+                      </children>
+                    </AnchorPane>
+                  </center>
+                  <padding>
+                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                  </padding>
+                  <top>
+                    <HBox id="HBox" alignment="CENTER_LEFT" spacing="5.0">
+                      <children>
+                        <Button mnemonicParsing="false" text="Manage Accounts" />
+                        <SplitMenuButton mnemonicParsing="false" text="">
+                          <items>
+                            <MenuItem mnemonicParsing="false" text="yangshuai" />
+                          </items>
+                        </SplitMenuButton>
+                      </children>
+                      <padding>
+                        <Insets bottom="5.0" />
+                      </padding>
+                    </HBox>
+                  </top>
+                </BorderPane>
+                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="199.0" prefWidth="998.0">
                   <children>
-                    <Label text="Job Name" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                    <Label text="Parent Mass Error" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                    <Label text="Fragment Error" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                    <TextField fx:id="tfJobName" prefWidth="190.0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                    <TextField prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                    <TextField prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                    <TabPane prefHeight="222.0" prefWidth="998.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                      <tabs>
+                        <Tab text="Regular Transfer">
+                          <content>
+                            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                              <children>
+                                <BorderPane prefHeight="191.0" prefWidth="998.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                  <center>
+                                    <TableView disable="false" editable="false" prefHeight="144.0" prefWidth="998.0" style="" tableMenuButtonVisible="false" BorderPane.alignment="CENTER">
+                                      <columns>
+                                        <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="240.0" style="" text="File Name" />
+                                        <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="200.0" text="From" />
+                                        <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="200.0" text="To" />
+                                        <TableColumn maxWidth="5000.0" minWidth="0.0" prefWidth="180.0" text="Type" />
+                                        <TableColumn maxWidth="5000.0" minWidth="0.0" prefWidth="220.0" text="Progress" />
+                                        <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="180.0" text="Status" />
+                                      </columns>
+                                    </TableView>
+                                  </center>
+                                  <padding>
+                                    <Insets bottom="5.0" left="10.0" right="10.0" top="5.0" fx:id="x1" />
+                                  </padding>
+                                  <top>
+                                    <HBox id="HBox" alignment="CENTER" prefHeight="28.0" prefWidth="1278.0" spacing="5.0">
+                                      <children>
+                                        <Button mnemonicParsing="false" text="Clear" />
+                                        <Button mnemonicParsing="false" text="Pause" />
+                                        <Button mnemonicParsing="false" text="Clear Completed" />
+                                        <Button mnemonicParsing="false" text="Retry Failed Tasks" />
+                                      </children>
+                                    </HBox>
+                                  </top>
+                                </BorderPane>
+                              </children>
+                            </AnchorPane>
+                          </content>
+                        </Tab>
+                        <Tab text="Log">
+                          <content>
+                            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                              <children>
+                                <BorderPane padding="$x1" prefHeight="350.0" prefWidth="1278.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                  <center>
+                                    <TextArea editable="false" prefWidth="200.0" wrapText="true" />
+                                  </center>
+                                  <top>
+                                    <HBox id="HBox" alignment="BOTTOM_LEFT" prefWidth="1242.0" spacing="5.0">
+                                      <children>
+                                        <Button mnemonicParsing="false" text="Clear" />
+                                        <CheckBox mnemonicParsing="false" text="Show only errors" />
+                                      </children>
+                                    </HBox>
+                                  </top>
+                                </BorderPane>
+                              </children>
+                            </AnchorPane>
+                          </content>
+                        </Tab>
+                      </tabs>
+                    </TabPane>
                   </children>
-                  <columnConstraints>
-                    <ColumnConstraints hgrow="SOMETIMES" maxWidth="183.0" minWidth="10.0" prefWidth="135.0" />
-                    <ColumnConstraints hgrow="SOMETIMES" maxWidth="233.0" minWidth="10.0" prefWidth="233.0" />
-                  </columnConstraints>
-                  <rowConstraints>
-                    <RowConstraints maxHeight="31.0" minHeight="10.0" prefHeight="31.0" vgrow="SOMETIMES" />
-                    <RowConstraints maxHeight="30.0" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                    <RowConstraints maxHeight="30.0" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                  </rowConstraints>
-                </GridPane>
-                <Button fx:id="btnRun" layoutX="636.0" layoutY="347.0" mnemonicParsing="false" onAction="#handleRun" text="  Run  " />
-                <TextArea fx:id="console" editable="false" layoutX="35.0" layoutY="148.0" prefHeight="220.0" prefWidth="581.0" wrapText="true" />
-                <Label layoutX="35.0" layoutY="122.0" prefWidth="111.0" text="Log Data" />
-              </children>
-            </AnchorPane>
+                </AnchorPane>
+              </items>
+            </SplitPane>
           </content>
         </Tab>
-        <Tab text=" Result ">
+        <Tab text="Job">
           <content>
-            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
-              <children>
-                <TableView fx:id="tvResult" prefHeight="412.0" prefWidth="728.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                  <columns>
-                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="130.0" text="job name" fx:id="tcJobName" />
-                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="560.0" text="result file" fx:id="tcResultPath" />
-                  </columns>
-                </TableView>
-              </children>
-            </AnchorPane>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+          </content>
+        </Tab>
+        <Tab text="Status">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+          </content>
+        </Tab>
+        <Tab text="Result">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
           </content>
         </Tab>
       </tabs>
     </TabPane>
-    <Button layoutX="601.0" layoutY="21.0" mnemonicParsing="false" onAction="#handleBrowse" prefWidth="47.0001220703125" text="Add" />
-    <Button layoutX="662.0" layoutY="21.0" mnemonicParsing="false" onAction="#handleClear" text="Clear" />
-    <GridPane layoutX="96.0" layoutY="18.0" prefHeight="91.0" prefWidth="481.0">
-      <children>
-        <TextField fx:id="tfFilepath" editable="false" prefWidth="394.0000915527344" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-        <Label text="Spectrum File(s)" textFill="RED" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-        <Label text="Cloud Settings" textFill="RED" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-        <Label text="Search Settings" textFill="RED" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-        <TextField prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-        <TextField prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-      </children>
-      <columnConstraints>
-        <ColumnConstraints hgrow="SOMETIMES" maxWidth="269.0" minWidth="10.0" prefWidth="113.0" />
-        <ColumnConstraints hgrow="SOMETIMES" maxWidth="415.0" minWidth="10.0" prefWidth="368.0" />
-      </columnConstraints>
-      <rowConstraints>
-        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-      </rowConstraints>
-    </GridPane>
-    <Button layoutX="601.0" layoutY="53.0" mnemonicParsing="false" onAction="#handleAddCloudSettings" text="Add" />
-    <Button layoutX="601.0" layoutY="83.0" mnemonicParsing="false" onAction="#handleAddSearchSettings" text="Add" />
-    <Button layoutX="665.0" layoutY="83.0" mnemonicParsing="false" onAction="#handleLoadSearchSettings" text="load" />
   </children>
 </AnchorPane>
