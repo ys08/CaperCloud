@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.collections.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="569.0" prefWidth="800.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.AdvancedViewController">
+  <children>
+    <GridPane layoutX="30.0" layoutY="50.0" prefHeight="241.0" prefWidth="494.0">
+      <children>
+        <Label text="Refinement" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+        <ComboBox prefWidth="169.0" promptText="Yes" GridPane.columnIndex="1" GridPane.rowIndex="0">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <Label text="Maximum Valid Expectation Value" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+        <Label text="Unanticipated Cleavage" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+        <Label text="Semi-enzyme Cleavage" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+        <Label text="Potential Modifications for Full Refinement" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+        <Label text="Point Mutations" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+        <Label text="snAPs" GridPane.columnIndex="0" GridPane.rowIndex="6" />
+        <Label text="Spectrum Synthesis" GridPane.columnIndex="0" GridPane.rowIndex="7" />
+        <ComboBox prefWidth="169.0" promptText="Yes" GridPane.columnIndex="1" GridPane.rowIndex="2">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <ComboBox prefWidth="169.0" promptText="No" GridPane.columnIndex="1" GridPane.rowIndex="3">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <ComboBox prefWidth="169.0" promptText="No" GridPane.columnIndex="1" GridPane.rowIndex="4">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <ComboBox prefWidth="169.0" promptText="No" GridPane.columnIndex="1" GridPane.rowIndex="5">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <ComboBox prefWidth="169.0" promptText="Yes" GridPane.columnIndex="1" GridPane.rowIndex="6">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <ComboBox prefWidth="169.0" promptText="Yes" GridPane.columnIndex="1" GridPane.rowIndex="7">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <TextField prefWidth="169.0" text="0.01" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+      </children>
+      <columnConstraints>
+        <ColumnConstraints hgrow="SOMETIMES" maxWidth="323.0" minWidth="10.0" prefWidth="323.0" />
+        <ColumnConstraints hgrow="SOMETIMES" maxWidth="246.0" minWidth="10.0" prefWidth="171.0" />
+      </columnConstraints>
+      <rowConstraints>
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      </rowConstraints>
+    </GridPane>
+    <Label layoutX="29.0" layoutY="27.0" text="Refinement">
+      <font>
+        <Font name="System Bold" size="13.0" fx:id="x1" />
+      </font>
+    </Label>
+    <GridPane layoutX="29.0" layoutY="351.0" prefWidth="369.0">
+      <children>
+        <Label text="Dynamic Range (Da)" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+        <Label text="Number of Peaks" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+        <Label text="Minimum Fragment m/z" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+        <Label text="Minimum Peaks" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+        <Label text="Noise Suppression" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+        <Label text="Minimum Precursor Mass" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+        <TextField prefWidth="200.0" text="100.0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+        <TextField prefWidth="200.0" text="50" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+        <TextField prefWidth="200.0" text="200.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+        <TextField prefWidth="200.0" text="5" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+        <ComboBox promptText="No" GridPane.columnIndex="1" GridPane.rowIndex="4">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <TextField disable="true" prefWidth="200.0" text="500.0" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+      </children>
+      <columnConstraints>
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+      </columnConstraints>
+      <rowConstraints>
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      </rowConstraints>
+    </GridPane>
+    <Label font="$x1" layoutX="29.0" layoutY="323.0" text="Spectrum Import" />
+    <GridPane layoutX="437.0" layoutY="351.0" prefWidth="329.0">
+      <children>
+        <Label text="Output Proteins" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+        <Label text="E-value cutoff" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+        <Label text="Output Sequences" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+        <Label text="Output Spectra" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+        <Label text="Output Histograms" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+        <Label prefWidth="134.0" text="Skyline Path" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+        <TextField prefWidth="200.0" text="100.0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+        <TextField prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+        <ComboBox promptText="Yes" GridPane.columnIndex="1" GridPane.rowIndex="1">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <ComboBox promptText="No" GridPane.columnIndex="1" GridPane.rowIndex="2">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <ComboBox promptText="Yes" GridPane.columnIndex="1" GridPane.rowIndex="3">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <ComboBox promptText="No" GridPane.columnIndex="1" GridPane.rowIndex="4">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+      </children>
+      <columnConstraints>
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+      </columnConstraints>
+      <rowConstraints>
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      </rowConstraints>
+    </GridPane>
+    <Label font="$x1" layoutX="437.0" layoutY="323.0" text="Output" />
+    <GridPane layoutX="553.0" layoutY="50.0" prefWidth="227.0">
+      <children>
+        <Label prefWidth="95.0" text="Quick Acetyl" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+        <Label text="Quick Pyrolidone" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+        <Label text="stP Bias" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+        <ComboBox promptText="Yes" GridPane.columnIndex="1" GridPane.rowIndex="0">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <ComboBox promptText="Yes" GridPane.columnIndex="1" GridPane.rowIndex="1">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+        <ComboBox promptText="No" GridPane.columnIndex="1" GridPane.rowIndex="2">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="项 1" />
+              <String fx:value="项 2" />
+              <String fx:value="项 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
+      </children>
+      <columnConstraints>
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+      </columnConstraints>
+      <rowConstraints>
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      </rowConstraints>
+    </GridPane>
+    <Label font="$x1" layoutX="552.0" layoutY="27.0" text="Advanced Search" />
+  </children>
+</AnchorPane>
