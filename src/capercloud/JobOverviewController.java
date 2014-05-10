@@ -17,7 +17,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -29,6 +31,8 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecutor;
@@ -48,21 +52,20 @@ public class JobOverviewController implements Initializable {
     @FXML private TextArea console;
     @FXML private TextField tfFilepath;
     @FXML private TextField tfJobName;
-    @FXML private TableView tvResult;
-    @FXML private TableColumn<Result, String> tcJobName;
-    @FXML private TableColumn<Result, String> tcResultPath;
+    @FXML private BorderPane bpJobType;
     
-    @FXML private TabPane tpJobOverview;
     
     private CaperCloud mainApp;
-    private final ObservableList strings = FXCollections.observableArrayList(
-        "Find new gene", "Find SAP", "Find AS", "RNA-seq");
+    private final ObservableList jobTypes = FXCollections.observableArrayList(
+            "Novel Protein", 
+            "SAP", 
+            "AS",
+            "Custom Protein Database"
+    );
     
     public void setMainApp(CaperCloud mainApp) {
         this.mainApp = mainApp;
         
-        //set result table when we know the mainApp
-        tvResult.setItems(mainApp.getResults());
     }
 
     /**
@@ -70,11 +73,7 @@ public class JobOverviewController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        cbJobType.setItems(strings);
-        tcJobName.setCellValueFactory(new PropertyValueFactory<Result, String>("jobName"));
-        tcResultPath.setCellValueFactory(new PropertyValueFactory<Result, String>("resultPath"));
-        SingleSelectionModel<Tab> selectionModel = tpJobOverview.getSelectionModel();
-        selectionModel.select(0);
+        cbJobType.setItems(jobTypes);
     }    
     
     @FXML
@@ -160,6 +159,46 @@ public class JobOverviewController implements Initializable {
         File file = fileChooser.showOpenDialog(mainApp.getPrimaryStage());
         if (file != null) {
             tfFilepath.setText(file.getAbsolutePath());
+        }
+    }
+    
+    @FXML
+    private void handleJobTypeChange(ActionEvent ae) {
+        if("Novel Protein".equals(cbJobType.getValue())) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeOne.fxml"));
+                AnchorPane ap = (AnchorPane) loader.load();
+                bpJobType.setCenter(ap);
+            } catch (IOException ex) {
+                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+       if("SAP".equals(cbJobType.getValue())) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeTwo.fxml"));
+                AnchorPane ap = (AnchorPane) loader.load();
+                bpJobType.setCenter(ap);
+            } catch (IOException ex) {
+                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        if("AS".equals(cbJobType.getValue())) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeThree.fxml"));
+                AnchorPane ap = (AnchorPane) loader.load();
+                bpJobType.setCenter(ap);
+            } catch (IOException ex) {
+                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        if("Custom Protein Database".equals(cbJobType.getValue())) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeFour.fxml"));
+                AnchorPane ap = (AnchorPane) loader.load();
+                bpJobType.setCenter(ap);
+            } catch (IOException ex) {
+                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
 }
