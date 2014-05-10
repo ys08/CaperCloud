@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+
+<AnchorPane id="AnchorPane" prefHeight="475.0" prefWidth="498.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.TypeTwoController">
+  <children>
+    <Rectangle arcHeight="5.0" arcWidth="5.0" fill="WHITE" height="236.0" layoutX="27.0" layoutY="6.0" stroke="BLACK" strokeType="INSIDE" width="437.740234375" />
+    <CheckBox layoutX="53.0" layoutY="48.0" mnemonicParsing="false" text="Use custom data" />
+    <Button disable="true" layoutX="199.0" layoutY="46.0" mnemonicParsing="false" text="Generate databases" />
+    <Rectangle arcHeight="5.0" arcWidth="5.0" fill="WHITE" height="85.0" layoutX="25.0" layoutY="253.0" stroke="BLACK" strokeType="INSIDE" width="437.740234375" />
+    <Label layoutX="192.0" layoutY="269.0" text="Filter Stage" />
+    <VBox id="VBox" alignment="CENTER_RIGHT" layoutX="48.0" layoutY="103.0" spacing="20.0">
+      <children>
+        <Button disable="true" mnemonicParsing="false" text="Import VCF File" />
+        <Button disable="true" mnemonicParsing="false" text="Import Annotation File" />
+        <Button disable="true" mnemonicParsing="false" text="Import Fasta File" />
+      </children>
+    </VBox>
+    <TextArea editable="false" layoutX="25.0" layoutY="345.0" prefHeight="66.0" prefWidth="438.0" style="" text="When &quot;Use custom data&quot; is selected, you should select VCF file, gene annotation file and Fasta file containing mRNA sequence from left panel, and import them." wrapText="true" />
+    <HBox id="HBox" alignment="CENTER" layoutX="44.0" layoutY="298.0" spacing="5.0">
+      <children>
+        <Label text="FDR" />
+        <TextField prefWidth="149.0" />
+      </children>
+    </HBox>
+    <Label layoutX="194.0" layoutY="16.0" text="Database Selection" />
+    <ListView layoutX="233.0" layoutY="90.0" prefHeight="130.0" prefWidth="200.0" />
+  </children>
+</AnchorPane>
