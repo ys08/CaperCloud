@@ -13,9 +13,9 @@
       <menus>
         <Menu mnemonicParsing="false" text="CaperCloud">
           <items>
-            <MenuItem mnemonicParsing="false" onAction="#handleAbout" text="About" />
+            <MenuItem mnemonicParsing="false" text="About" />
             <MenuItem mnemonicParsing="false" text="Preference" />
-            <MenuItem mnemonicParsing="false" onAction="#handleClear" text="Clear" />
+            <MenuItem mnemonicParsing="false" text="Clear" />
           </items>
         </Menu>
         <Menu mnemonicParsing="false" text="Help">
