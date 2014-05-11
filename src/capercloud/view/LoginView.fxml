@@ -15,43 +15,38 @@
           <children>
             <HBox id="HBox" alignment="CENTER" layoutX="416.0" layoutY="0.0" spacing="5.0">
               <children>
-                <Button mnemonicParsing="false" text="Store Credentials" />
-                <Button mnemonicParsing="false" text="Login" />
+                <Button fx:id="btnSave" disable="false" mnemonicParsing="false" onAction="#handleSaveAction" text="Store Credentials" />
+                <Button fx:id="btnLogin" mnemonicParsing="false" onAction="#handleLoginAction" text="Login" />
               </children>
             </HBox>
-            <Button layoutX="31.0" layoutY="0.0" mnemonicParsing="false" text="Cancel" />
+            <Button layoutX="31.0" layoutY="0.0" mnemonicParsing="false" onAction="#handleCancelAction" text="Cancel" />
           </children>
         </AnchorPane>
       </bottom>
       <center>
-        <TabPane prefHeight="400.0" prefWidth="600.0" tabClosingPolicy="UNAVAILABLE">
+        <TabPane fx:id="tpLogin" prefHeight="400.0" prefWidth="600.0" tabClosingPolicy="UNAVAILABLE">
           <tabs>
-            <Tab text="Local Folder">
+            <Tab fx:id="tab0" text="Local Folder">
               <content>
                 <AnchorPane id="AnchorPane" prefHeight="369.0" prefWidth="600.0">
                   <children>
-                    <AnchorPane id="Content" layoutX="0.0" layoutY="11.0" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                    <TextArea layoutX="23.0" layoutY="25.0" prefHeight="45.0" prefWidth="537.0" text="Your credentials are stored in encrypted files in a folder on your computer. Each stored login has a nickname." wrapText="true" />
+                    <Text layoutX="83.0" layoutY="89.0" scaleX="1.0" scaleY="1.0" strokeType="OUTSIDE" strokeWidth="0.0" text="You need to store your credentials before you can use this login method." />
+                    <HBox id="HBox" alignment="CENTER" layoutX="24.0" layoutY="109.0" spacing="5.0">
                       <children>
-                        <Text layoutX="120.0" layoutY="50.0" strokeType="OUTSIDE" strokeWidth="0.0" text="" />
-                        <TextArea layoutX="23.0" layoutY="14.0" prefHeight="45.0" prefWidth="537.0" text="Your credentials are stored in encrypted files in a folder on your computer. Each stored login has a nickname." wrapText="true" />
-                        <Text layoutX="83.0" layoutY="78.0" scaleX="1.0" scaleY="1.0" strokeType="OUTSIDE" strokeWidth="0.0" text="You need to store your credentials before you can use this login method." />
-                        <HBox id="HBox" alignment="CENTER" layoutX="24.0" layoutY="98.0" spacing="5.0">
-                          <children>
-                            <TextField prefWidth="428.0" />
-                            <Button mnemonicParsing="false" text="Change Folder" />
-                          </children>
-                        </HBox>
-                        <Label layoutX="30.0" layoutY="124.0" text="Stored Logins" />
-                        <TextArea layoutX="30.0" layoutY="147.0" prefHeight="117.0" prefWidth="531.0" wrapText="true" />
-                        <Label layoutX="30.0" layoutY="271.0" text="Password" />
-                        <PasswordField layoutX="30.0" layoutY="299.0" prefWidth="531.0" />
+                        <TextField fx:id="tfHomeFolder" disable="false" editable="false" prefWidth="428.0" />
+                        <Button mnemonicParsing="false" onAction="#handleChooseFolderAction" text="Choose Folder" />
                       </children>
-                    </AnchorPane>
+                    </HBox>
+                    <Label layoutX="30.0" layoutY="135.0" text="Stored Logins" />
+                    <Label layoutX="30.0" layoutY="282.0" text="Password" />
+                    <ListView id="lvLoginLocalFolder" fx:id="lvCredentialsFile" layoutX="34.0" layoutY="159.0" prefHeight="114.0" prefWidth="524.0" />
+                    <PasswordField fx:id="pfPassword" layoutX="34.0" layoutY="311.0" prefWidth="524.0" text="" />
                   </children>
                 </AnchorPane>
               </content>
             </Tab>
-            <Tab text="Direct Login">
+            <Tab fx:id="tab1" text="Direct Login">
               <content>
                 <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
                   <children>
@@ -60,8 +55,8 @@
                       <children>
                         <Label text="Access Key" GridPane.columnIndex="0" GridPane.rowIndex="0" />
                         <Label text="Secret Key" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                        <TextField prefWidth="200.0" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                        <TextField prefWidth="200.0" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <TextField fx:id="tfAccessKey" prefWidth="200.0" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <TextField fx:id="tfSecretKey" prefWidth="200.0" GridPane.columnIndex="0" GridPane.rowIndex="3" />
                       </children>
                       <columnConstraints>
                         <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />

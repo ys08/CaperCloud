@@ -9,17 +9,17 @@
 <?import javafx.scene.shape.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane id="AnchorPane" prefHeight="400.0" prefWidth="500.0" style="" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.view.AcountManagerViewController">
+<AnchorPane id="AnchorPane" prefHeight="400.0" prefWidth="500.0" style="" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.AccountManagerViewController">
   <children>
     <Text layoutX="90.0" layoutY="36.0" strokeType="OUTSIDE" strokeWidth="0.0" text="View your AWS Access Identifiers on Amazon's website " />
     <GridPane layoutX="71.0" layoutY="77.0" prefWidth="358.0">
       <children>
         <Label text="Access Key" GridPane.columnIndex="0" GridPane.rowIndex="2" />
         <Label text="Secret Key" GridPane.columnIndex="0" GridPane.rowIndex="4" />
-        <TextField prefWidth="200.0" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-        <TextField prefWidth="200.0" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+        <TextField fx:id="tfAccessKey" prefWidth="200.0" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+        <TextField fx:id="tfSecretKey" prefWidth="200.0" GridPane.columnIndex="0" GridPane.rowIndex="5" />
         <Label text="Nickname" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-        <TextField prefWidth="200.0" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+        <TextField fx:id="tfNickname" prefWidth="200.0" GridPane.columnIndex="0" GridPane.rowIndex="1" />
       </children>
       <columnConstraints>
         <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
@@ -35,7 +35,7 @@
     </GridPane>
     <HBox id="HBox" alignment="CENTER" layoutX="346.0" layoutY="337.0" spacing="5.0">
       <children>
-        <Button mnemonicParsing="false" text="OK" />
+        <Button mnemonicParsing="false" onAction="#handleOkAction" text="OK" />
         <Button mnemonicParsing="false" text="Cancel" />
       </children>
     </HBox>

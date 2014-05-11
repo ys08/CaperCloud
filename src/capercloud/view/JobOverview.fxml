@@ -225,7 +225,7 @@
                   <top>
                     <HBox id="HBox" alignment="CENTER_LEFT" spacing="5.0">
                       <children>
-                        <Button fx:id="btnManageAccounts" mnemonicParsing="false" text="Manage Accounts" />
+                        <Button fx:id="btnManageAccounts" mnemonicParsing="false" onAction="#handleManageAccountsAction" text="Manage Accounts" />
                         <ComboBox fx:id="cbSwitchAccount">
                           <items>
                             <FXCollections fx:factory="observableArrayList">

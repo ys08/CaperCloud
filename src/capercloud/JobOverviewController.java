@@ -33,6 +33,8 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 import javafx.stage.DirectoryChooser;
+import org.jets3t.service.multithread.S3ServiceMulti;
+import org.jets3t.service.security.ProviderCredentials;
 
 /**
  * FXML Controller class
@@ -42,7 +44,7 @@ import javafx.stage.DirectoryChooser;
 public class JobOverviewController implements Initializable {
     
     private CaperCloud mainApp;
-    private ObservableList Accounts = FXCollections.observableArrayList();
+    private ObservableList<String> nickList = FXCollections.observableArrayList();
     private final ObservableList jobTypes = FXCollections.observableArrayList(
             "Novel Protein", 
             "SAP", 
@@ -51,6 +53,8 @@ public class JobOverviewController implements Initializable {
     );
     //data for localFileTableView
     private ObservableList localFileCache;
+    //get it from manage account action
+    private ProviderCredentials credentials;
     
     @FXML private TabPane mainTab;
     //File Tab
@@ -92,8 +96,16 @@ public class JobOverviewController implements Initializable {
     public void setLocalFileCache(ObservableList<FileDescription> localFileCache) {
         this.localFileCache = localFileCache;
     }
-    
 
+    public ObservableList getNickLists() {
+        return nickList;
+    }
+
+    public ComboBox getCbSwitchAccount() {
+        return cbSwitchAccount;
+    }
+    
+    
     
     public void setMainApp(CaperCloud mainApp) {
         this.mainApp = mainApp;   
@@ -105,7 +117,7 @@ public class JobOverviewController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         //File tab init
-        this.cbSwitchAccount.setItems(Accounts);
+        this.cbSwitchAccount.setItems(this.nickList);
         this.tvLocal.setPlaceholder(new Text(""));
         this.tvRemote.setPlaceholder(new Text(""));
         this.tvTransferLog.setPlaceholder(new Text(""));
@@ -122,6 +134,10 @@ public class JobOverviewController implements Initializable {
         this.tvResults.setPlaceholder(new Text(""));
         
     }    
+    @FXML
+    private void handleManageAccountsAction() {
+        this.mainApp.showLoginView();
+    }
     @FXML
     private void handleLocalBrowse() {
         DirectoryChooser directoryChooser = new DirectoryChooser(); 

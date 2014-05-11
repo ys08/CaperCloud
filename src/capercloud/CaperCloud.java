@@ -16,6 +16,8 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.jets3t.service.Constants;
+import org.jets3t.service.Jets3tProperties;
 
 /**
  *
@@ -23,12 +25,22 @@ import javafx.stage.Stage;
  */
 public class CaperCloud extends Application {
     
+    public static final String APPLICATION_DESCRIPTION = "CaperCloud";
+    private Jets3tProperties caperCloudProperties = Jets3tProperties.getInstance(Constants.JETS3T_PROPERTIES_FILENAME);;
+    
     private Stage primaryStage;
+    private Stage loginStage;
+    private Stage newAccountStage;
     
     private BorderPane rootLayout;
     private RootLayoutController rootController;
     private AnchorPane mainView;
     private JobOverviewController mainController;
+    private AnchorPane loginView;
+    private LoginViewController loginController;
+    private AnchorPane accountView;
+    private AccountManagerViewController accountController;
+    
 
     
     /**
@@ -41,38 +53,12 @@ public class CaperCloud extends Application {
      */
     public CaperCloud() {
     }
-        public BorderPane getRootLayout() {
-        return rootLayout;
-    }
 
-    public void setRootLayout(BorderPane rootLayout) {
-        this.rootLayout = rootLayout;
-    }
-
-    public RootLayoutController getRootController() {
-        return rootController;
-    }
-
-    public void setRootController(RootLayoutController rootController) {
-        this.rootController = rootController;
-    }
-
-    public AnchorPane getMainView() {
-        return mainView;
-    }
-
-    public void setMainView(AnchorPane mainView) {
-        this.mainView = mainView;
-    }
-
-    public JobOverviewController getMainController() {
-        return mainController;
-    }
-
-    public void setMainController(JobOverviewController mainController) {
-        this.mainController = mainController;
+    public Jets3tProperties getCaperCloudProperties() {
+        return caperCloudProperties;
     }
     
+        
     public Stage getPrimaryStage() {
         return primaryStage;
     }
@@ -80,22 +66,84 @@ public class CaperCloud extends Application {
     public void setPrimaryStage(Stage primaryStage) {
         this.primaryStage = primaryStage;
     }
+
+    public Stage getLoginStage() throws IOException {
+        if (this.loginStage == null) {
+            this.loginStage = new Stage();
+        }
+        return loginStage;
+    }
+
+    public Stage getNewAccountStage() throws IOException {
+        if (this.newAccountStage == null) {
+            this.newAccountStage = new Stage();
+        }
+        return newAccountStage;
+    }
+    
+    public BorderPane getRootLayout() throws IOException {
+        if (this.rootLayout == null) {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/RootLayout.fxml"));
+            this.rootLayout = (BorderPane) loader.load();
+            //we should load fxml only one time, so set controller here
+            this.rootController = loader.getController();
+        }
+        return rootLayout;
+    }
+
+    public RootLayoutController getRootController() {
+        return rootController;
+    }
+
+    public AnchorPane getMainView() throws IOException {
+        if (this.mainView == null) {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/JobOverview.fxml"));
+            this.mainView = (AnchorPane) loader.load();
+            this.mainController = loader.getController();
+        }
+        return mainView;
+    }
+
+    public JobOverviewController getMainController() {
+        return mainController;
+    }
+
+    public AnchorPane getLoginView() throws IOException {
+        if (this.loginView == null) {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/LoginView.fxml"));
+            this.loginView = (AnchorPane) loader.load();
+            this.loginController = loader.getController();
+        }
+        return loginView;
+    }
+
+    public LoginViewController getLoginController() {
+        return loginController;
+    }
+
+    public AnchorPane getAccountView() throws IOException {
+        if (this.accountView == null) {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/AccountManagerView.fxml"));
+            this.accountView = (AnchorPane) loader.load();
+            this.accountController = loader.getController();
+        }
+        return accountView;
+    }
+
+    public AccountManagerViewController getAccountController() {
+        return accountController;
+    }
     
     @Override
     public void start(Stage stage) throws Exception {
         this.setPrimaryStage(stage);
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("view/RootLayout.fxml"));
         
-        BorderPane rootLayout = (BorderPane) loader.load();
-        this.setRootLayout(rootLayout);
-        
-        Scene scene = new Scene(rootLayout);
+        Scene scene = new Scene(this.getRootLayout());
         
         stage.setScene(scene);
         stage.setTitle("CaperCloud");
         stage.show();
-        
-        this.setRootController((RootLayoutController) loader.getController());
+
         this.getRootController().setMainApp(this);
         
         //show the tabpane
@@ -115,13 +163,8 @@ public class CaperCloud extends Application {
     }
     
     public void showJobOverview() throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("view/JobOverview.fxml"));
-        //the root node is AnchorPane type
-        this.setMainView((AnchorPane) loader.load());
         
         this.getRootLayout().setCenter(this.getMainView());
-        
-        this.setMainController((JobOverviewController) loader.getController());
         //let JobOverviewController know us
         this.getMainController().setMainApp(this);
     }
@@ -139,31 +182,50 @@ public class CaperCloud extends Application {
             
             dialogStage.showAndWait();
             
-            //so we can get data in CaperCloud
         } catch (IOException ex) {
             Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
-    public void showPreferenceView(int index) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/PreferenceView.fxml"));
-            AnchorPane ap = (AnchorPane) loader.load();
-            Stage preferenceStage = new Stage();
-            preferenceStage.setTitle("Preferences");
-            preferenceStage.initModality(Modality.WINDOW_MODAL);
-            preferenceStage.initOwner(primaryStage);
-            
-            Scene scene = new Scene(ap);
-            preferenceStage.setScene(scene);
-            
-            //will not raise nullpointer error here
-            PreferenceViewController controller = loader.getController();
-            
-            controller.selectTabAtIndex(index);
-            preferenceStage.showAndWait();
+    public void showLoginView() {
+        try {       
+            if (this.getLoginStage().getScene() == null) {
+                this.getLoginStage().setTitle("Manage Accounts");
+                this.getLoginStage().initModality(Modality.WINDOW_MODAL);
+                this.getLoginStage().initOwner(this.getPrimaryStage());
+
+                Scene scene = new Scene(this.getLoginView());
+                this.getLoginStage().setScene(scene);
+                this.getLoginController().setMainApp(this);
+
+                this.getLoginStage().showAndWait();                
+            }
+            else {
+                this.getLoginStage().showAndWait();  
+            }
         } catch (IOException ex) {
             Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
         }
-    } 
+    }
+    
+    public void showAccountManagerView() {
+        try {
+            if (this.getNewAccountStage().getScene() == null) {
+                this.getNewAccountStage().setTitle("New Account");
+                this.getNewAccountStage().initModality(Modality.WINDOW_MODAL);
+                this.getNewAccountStage().initOwner(this.getLoginStage());
+
+                Scene scene = new Scene(this.getAccountView());
+                this.getNewAccountStage().setScene(scene);
+                //will not raise nullpointer error here 
+                this.getAccountController().setMainApp(this);
+
+                this.getNewAccountStage().showAndWait();   
+            } else {
+                this.getNewAccountStage().showAndWait();  
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 }
