@@ -12,7 +12,7 @@
 
 <AnchorPane id="AnchorPane" prefHeight="768.0" prefWidth="1280.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.JobOverviewController">
   <children>
-    <TabPane id="tpJobOverview" prefHeight="-1.0" prefWidth="-1.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+    <TabPane id="tpJobOverview" fx:id="mainTab" prefHeight="-1.0" prefWidth="-1.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
       <tabs>
         <Tab closable="false" style="" text="File">
           <content>
@@ -24,11 +24,11 @@
                       <items>
                         <BorderPane prefHeight="437.0" prefWidth="581.0">
                           <center>
-                            <TableView prefHeight="200.0" prefWidth="200.0">
+                            <TableView fx:id="tvLocal" prefHeight="200.0" prefWidth="200.0">
                               <columns>
-                                <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="270.0" text="File Name" />
-                                <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="130.0" text="File Size(KB)" />
-                                <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="167.0" text="Modified Time" />
+                                <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="203.0" text="File Name" fx:id="tcLocalFilename" />
+                                <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="130.0" text="File Size" fx:id="tcLocalFilesize" />
+                                <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="222.0" text="Modified Time" fx:id="tcLocalModifiedTime" />
                               </columns>
                               <BorderPane.margin>
                                 <Insets bottom="1.0" left="1.0" right="1.0" />
@@ -43,7 +43,7 @@
                                     <Insets right="20.0" />
                                   </HBox.margin>
                                 </TextField>
-                                <Button minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" text="">
+                                <Button fx:id="btnLocalBrowse" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#handleLocalBrowse" prefHeight="22.0" prefWidth="22.0" text="">
                                   <graphic>
                                     <ImageView fitHeight="22.0" fitWidth="22.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
                                       <image>
@@ -128,11 +128,11 @@
                           <children>
                             <BorderPane prefHeight="437.0" prefWidth="591.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                               <center>
-                                <TableView prefHeight="200.0" prefWidth="200.0">
+                                <TableView fx:id="tvRemote" prefHeight="200.0" prefWidth="200.0">
                                   <columns>
-                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="249.0" style="" text="File Name" />
-                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="140.0" text="File Size(KB)" />
-                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="186.0" text="Upload Time" />
+                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="206.0" style="" text="File Name" />
+                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="140.0" text="File Size" />
+                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="219.0" text="Upload Time" />
                                   </columns>
                                   <BorderPane.margin>
                                     <Insets bottom="1.0" left="1.0" right="1.0" />
@@ -225,8 +225,8 @@
                   <top>
                     <HBox id="HBox" alignment="CENTER_LEFT" spacing="5.0">
                       <children>
-                        <Button mnemonicParsing="false" text="Manage Accounts" />
-                        <ComboBox>
+                        <Button fx:id="btnManageAccounts" mnemonicParsing="false" text="Manage Accounts" />
+                        <ComboBox fx:id="cbSwitchAccount">
                           <items>
                             <FXCollections fx:factory="observableArrayList">
                               <String fx:value="项 1" />
@@ -235,6 +235,8 @@
                             </FXCollections>
                           </items>
                         </ComboBox>
+                        <Button fx:id="btnTransferPreferences" mnemonicParsing="false" text="Transfer Preferences" />
+                        <Button fx:id="btnLogout" disable="true" mnemonicParsing="false" text="Logout" />
                       </children>
                       <padding>
                         <Insets bottom="5.0" />
@@ -252,7 +254,7 @@
                               <children>
                                 <BorderPane prefHeight="191.0" prefWidth="998.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                   <center>
-                                    <TableView disable="false" editable="false" prefHeight="144.0" prefWidth="998.0" style="" tableMenuButtonVisible="false" BorderPane.alignment="CENTER">
+                                    <TableView fx:id="tvTransferLog" disable="false" editable="false" prefHeight="144.0" prefWidth="998.0" style="" tableMenuButtonVisible="false" BorderPane.alignment="CENTER">
                                       <columns>
                                         <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="240.0" style="" text="File Name" />
                                         <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="200.0" text="From" />
@@ -370,22 +372,22 @@
                                     </HBox>
                                   </bottom>
                                   <center>
-                                    <TableView maxWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0">
+                                    <TableView fx:id="tvInput" maxWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0">
                                       <columns>
                                         <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="27.0" text="">
                                           <graphic>
                                             <CheckBox mnemonicParsing="false" text="" />
                                           </graphic>
                                         </TableColumn>
-                                        <TableColumn maxWidth="220.0" minWidth="134.0" prefWidth="200.0" text="File Name" />
+                                        <TableColumn maxWidth="220.0" minWidth="134.0" prefWidth="200.0" text="Object Keys" />
                                       </columns>
                                     </TableView>
                                   </center>
                                   <top>
                                     <HBox id="HBox" alignment="CENTER" spacing="20.0">
                                       <children>
-                                        <Label text="Inut Spectra" />
-                                        <ComboBox prefHeight="21.0" prefWidth="108.0" promptText="Select Bucket">
+                                        <Label text="Inut File" />
+                                        <ComboBox prefHeight="21.0" prefWidth="160.0" promptText="Please select a bucket">
                                           <items>
                                             <FXCollections fx:factory="observableArrayList">
                                               <String fx:value="项 1" />
@@ -504,7 +506,7 @@
                                             <RowConstraints maxHeight="30.0" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                                           </rowConstraints>
                                         </GridPane>
-                                        <TableView layoutX="307.0" layoutY="123.0" prefHeight="300.0" prefWidth="200.0">
+                                        <TableView id="tvVariableModifications" fx:id="tvModifications" layoutX="307.0" layoutY="123.0" prefHeight="300.0" prefWidth="200.0">
                                           <columns>
                                             <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="119.0" text="Name" />
                                             <TableColumn prefWidth="75.0" text="Mass" />
@@ -513,7 +515,7 @@
                                         <VBox id="VBox" alignment="CENTER" layoutX="31.0" layoutY="123.0" spacing="5.0">
                                           <children>
                                             <Label text="Fixed Modifications" />
-                                            <TableView prefHeight="100.0" prefWidth="200.0">
+                                            <TableView fx:id="tvFixedModifications" prefHeight="100.0" prefWidth="200.0">
                                               <columns>
                                                 <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="115.0" text="Name" />
                                                 <TableColumn prefWidth="75.0" text="Mass" />
@@ -524,7 +526,7 @@
                                         <VBox id="VBox" alignment="CENTER" layoutX="32.0" layoutY="302.0" spacing="5.0">
                                           <children>
                                             <Label text="Variable Modifications" />
-                                            <TableView prefHeight="100.0" prefWidth="200.0">
+                                            <TableView id="tvModifications" fx:id="tvVariableModifications" prefHeight="100.0" prefWidth="200.0">
                                               <columns>
                                                 <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="114.0" text="Name" />
                                                 <TableColumn prefWidth="75.0" text="Mass" />
@@ -620,7 +622,7 @@
                   <children>
                     <BorderPane prefHeight="364.0" prefWidth="1278.0" AnchorPane.bottomAnchor="1.0" AnchorPane.leftAnchor="1.0" AnchorPane.rightAnchor="1.0" AnchorPane.topAnchor="1.0">
                       <center>
-                        <TableView prefHeight="200.0" prefWidth="200.0">
+                        <TableView fx:id="tvJobMonitor" prefHeight="200.0" prefWidth="200.0">
                           <columns>
                             <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="95.0" text="Job Name" />
                             <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="113.0" text="Spectra" />
@@ -646,7 +648,7 @@
                           <children>
                             <BorderPane prefHeight="349.0" prefWidth="1278.0" AnchorPane.bottomAnchor="1.0" AnchorPane.leftAnchor="1.0" AnchorPane.rightAnchor="1.0" AnchorPane.topAnchor="1.0">
                               <center>
-                                <TableView prefHeight="200.0" prefWidth="200.0">
+                                <TableView fx:id="tvInstanceMonitor" prefHeight="200.0" prefWidth="200.0">
                                   <columns>
                                     <TableColumn prefWidth="75.0" text="ID" />
                                     <TableColumn prefWidth="75.0" text="AMI" />
@@ -731,7 +733,7 @@
                     <TextArea prefHeight="448.0" prefWidth="1280.0" wrapText="true" />
                   </bottom>
                   <center>
-                    <TableView prefHeight="251.0" prefWidth="1280.0">
+                    <TableView fx:id="tvResults" prefHeight="251.0" prefWidth="1280.0">
                       <columns>
                         <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="27.0" text="">
                           <graphic>

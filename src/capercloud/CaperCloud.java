@@ -6,13 +6,10 @@
 
 package capercloud;
 
-import capercloud.model.Result;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
@@ -27,30 +24,70 @@ import javafx.stage.Stage;
 public class CaperCloud extends Application {
     
     private Stage primaryStage;
-    private ObservableList<Result> results;
+    
     private BorderPane rootLayout;
+    private RootLayoutController rootController;
+    private AnchorPane mainView;
+    private JobOverviewController mainController;
+
     
+    /**
+     * CaperCloud is a Cloud-based Proteogenomics pipeline.
+     * Main features:
+     * 1. Rubost interact with/monitor Amazon S3 and EC2 Service.
+     * 2. Aim to aid four scientific goals - new gene, SAP, AS and custom database.
+     * 3. Results can be sent to CAPER server or download to local storage.
+     * @author Yang Shuai
+     */
     public CaperCloud() {
-        if (results == null) {
-            results = FXCollections.observableArrayList();
-        }
     }
-    
-    public ObservableList<Result> getResults() {
-        return results;
+        public BorderPane getRootLayout() {
+        return rootLayout;
+    }
+
+    public void setRootLayout(BorderPane rootLayout) {
+        this.rootLayout = rootLayout;
+    }
+
+    public RootLayoutController getRootController() {
+        return rootController;
+    }
+
+    public void setRootController(RootLayoutController rootController) {
+        this.rootController = rootController;
+    }
+
+    public AnchorPane getMainView() {
+        return mainView;
+    }
+
+    public void setMainView(AnchorPane mainView) {
+        this.mainView = mainView;
+    }
+
+    public JobOverviewController getMainController() {
+        return mainController;
+    }
+
+    public void setMainController(JobOverviewController mainController) {
+        this.mainController = mainController;
     }
     
     public Stage getPrimaryStage() {
         return primaryStage;
     }
+
+    public void setPrimaryStage(Stage primaryStage) {
+        this.primaryStage = primaryStage;
+    }
     
     @Override
     public void start(Stage stage) throws Exception {
-        this.primaryStage = stage;
+        this.setPrimaryStage(stage);
         FXMLLoader loader = new FXMLLoader(getClass().getResource("view/RootLayout.fxml"));
         
         BorderPane rootLayout = (BorderPane) loader.load();
-        this.rootLayout = rootLayout;
+        this.setRootLayout(rootLayout);
         
         Scene scene = new Scene(rootLayout);
         
@@ -58,10 +95,11 @@ public class CaperCloud extends Application {
         stage.setTitle("CaperCloud");
         stage.show();
         
-        RootLayoutController controller = loader.getController();
-        controller.setMainApp(this);
+        this.setRootController((RootLayoutController) loader.getController());
+        this.getRootController().setMainApp(this);
         
-        showJobOverview();
+        //show the tabpane
+        this.showJobOverview();
     }
 
     /**
@@ -78,14 +116,14 @@ public class CaperCloud extends Application {
     
     public void showJobOverview() throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("view/JobOverview.fxml"));
-        AnchorPane apJobView = (AnchorPane) loader.load();
+        //the root node is AnchorPane type
+        this.setMainView((AnchorPane) loader.load());
         
-        rootLayout.setCenter(apJobView);
+        this.getRootLayout().setCenter(this.getMainView());
         
-        JobOverviewController controller = loader.getController();
-        //so we can get data in CaperCloud
-        controller.setMainApp(this);
-        
+        this.setMainController((JobOverviewController) loader.getController());
+        //let JobOverviewController know us
+        this.getMainController().setMainApp(this);
     }
     
     public void showAboutView() {
@@ -127,5 +165,5 @@ public class CaperCloud extends Application {
         } catch (IOException ex) {
             Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }
+    } 
 }

@@ -6,12 +6,14 @@
 
 package capercloud;
 
-import capercloud.model.Result;
-import java.io.ByteArrayOutputStream;
+import capercloud.model.FileDescription;
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -23,22 +25,14 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.SingleSelectionModel;
-import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
-import javafx.stage.FileChooser;
-import org.apache.commons.exec.CommandLine;
-import org.apache.commons.exec.DefaultExecutor;
-import org.apache.commons.exec.ExecuteException;
-import org.apache.commons.exec.ExecuteResultHandler;
-import org.apache.commons.exec.PumpStreamHandler;
+import javafx.scene.text.Text;
+import javafx.stage.DirectoryChooser;
 
 /**
  * FXML Controller class
@@ -47,25 +41,62 @@ import org.apache.commons.exec.PumpStreamHandler;
  */
 public class JobOverviewController implements Initializable {
     
-    @FXML private ComboBox cbJobType;
-    @FXML private Button btnRun;
-    @FXML private TextArea console;
-    @FXML private TextField tfFilepath;
-    @FXML private TextField tfJobName;
-    @FXML private BorderPane bpJobType;
-    
-    
     private CaperCloud mainApp;
+    private ObservableList Accounts = FXCollections.observableArrayList();
     private final ObservableList jobTypes = FXCollections.observableArrayList(
             "Novel Protein", 
             "SAP", 
             "AS",
             "Custom Protein Database"
     );
+    //data for localFileTableView
+    private ObservableList localFileCache;
+    
+    @FXML private TabPane mainTab;
+    //File Tab
+    @FXML private Button btnManageAccounts;
+    @FXML private Button btnTransferPreferences;
+    @FXML private Button btnLogout;
+    @FXML private Button btnLocalBrowse;
+    @FXML private ComboBox cbSwitchAccount;
+    @FXML private TableView tvLocal;
+    @FXML private TableView tvRemote;
+    @FXML private TableView tvTransferLog;
+    @FXML private TableColumn tcLocalFilename;
+    @FXML private TableColumn tcLocalFilesize;
+    @FXML private TableColumn tcLocalModifiedTime;
+    
+    //Job Tab
+    @FXML private ComboBox cbJobType;
+    @FXML private BorderPane bpJobType;
+    @FXML private TableView tvInput;
+    @FXML private TableView tvFixedModifications;
+    @FXML private TableView tvVariableModifications;
+    @FXML private TableView tvModifications;
+    
+    //Status Tab
+    @FXML private TableView tvJobMonitor;
+    @FXML private TableView tvInstanceMonitor;
+    
+    //Result Tab
+    @FXML private TableView tvResults;
+
+    public ObservableList<FileDescription> getLocalFileCache() {
+        //lazy init
+        if (this.localFileCache == null) {
+            this.localFileCache = FXCollections.observableArrayList();
+        }
+        return localFileCache;
+    }
+
+    public void setLocalFileCache(ObservableList<FileDescription> localFileCache) {
+        this.localFileCache = localFileCache;
+    }
+    
+
     
     public void setMainApp(CaperCloud mainApp) {
-        this.mainApp = mainApp;
-        
+        this.mainApp = mainApp;   
     }
 
     /**
@@ -73,93 +104,38 @@ public class JobOverviewController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        cbJobType.setItems(jobTypes);
+        //File tab init
+        this.cbSwitchAccount.setItems(Accounts);
+        this.tvLocal.setPlaceholder(new Text(""));
+        this.tvRemote.setPlaceholder(new Text(""));
+        this.tvTransferLog.setPlaceholder(new Text(""));
+        //Job tab init
+        this.cbJobType.setItems(jobTypes);
+        this.tvInput.setPlaceholder(new Text(""));
+        this.tvFixedModifications.setPlaceholder(new Text(""));
+        this.tvVariableModifications.setPlaceholder(new Text(""));
+        this.tvModifications.setPlaceholder(new Text());
+        //Status tab init
+        this.tvJobMonitor.setPlaceholder(new Text(""));
+        this.tvInstanceMonitor.setPlaceholder(new Text(""));
+        //Result tab init
+        this.tvResults.setPlaceholder(new Text(""));
+        
     }    
-    
     @FXML
-    private void handleRun() {
-        try {
-            btnRun.setDisable(true);
-            console.setText("");
-            String command = "/Users/shuai/Bio/tools/tandem-osx-13-09-01-1/bin/tandem " +
-                    "/Users/shuai/Bio/tools/tandem-osx-13-09-01-1/bin/input.xml";
-            
-            final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            final ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
-            
-            CommandLine commandline = CommandLine.parse(command);
-            DefaultExecutor exec = new DefaultExecutor();
-            
-            exec.setExitValues(null);
-            
-            PumpStreamHandler streamHandler = new PumpStreamHandler(outputStream,errorStream);
-            exec.setStreamHandler(streamHandler);
-            exec.execute(commandline, new ExecuteResultHandler() {
-                @Override
-                public void onProcessComplete(int i) {
-                    try {
-                        String out = outputStream.toString("utf8");
-                        console.setText(out);
-                        
-                        mainApp.getResults().add(new Result(tfJobName.getText(), "output filepath"));
-                    } catch (UnsupportedEncodingException ex) { 
-                        Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
-                    } finally {
-                        btnRun.setDisable(false);
-                    }
-                }
-                
-                @Override
-                public void onProcessFailed(ExecuteException ee) {
-                    try {
-                        String error = errorStream.toString("utf8");
-                        console.setText(error);
-                    } catch (UnsupportedEncodingException ex) {
-                        
-                        Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
-                    } finally {
-                        btnRun.setDisable(false);
-                    }
-                }
-            });
-        } catch (IOException ex) {
-            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+    private void handleLocalBrowse() {
+        DirectoryChooser directoryChooser = new DirectoryChooser(); 
+        directoryChooser.setTitle("Please choose a folder");
+        
+        File file = directoryChooser.showDialog(null);
+        if(file != null) {
+            this.getLocalFileCache().clear();
+            for(File f : file.listFiles()) {
+                this.getLocalFileCache().add(new FileDescription(f.getName(), f.length(), new Date(f.lastModified()), null));
+                this.tvLocal.setItems(this.getLocalFileCache());
+            }
         }
-    }
-    
-    @FXML
-    private void handleBrowse() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Open Spectra File");
-        File file = fileChooser.showOpenDialog(mainApp.getPrimaryStage());
-        if (file != null) {
-            tfFilepath.setText(file.getAbsolutePath());
-        }
-    }
-    
-    @FXML
-    private void handleClear() {
-        tfFilepath.setText("");
-    }
-    
-    @FXML
-    private void handleAddCloudSettings() {
-        mainApp.showPreferenceView(0);
-    }
-    
-    @FXML
-    private void handleAddSearchSettings() {
-        mainApp.showPreferenceView(1);
-    }
-    
-    @FXML
-    private void handleLoadSearchSettings() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Load Search Settings");
-        File file = fileChooser.showOpenDialog(mainApp.getPrimaryStage());
-        if (file != null) {
-            tfFilepath.setText(file.getAbsolutePath());
-        }
+        listLocalFiles();
     }
     
     @FXML
@@ -200,5 +176,12 @@ public class JobOverviewController implements Initializable {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+    }
+    
+    public void listLocalFiles() {
+        this.tcLocalFilename.setCellValueFactory(new PropertyValueFactory<FileDescription, String>("filename"));
+        this.tcLocalFilesize.setCellValueFactory(new PropertyValueFactory<FileDescription, Long>("filesize"));
+        this.tcLocalModifiedTime.setCellValueFactory(new PropertyValueFactory<FileDescription, Date>("modifiedTime"));
+        this.tvLocal.setItems(this.getLocalFileCache());
     }
 }
