@@ -6,6 +6,7 @@
 
 package capercloud;
 
+import capercloud.model.DataTransferTask;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -13,7 +14,11 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.ResourceBundle;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.beans.property.SimpleStringProperty;
@@ -21,16 +26,22 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellDataFeatures;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.cell.ProgressBarTableCell;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
@@ -122,6 +133,7 @@ public class JobOverviewController implements Initializable {
         //File tab init
         this.cbSwitchAccount.setItems(this.nickList);
         this.tvLocal.setPlaceholder(new Text(""));
+        this.tvLocal.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         this.tvRemote.setPlaceholder(new Text(""));
         this.tvTransferLog.setPlaceholder(new Text(""));
         this.tfLocalPath.setText(this.homeDirectory.getAbsolutePath());
@@ -143,7 +155,6 @@ public class JobOverviewController implements Initializable {
             this.getLocalFileCache().add(filesinFolder.next());
         }
         this.getLocalFileCache();
-        
         this.tcLocalFilename.setCellValueFactory(new Callback<CellDataFeatures<File, String>, ObservableValue<String>>() {
             @Override
             public ObservableValue<String> call(CellDataFeatures<File, String> p) {
@@ -176,6 +187,25 @@ public class JobOverviewController implements Initializable {
             }
         });
         this.tvLocal.setItems(this.getLocalFileCache());
+        
+        //local table clear selection
+        tvLocal.setRowFactory(new Callback<TableView<File>, TableRow<File>>() {  
+            @Override  
+            public TableRow<File> call(TableView<File> tableView2) {  
+            final TableRow<File> row = new TableRow<>();  
+            row.addEventFilter(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {  
+                @Override  
+                public void handle(MouseEvent event) {  
+                    final int index = row.getIndex();  
+                    if (index >= 0 && index < tvLocal.getItems().size() && tvLocal.getSelectionModel().isSelected(index)  ) {
+                        tvLocal.getSelectionModel().clearSelection();
+                        event.consume();  
+                    }  
+                }  
+            });  
+            return row;  
+            }  
+        });  
     }    
     
     @FXML
@@ -237,6 +267,42 @@ public class JobOverviewController implements Initializable {
             } catch (IOException ex) {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
             }
+        }
+    }
+    @FXML
+    private void handleUploadAction() {
+        ObservableList<File> selectedFiles = this.tvLocal.getSelectionModel().getSelectedItems();
+        if (selectedFiles.size() == 0) {
+            return;
+        }
+        for (File f : selectedFiles) {
+            Random rng = new Random();
+            this.tvTransferLog.getItems().add(
+                new DataTransferTask(f.getName(), f.getPath(), rng.nextInt(3000) + 2000, rng.nextInt(30) + 20));
+        }
+
+        
+        TableColumn filenameCol = (TableColumn) this.tvTransferLog.getColumns().get(0);
+        filenameCol.setCellValueFactory(new PropertyValueFactory<DataTransferTask, String>("fileName"));
+        TableColumn fromCol = (TableColumn) this.tvTransferLog.getColumns().get(1);
+        fromCol.setCellValueFactory(new PropertyValueFactory<DataTransferTask, String>("fromPath"));
+        TableColumn progressCol = (TableColumn) this.tvTransferLog.getColumns().get(4);
+        progressCol.setCellValueFactory(new PropertyValueFactory<DataTransferTask, Double>("progress"));
+        progressCol.setCellFactory(ProgressBarTableCell.<DataTransferTask> forTableColumn());
+        TableColumn statusCol = (TableColumn) this.tvTransferLog.getColumns().get(5);
+        statusCol.setCellValueFactory(new PropertyValueFactory<DataTransferTask, String>("message"));
+        
+        ExecutorService executor = Executors.newFixedThreadPool(this.tvTransferLog.getItems().size(), new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread t = new Thread(r);
+                t.setDaemon(true);
+                return t;
+            }
+        });
+        for (Iterator it = this.tvTransferLog.getItems().iterator(); it.hasNext();) {
+            DataTransferTask task = (DataTransferTask) it.next();
+            executor.execute(task);
         }
     }
 }
