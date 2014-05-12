@@ -38,7 +38,7 @@
                           <top>
                             <HBox id="HBox" alignment="BOTTOM_LEFT" spacing="5.0" BorderPane.alignment="CENTER_LEFT">
                               <children>
-                                <TextField editable="true" prefWidth="271.0">
+                                <TextField fx:id="tfLocalPath" editable="false" prefWidth="271.0">
                                   <HBox.margin>
                                     <Insets right="20.0" />
                                   </HBox.margin>
