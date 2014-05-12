@@ -6,7 +6,10 @@
 
 package capercloud;
 
+import capercloud.s3.S3Manager;
+import capercloud.ec2.EC2Manager;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -16,8 +19,10 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import org.jets3t.service.Constants;
 import org.jets3t.service.Jets3tProperties;
+import org.jets3t.service.ServiceException;
+import org.jets3t.service.security.AWSCredentials;
+import org.jets3t.service.security.ProviderCredentials;
 
 /**
  *
@@ -26,7 +31,6 @@ import org.jets3t.service.Jets3tProperties;
 public class CaperCloud extends Application {
     
     public static final String APPLICATION_DESCRIPTION = "CaperCloud";
-    private Jets3tProperties caperCloudProperties = Jets3tProperties.getInstance(Constants.JETS3T_PROPERTIES_FILENAME);;
     
     private Stage primaryStage;
     private Stage loginStage;
@@ -41,7 +45,11 @@ public class CaperCloud extends Application {
     private AnchorPane accountView;
     private AccountManagerViewController accountController;
     
-
+    //for cloud management
+    private final HashMap<String, AWSCredentials> loginAwsCredentialsMap = new HashMap<>();
+    private AWSCredentials currentCredentials; 
+    private S3Manager s3m;
+    private EC2Manager ec2m;
     
     /**
      * CaperCloud is a Cloud-based Proteogenomics pipeline.
@@ -53,12 +61,7 @@ public class CaperCloud extends Application {
      */
     public CaperCloud() {
     }
-
-    public Jets3tProperties getCaperCloudProperties() {
-        return caperCloudProperties;
-    }
-    
-        
+       
     public Stage getPrimaryStage() {
         return primaryStage;
     }
@@ -132,6 +135,43 @@ public class CaperCloud extends Application {
 
     public AccountManagerViewController getAccountController() {
         return accountController;
+    }
+
+    public S3Manager getS3m() throws ServiceException {
+        if (this.s3m == null) {
+            //no credentials provided, so let controller set it
+            if (this.currentCredentials == null) {
+                this.s3m = new S3Manager(this);
+            } else {
+                //we will do some init
+                this.s3m = new S3Manager(this);
+                this.s3m.setAwsCredentials(currentCredentials);
+            }
+        }
+        return s3m;
+    }
+
+    public EC2Manager getEc2m() {
+        if (this.ec2m == null) {
+            if (this.currentCredentials == null) {
+                this.ec2m = new EC2Manager(this);
+            } else {
+                this.ec2m = new EC2Manager(this);
+                this.ec2m.setAwsCredentials(currentCredentials);
+            }
+        }
+        return ec2m;
+    }
+
+    public AWSCredentials getCurrentCredentials() {
+        return currentCredentials;
+    }
+
+    public void setCurrentCredentials(AWSCredentials currentCredentials) throws ServiceException {
+        this.currentCredentials = currentCredentials;
+        //set ec2m and s3m at the same time
+        this.getEc2m().setAwsCredentials(currentCredentials);
+        this.getS3m().setAwsCredentials(currentCredentials);
     }
     
     @Override

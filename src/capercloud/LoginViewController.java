@@ -290,12 +290,6 @@ public class LoginViewController implements Initializable {
         return (String[]) errors.toArray(new String[errors.size()]);
     }
     
-    //connect to S3
-    protected RestS3Service getRestS3Service(ProviderCredentials credentials) throws S3ServiceException {
-        return new RestS3Service(credentials, CaperCloud.APPLICATION_DESCRIPTION,
-            new BasicCredentialsProvider(), mainApp.getCaperCloudProperties());
-    }
-    
     @FXML private void handleSaveAction() {
         storeCredentialsInDirectory(this.getHomeFolder(), this.getPassword());
     }
