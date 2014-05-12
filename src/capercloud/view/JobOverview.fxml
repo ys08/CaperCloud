@@ -24,7 +24,7 @@
                       <items>
                         <BorderPane prefHeight="437.0" prefWidth="581.0">
                           <center>
-                            <TableView fx:id="tvLocal" prefHeight="200.0" prefWidth="200.0">
+                            <TableView fx:id="tvLocal" editable="false" prefHeight="200.0" prefWidth="200.0">
                               <columns>
                                 <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="203.0" text="File Name" fx:id="tcLocalFilename" />
                                 <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="130.0" text="File Size" fx:id="tcLocalFilesize" />
@@ -102,7 +102,7 @@
                           <children>
                             <VBox id="VBox" alignment="CENTER" maxWidth="-1.0" minWidth="-1.0" prefHeight="473.0" prefWidth="60.0" spacing="5.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                               <children>
-                                <Button mnemonicParsing="false" prefHeight="30.0" prefWidth="30.0" text="">
+                                <Button mnemonicParsing="false" onAction="#handleUploadAction" prefHeight="30.0" prefWidth="30.0" text="">
                                   <graphic>
                                     <ImageView fitHeight="30.0" fitWidth="30.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
                                       <image>
