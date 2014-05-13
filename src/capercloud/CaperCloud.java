@@ -19,10 +19,12 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.jets3t.service.Constants;
 import org.jets3t.service.Jets3tProperties;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.security.AWSCredentials;
-import org.jets3t.service.security.ProviderCredentials;
 
 /**
  *
@@ -35,6 +37,7 @@ public class CaperCloud extends Application {
     private Stage primaryStage;
     private Stage loginStage;
     private Stage newAccountStage;
+    private Stage transferPreferenceStage;
     
     private BorderPane rootLayout;
     private RootLayoutController rootController;
@@ -44,11 +47,15 @@ public class CaperCloud extends Application {
     private LoginViewController loginController;
     private AnchorPane accountView;
     private AccountManagerViewController accountController;
+    private AnchorPane preferenceView;
+    private TransferPreferenceViewController preferenceController;
     
-    //for cloud management
-    private final HashMap<String, AWSCredentials> loginAwsCredentialsMap = new HashMap<>();
+    //store login account
+    private HashMap<String, AWSCredentials> loginAwsCredentialsMap = new HashMap<>();
     private AWSCredentials currentCredentials; 
     private S3Manager s3m;
+    private Jets3tProperties jets3tProperties;
+    private CredentialsProvider mCredentialProvider;
     private EC2Manager ec2m;
     
     /**
@@ -60,8 +67,18 @@ public class CaperCloud extends Application {
      * @author Yang Shuai
      */
     public CaperCloud() {
+        System.out.println("in CaperCloud constructor");
+        try {
+            this.jets3tProperties = Jets3tProperties.getInstance(getClass().getResourceAsStream("config/" + 
+                    Constants.JETS3T_PROPERTIES_FILENAME), "default Jets3t Properties");
+        } catch (IOException ex) {
+            this.jets3tProperties = Jets3tProperties.getInstance(Constants.JETS3T_PROPERTIES_FILENAME);
+        }
+        this.mCredentialProvider = new BasicCredentialsProvider();
+        this.jets3tProperties.getProperties().list(System.out);
     }
-       
+    
+    //geters and setters
     public Stage getPrimaryStage() {
         return primaryStage;
     }
@@ -82,6 +99,13 @@ public class CaperCloud extends Application {
             this.newAccountStage = new Stage();
         }
         return newAccountStage;
+    }
+
+    public Stage getTransferPreferenceStage() {
+        if (this.transferPreferenceStage == null) {
+            this.transferPreferenceStage = new Stage();
+        }
+        return transferPreferenceStage;
     }
     
     public BorderPane getRootLayout() throws IOException {
@@ -137,14 +161,27 @@ public class CaperCloud extends Application {
         return accountController;
     }
 
+    public AnchorPane getPreferenceView() throws IOException {
+        if (this.preferenceView == null) {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TransferPreferenceView.fxml"));
+            this.preferenceView = (AnchorPane) loader.load();
+            this.preferenceController = loader.getController();
+        }
+        return preferenceView;
+    }
+
+    public TransferPreferenceViewController getPreferenceController() {
+        return preferenceController;
+    }
+
+    
     public S3Manager getS3m() throws ServiceException {
         if (this.s3m == null) {
             //no credentials provided, so let controller set it
             if (this.currentCredentials == null) {
-                this.s3m = new S3Manager(this);
+                this.s3m = new S3Manager(this, jets3tProperties, mCredentialProvider);
             } else {
-                //we will do some init
-                this.s3m = new S3Manager(this);
+                //change login credentials
                 this.s3m.setAwsCredentials(currentCredentials);
             }
         }
@@ -156,7 +193,6 @@ public class CaperCloud extends Application {
             if (this.currentCredentials == null) {
                 this.ec2m = new EC2Manager(this);
             } else {
-                this.ec2m = new EC2Manager(this);
                 this.ec2m.setAwsCredentials(currentCredentials);
             }
         }
@@ -173,9 +209,18 @@ public class CaperCloud extends Application {
         this.getEc2m().setAwsCredentials(currentCredentials);
         this.getS3m().setAwsCredentials(currentCredentials);
     }
+
+    public Jets3tProperties getJets3tProperties() {
+        return jets3tProperties;
+    }
+
+    public HashMap<String, AWSCredentials> getLoginAwsCredentialsMap() {
+        return loginAwsCredentialsMap;
+    }
     
     @Override
     public void start(Stage stage) throws Exception {
+        System.out.println("in start method");
         this.setPrimaryStage(stage);
         
         Scene scene = new Scene(this.getRootLayout());
@@ -263,6 +308,26 @@ public class CaperCloud extends Application {
                 this.getNewAccountStage().showAndWait();   
             } else {
                 this.getNewAccountStage().showAndWait();  
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void showTransferPreferenceView() {
+        try{
+            if (this.getTransferPreferenceStage().getScene() == null) {
+                this.getTransferPreferenceStage().setTitle("Transfer Preferences");
+                this.getTransferPreferenceStage().initModality(Modality.WINDOW_MODAL);
+                this.getTransferPreferenceStage().initOwner(this.getPrimaryStage());
+
+                Scene scene = new Scene(this.getPreferenceView());
+                this.getTransferPreferenceStage().setScene(scene);
+                this.getPreferenceController().setMainApp(this);
+
+                this.getTransferPreferenceStage().showAndWait();
+            } else {
+                this.getTransferPreferenceStage().showAndWait();
             }
         } catch (IOException ex) {
             Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);

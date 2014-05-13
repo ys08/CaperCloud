@@ -3,6 +3,7 @@
 <?import java.lang.*?>
 <?import java.util.*?>
 <?import javafx.collections.*?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
@@ -10,11 +11,9 @@
 <?import javafx.scene.shape.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane id="AnchorPane" prefHeight="475.0" prefWidth="498.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.TypeOneController">
+<AnchorPane id="AnchorPane" maxWidth="-Infinity" minHeight="-1.0" minWidth="-Infinity" prefHeight="470.0" prefWidth="450.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.TypeOneController">
   <children>
-    <Rectangle arcHeight="5.0" arcWidth="5.0" fill="WHITE" height="72.0" layoutX="33.0" layoutY="11.0" stroke="BLACK" strokeType="INSIDE" width="437.740234375" />
-    <Rectangle arcHeight="5.0" arcWidth="5.0" fill="WHITE" height="144.5" layoutX="34.0" layoutY="98.0" stroke="BLACK" strokeType="INSIDE" width="437.740234375" />
-    <ComboBox layoutX="172.0" layoutY="47.0" prefHeight="21.0" prefWidth="172.0" promptText="Select chromosome(s)" visibleRowCount="25">
+    <ComboBox layoutX="144.0" prefHeight="21.0" prefWidth="172.0" promptText="Select chromosome(s)" visibleRowCount="25" AnchorPane.topAnchor="40.0">
       <items>
         <FXCollections fx:factory="observableArrayList">
           <String fx:value="all" />
@@ -24,27 +23,14 @@
         </FXCollections>
       </items>
     </ComboBox>
-    <VBox id="VBox" alignment="CENTER_LEFT" layoutX="321.0" layoutY="184.0" spacing="5.0">
+    <VBox id="VBox" alignment="CENTER_LEFT" layoutY="154.0" spacing="5.0" AnchorPane.rightAnchor="40.0">
       <children>
         <CheckBox disable="true" mnemonicParsing="false" selected="true" text="Unique Spectrum" />
         <CheckBox disable="true" mnemonicParsing="false" selected="true" text="Unique Peptide" />
       </children>
     </VBox>
-    <Label layoutX="214.0" layoutY="109.0" text="Filter Stage" />
-    <VBox id="VBox" alignment="CENTER_LEFT" layoutX="34.0" layoutY="253.0" spacing="5.0">
-      <children>
-        <Text strokeType="OUTSIDE" strokeWidth="0.0" text="HyperSocre is used to filter PSM">
-          <fill>
-            <Color blue="0.800" green="0.000" red="0.064" fx:id="x1" />
-          </fill>
-        </Text>
-        <Text fill="$x1" strokeType="OUTSIDE" strokeWidth="0.0" text="ORF Score sets the threshold of confident ORF" />
-        <Text fill="$x1" strokeType="OUTSIDE" strokeWidth="0.0" text="Identity is used by BLAST, similarity to known protein" />
-        <Text fill="$x1" strokeType="OUTSIDE" strokeWidth="0.0" text="Unique Spectrum means spectrum that matches to only one peptide sequence" />
-        <Text fill="$x1" strokeType="OUTSIDE" strokeWidth="0.0" text="Unique Peptide means peptide that belongs to only one ORF" />
-      </children>
-    </VBox>
-    <GridPane layoutX="47.0" layoutY="134.0">
+    <Label layoutY="96.0" text="Filter Stage" AnchorPane.leftAnchor="10.0" />
+    <GridPane layoutY="135.0" AnchorPane.leftAnchor="40.0">
       <children>
         <Label text="HyperScore" GridPane.columnIndex="0" GridPane.rowIndex="0" />
         <TextField prefWidth="60.0" text="35" GridPane.columnIndex="1" GridPane.rowIndex="0" />
@@ -63,6 +49,11 @@
         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
       </rowConstraints>
     </GridPane>
-    <Label layoutX="203.0" layoutY="20.0" text="Database Selection" />
+    <Label text="Database Selection" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="15.0" />
+    <Separator prefWidth="454.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="80.0" />
+    <TextArea layoutY="295.0" prefHeight="123.0" prefWidth="460.0" text="HyperSocre is used to filter PSM&#10;ORF Score sets the threshold of confident ORF&#10;Identity is used by BLAST, similarity to known protein&#10;Unique Spectrum means spectrum matches to only one peptide sequence&#10;Unique Peptide means peptide that belongs to only one ORF" wrapText="true" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" />
   </children>
+  <padding>
+    <Insets />
+  </padding>
 </AnchorPane>

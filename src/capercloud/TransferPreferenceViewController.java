@@ -16,6 +16,8 @@ import javafx.fxml.Initializable;
  * @author shuai
  */
 public class TransferPreferenceViewController implements Initializable {
+    
+    private CaperCloud mainApp;
 
     /**
      * Initializes the controller class.
@@ -23,6 +25,11 @@ public class TransferPreferenceViewController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         // TODO
-    }    
+    }
+
+    //getters and setters
+    public void setMainApp(CaperCloud mainApp) {
+        this.mainApp = mainApp;
+    }
     
 }

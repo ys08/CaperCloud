@@ -13,7 +13,7 @@
       <bottom>
         <AnchorPane id="AnchorPane" prefHeight="22.0" BorderPane.alignment="CENTER_RIGHT">
           <children>
-            <HBox id="HBox" alignment="CENTER" layoutX="416.0" layoutY="0.0" spacing="5.0">
+            <HBox id="HBox" alignment="CENTER" layoutX="394.0" layoutY="0.0" spacing="5.0">
               <children>
                 <Button fx:id="btnSave" disable="false" mnemonicParsing="false" onAction="#handleSaveAction" text="Store Credentials" />
                 <Button fx:id="btnLogin" mnemonicParsing="false" onAction="#handleLoginAction" text="Login" />
