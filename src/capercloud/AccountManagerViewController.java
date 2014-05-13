@@ -15,16 +15,14 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.TextField;
 import org.jets3t.service.security.AWSCredentials;
-import org.jets3t.service.security.ProviderCredentials;
 
 /**
- * FXML Controller class
+ * store credentials to mainApp.loginAwsCredentialsMap
  *
  * @author shuai
  */
 public class AccountManagerViewController implements Initializable {
     private CaperCloud mainApp;
-    private ProviderCredentials credentials;
     
     @FXML TextField tfNickname;
     @FXML TextField tfAccessKey;
@@ -40,25 +38,36 @@ public class AccountManagerViewController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // TODO
-    }   
-
-    public ProviderCredentials getCredentials() {
-        return credentials;
     }
     
     private void clear() {
         tfAccessKey.setText("");
         tfSecretKey.setText("");
         tfNickname.setText("");
+
     }
     
     @FXML private void handleOkAction() {
-        this.credentials = new AWSCredentials(
+        if (tfAccessKey.getText().equals("") || tfSecretKey.getText().equals("") || tfNickname.getText().equals("")) {
+            System.out.println("All fields are needed");
+            clear();
+            return;
+        }
+        //nickname must unique
+        if (this.mainApp.getLoginAwsCredentialsMap().containsKey(tfNickname.getText())) {
+            System.out.println("already have nickname:" + tfNickname.getText());
+            clear();
+            return;
+        }
+        
+        AWSCredentials credentials = new AWSCredentials(
                 tfAccessKey.getText(),
                 tfSecretKey.getText(),
                 tfNickname.getText()
         );
+        
+        this.mainApp.getLoginController().setCredentials(credentials);
+        
         try {
             clear();
             this.mainApp.getNewAccountStage().close();
@@ -68,6 +77,7 @@ public class AccountManagerViewController implements Initializable {
     }
     
     @FXML private void handleCancelAction() {
+        this.mainApp.getLoginController().setCredentials(null);
         clear();
         try {
             this.mainApp.getNewAccountStage().close();
@@ -75,6 +85,4 @@ public class AccountManagerViewController implements Initializable {
             Logger.getLogger(AccountManagerViewController.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
-
 }

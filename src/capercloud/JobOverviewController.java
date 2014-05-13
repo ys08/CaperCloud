@@ -57,7 +57,7 @@ import org.apache.commons.io.FileUtils;
 public class JobOverviewController implements Initializable {
     
     private CaperCloud mainApp;
-    private ObservableList<String> nickList = FXCollections.observableArrayList();
+    private ObservableList<String> nickList;
     private final ObservableList jobTypes = FXCollections.observableArrayList(
             "Novel Protein", 
             "SAP", 
@@ -66,8 +66,8 @@ public class JobOverviewController implements Initializable {
     );
     //data for localFileTableView
     private ObservableList<File> localFileCache;
-    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    private File homeDirectory = new File(System.getProperty("user.home"));
+    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private final File homeDirectory = new File(System.getProperty("user.home"));
     
     @FXML private TabPane mainTab;
     //File Tab
@@ -98,6 +98,11 @@ public class JobOverviewController implements Initializable {
     
     //Result Tab
     @FXML private TableView tvResults;
+    
+    public JobOverviewController() {
+        System.out.println("in JobOverviewController constructor");
+        this.nickList = FXCollections.observableArrayList();
+    }
 
     public ObservableList<File> getLocalFileCache() {
         //lazy init
@@ -118,8 +123,10 @@ public class JobOverviewController implements Initializable {
     public ComboBox getCbSwitchAccount() {
         return cbSwitchAccount;
     }
-    
-    
+
+    public Button getBtnLogout() {
+        return btnLogout;
+    }
     
     public void setMainApp(CaperCloud mainApp) {
         this.mainApp = mainApp;   
@@ -130,6 +137,7 @@ public class JobOverviewController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+        System.out.println("in JobOverviewController initialize");
         //File tab init
         this.cbSwitchAccount.setItems(this.nickList);
         this.tvLocal.setPlaceholder(new Text(""));
@@ -205,7 +213,8 @@ public class JobOverviewController implements Initializable {
             });  
             return row;  
             }  
-        });  
+        });
+        this.cbSwitchAccount.setItems(nickList);
     }    
     
     @FXML
@@ -304,5 +313,17 @@ public class JobOverviewController implements Initializable {
             DataTransferTask task = (DataTransferTask) it.next();
             executor.execute(task);
         }
+    }
+    
+    @FXML
+    private void handleTransferPreferenceAction() {
+        this.mainApp.showTransferPreferenceView();
+    }
+    
+    @FXML
+    private void handleLogoutAction() {
+        String currentLogin = (String) cbSwitchAccount.getValue();
+        this.nickList.remove(currentLogin);
+        cbSwitchAccount.setValue(null);
     }
 }

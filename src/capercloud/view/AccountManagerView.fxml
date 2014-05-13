@@ -36,7 +36,7 @@
     <HBox id="HBox" alignment="CENTER" layoutX="346.0" layoutY="337.0" spacing="5.0">
       <children>
         <Button mnemonicParsing="false" onAction="#handleOkAction" text="OK" />
-        <Button mnemonicParsing="false" text="Cancel" />
+        <Button mnemonicParsing="false" onAction="#handleCancelAction" text="Cancel" />
       </children>
     </HBox>
   </children>
