@@ -15,6 +15,8 @@ import org.apache.http.auth.Credentials;
 import org.apache.http.auth.NTCredentials;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.jets3t.service.Constants;
 import org.jets3t.service.Jets3tProperties;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
@@ -48,16 +50,15 @@ import org.jets3t.service.utils.TimeFormatter;
  *
  */
 public class S3Manager implements StorageServiceEventListener, CredentialsProvider{
-    
-    //should know our app
-    private CaperCloud mainApp;
-    
-    private RestS3Service s3Service;
-    private ThreadedS3Service storageService;
-    private Jets3tProperties jets3tProperties;
-    private AWSCredentials awsCredentials;
+
+    public static Jets3tProperties jets3tProperties = Jets3tProperties.getInstance(Constants.JETS3T_PROPERTIES_FILENAME);;
     private CredentialsProvider mCredentialProvider;
     
+    private RestS3Service s3Service;
+    //for monitor progress
+    private ThreadedS3Service storageService;
+    
+    //data
     private List<S3Object> uploadingObjects = new ArrayList<>();
     private Set<String> uploadedObjects = new HashSet<>();
     private boolean isUploadingErrorOccured = true;
@@ -71,43 +72,19 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
 
     /**
      * 
-     * @param mainApp
-     * @param jets3tProperties
-     * @param mCredentialProvider 
-     * 
-     * mCredentialProvider example: new BasicCredentialsProvider()
-     * 
+     * @param currentCredentials
+     * @throws ServiceException 
      */
-    public S3Manager(CaperCloud mainApp, Jets3tProperties jets3tProperties, CredentialsProvider mCredentialProvider) {
-        this.mainApp = mainApp;
-        this.jets3tProperties = jets3tProperties;
-        this.mCredentialProvider = mCredentialProvider;
-    }
-    
-    //getters and setters
-    public RestS3Service getS3Service() {
-        return s3Service;
+    public S3Manager(AWSCredentials currentCredentials) throws ServiceException {
+        this.mCredentialProvider = new BasicCredentialsProvider();
+        this.s3Service = new RestS3Service(currentCredentials, CaperCloud.APPLICATION_DESCRIPTION, this, this.jets3tProperties);
+        this.storageService = new ThreadedS3Service(this.s3Service, this);
     }
 
     public Jets3tProperties getJets3tProperties() {
         return jets3tProperties;
     }
 
-    public AWSCredentials getAwsCredentials() {
-        return awsCredentials;
-    }
-
-    /**
-     * When awsCredentials is set, s3Service and storageService are also changed
-     * @param awsCredentials
-     * @throws ServiceException 
-     */
-    public void setAwsCredentials(AWSCredentials awsCredentials) throws ServiceException {
-        this.awsCredentials = awsCredentials;
-        this.s3Service = new RestS3Service(this.awsCredentials, CaperCloud.APPLICATION_DESCRIPTION, this, this.jets3tProperties);
-        this.storageService = new ThreadedS3Service(this.s3Service, this);
-    }
-    
     public S3Bucket[] listBuckets() throws S3ServiceException {
         return this.s3Service.listAllBuckets();
     }

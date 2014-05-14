@@ -6,10 +6,14 @@
 
 package capercloud;
 
+import capercloud.exception.IllegalCredentialsException;
+import capercloud.s3.S3Manager;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,8 +30,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.stage.DirectoryChooser;
-import org.jets3t.service.Constants;
-import org.jets3t.service.Jets3tProperties;
+import org.apache.commons.io.filefilter.SuffixFileFilter;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.model.S3Bucket;
@@ -41,25 +44,18 @@ import org.jets3t.service.security.ProviderCredentials;
  */
 public class LoginViewController implements Initializable {
     private CaperCloud mainApp;
-    Jets3tProperties jets3tProperties;
     
-    //data for ListView
-    private ObservableList<File> fileList;
-    
-    //data for login
-    private ProviderCredentials currentCredentials = null;
-    
-    //credentials to be saved
-    private AWSCredentials credentials;
+    private File selectedFolder;
+    private ObservableList<File> storedCredentialsList;
+    private AWSCredentials selectedCredentials;
+    private AWSCredentials newCredentials;
     
     public static final String EMPTY_PASSWORD_SURROGATE = "NONE";    
     private static final int LOGIN_MODE_LOCAL_FOLDER = 0;
     private static final int LOGIN_MODE_DIRECT = 1;
     private int loginMode = LOGIN_MODE_LOCAL_FOLDER;
     
-    private File homeFolder;
-    
-    
+    //general components
     @FXML TabPane tpLogin;
     @FXML Button btnSave;
     @FXML Button btnLogin;
@@ -74,33 +70,17 @@ public class LoginViewController implements Initializable {
     @FXML TextField tfSecretKey;
     
     public LoginViewController() {
-        
-        fileList = FXCollections.observableArrayList();
-        
-        if (Constants.DEFAULT_PREFERENCES_DIRECTORY.exists()) {
-            this.homeFolder = Constants.DEFAULT_PREFERENCES_DIRECTORY;
-        } else {
-            this.homeFolder = new File(System.getProperty("user.home"));
-        }
-    }
-    
-    //getters and setters
-    public AWSCredentials getCredentials() {
-        return credentials;
-    }
-
-    public void setCredentials(AWSCredentials credentials) {
-        this.credentials = credentials;
+        storedCredentialsList = FXCollections.observableArrayList();
+        this.selectedFolder = new File(System.getProperty("user.home"));
     }
 
     public void setMainApp(CaperCloud mainApp) {
         System.out.println("in LoginViewController setMainApp Method");
         this.mainApp = mainApp;
-        this.jets3tProperties = mainApp.getJets3tProperties();
     }
 
-    public ProviderCredentials getcurrentCredentials() {
-        return currentCredentials;
+    public void setNewCredentials(AWSCredentials newCredentials) {
+        this.newCredentials = newCredentials;
     }
     
     /**
@@ -108,8 +88,7 @@ public class LoginViewController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        
-        //when switch tab, storeCredentials button will be disabled
+        //switch btnSave disable mode
         tpLogin.getSelectionModel().selectedItemProperty().addListener(
                 new ChangeListener<Tab>() {
                     @Override
@@ -122,10 +101,10 @@ public class LoginViewController implements Initializable {
                     }
                 });
         //display default homePath
-        tfHomeFolder.setText(homeFolder.getAbsolutePath());
+        tfHomeFolder.setText(selectedFolder.getAbsolutePath());
         refreshStoredCredentials();
         //credentials file for display
-        lvCredentialsFile.setItems(fileList);
+        lvCredentialsFile.setItems(storedCredentialsList);
     }   
     
     /**
@@ -134,24 +113,12 @@ public class LoginViewController implements Initializable {
      *
      */
     public void refreshStoredCredentials() {
-        fileList.clear();
-        try {
-            File[] files = homeFolder.listFiles();
-            for (int i = 0; files != null && i < files.length; i++) {
-                File candidateFile = files[i];
-                if (candidateFile.getName().endsWith(".enc")) {
-                    System.out.println("Candidate File: " + candidateFile.getName());
-                    fileList.add(candidateFile);
-                }
-            }
-        } catch (Exception e) {
-            String message = "Unable to find credential files in the folder "
-                + homeFolder.getAbsolutePath();
-            System.out.println(message);
-        }
+        storedCredentialsList.clear();
+        FilenameFilter fileFilter = new SuffixFileFilter(".enc");  
+        storedCredentialsList.addAll(selectedFolder.listFiles(fileFilter));
     }
     /**
-     * set currentCredentials
+     * set selectedCredentials
      * @param directory
      * @param credentialsFile
      * @param password 
@@ -160,12 +127,12 @@ public class LoginViewController implements Initializable {
         if (!validFolderInputs(false, directory, credentialsFile, password, true)) {
             return;
         }
-        this.currentCredentials = ProviderCredentials.load(password, credentialsFile);
-            System.out.println(currentCredentials);
+        this.selectedCredentials = (AWSCredentials) ProviderCredentials.load(password, credentialsFile);
+            System.out.println(this.selectedCredentials);
     }
     
     private boolean validFolderInputs(boolean isStoreAction, File directory, 
-            File credentialsFile, String password, boolean allowLegacyPassword)
+            File credentialsFile, String password, boolean allowLegacyPassword) 
     {
         if (password.length() < 6) {
             if (allowLegacyPassword) {
@@ -193,8 +160,6 @@ public class LoginViewController implements Initializable {
         return true;
     }
     
-
-    
     private void storeCredentialsInDirectory(File directory, String password) {
         if (!validFolderInputs(true, directory, null, password, false)) {
             return;
@@ -205,19 +170,18 @@ public class LoginViewController implements Initializable {
         this.mainApp.showAccountManagerView();
         
         //AccountManagerView will set credentials value
-        if (credentials == null) {
-            System.out.println("storeCredentialsInDirectory returns because no credentials are set");
+        if (newCredentials == null) {
+            System.out.println("user canceled");
             return;
         }
-        
         //save the credentials to file
-        File credentialsFile = new File(directory, credentials.getFriendlyName() + ".enc");
+        File credentialsFile = new File(directory, newCredentials.getFriendlyName() + ".enc");
 
         try {
-            String algorithm = this.mainApp.getJets3tProperties().getStringProperty("crypto.algorithm", "PBEWithMD5AndDES");
-            credentials.save(password, credentialsFile, algorithm);
-            this.clearPassword();
-            this.refreshStoredCredentials();
+            String algorithm = S3Manager.jets3tProperties.getStringProperty("crypto.algorithm", "PBEWithMD5AndDES");
+            newCredentials.save(password, credentialsFile, algorithm);
+            clearUserInput();
+            refreshStoredCredentials();
             System.out.println("Your credentials have been stored in the file:\n" +
                 credentialsFile.getAbsolutePath());
         } catch (RuntimeException e) {
@@ -232,7 +196,7 @@ public class LoginViewController implements Initializable {
      * @return
      * the credentials encrypted file chosen by the user.
      */
-    public File getCredentialsFile() {
+    public File getSelectedCredentialsFile() {
         File selectedFile = (File)lvCredentialsFile.getSelectionModel().getSelectedItem();
         if (selectedFile == null) {
             return null;
@@ -245,7 +209,7 @@ public class LoginViewController implements Initializable {
      * @return 
      */
     public File getHomeFolder() {
-        return this.homeFolder;
+        return this.selectedFolder;
     }
     
     /**
@@ -259,8 +223,12 @@ public class LoginViewController implements Initializable {
     /**
      * Clears the user-provided password field.
      */
-    public void clearPassword() {
+    public void clearUserInput() {
         pfPassword.setText("");
+        tfAccessKey.setText("");
+        tfSecretKey.setText("");
+        this.selectedCredentials = null;
+        this.newCredentials = null;
     }
     
     /**
@@ -304,22 +272,22 @@ public class LoginViewController implements Initializable {
         storeCredentialsInDirectory(this.getHomeFolder(), this.getPassword());
     }
     
-    @FXML private void handleLoginAction() throws ServiceException {
+    @FXML private void handleLoginAction() {
         loginMode = tpLogin.getSelectionModel().getSelectedIndex();
         if (loginMode == LOGIN_MODE_LOCAL_FOLDER) {
             try {
-                retrieveCredentialsFromDirectory(this.getHomeFolder(), this.getCredentialsFile(), this.getPassword());
+                retrieveCredentialsFromDirectory(this.getHomeFolder(), this.getSelectedCredentialsFile(), this.getPassword());
             } catch (ServiceException ex) { 
                 System.out.println("Unable to load your credentials from the file:" + 
-                        this.getCredentialsFile().getAbsolutePath());
+                        this.getSelectedCredentialsFile().getAbsolutePath());
                 System.out.println("Please check your password.");
                 return;
             }
-            if (this.currentCredentials == null) {
-                System.out.println("currentCredentials is empty");
+            if (this.selectedCredentials == null) {
+                System.out.println("credentials is not available");
                 return;
             }
-            //do some login initiating stuff here
+            //credentials is stored in selectedCredentials
             System.out.println("listing bucket local folder, please wait");
             
         } else if (loginMode == LOGIN_MODE_DIRECT) {
@@ -333,44 +301,46 @@ public class LoginViewController implements Initializable {
                 System.out.println(errorMessages);
                 return;
             } else {
-                this.currentCredentials = new AWSCredentials(
+                this.selectedCredentials = new AWSCredentials(
                         this.getAccessKey(),
-                        this.getSecretKey(),
-                        "default nick");
+                        this.getSecretKey()
+                );
             }
-            if (this.currentCredentials == null) {
-                System.out.println("currentCredentials is empty");
+            if (this.selectedCredentials == null) {
+                System.out.println("selectedCredentials is null");
                 return;
             }
-            //do some login initiating stuff here
-            
-            System.out.println("listing bucket direct login, please wait");
         }
-        
-        //close the window
+        //login to cloud
         try {
-            clearPassword();
-            //let our app know it
-            this.mainApp.getLoginAwsCredentialsMap().put(currentCredentials.getFriendlyName(), (AWSCredentials) currentCredentials);
-            //let combobox knows it
-            this.mainApp.getMainController().getNickLists().add(currentCredentials.getFriendlyName());
-            this.mainApp.getMainController().getCbSwitchAccount().setValue(currentCredentials.getFriendlyName());
-            //logout button enabled
-            this.mainApp.getMainController().getBtnLogout().setDisable(false);
+            this.mainApp.getCloudManager().loginCloud(this.selectedCredentials);
+            System.out.println("Checking accounts");
+            S3Bucket[] buckets = this.mainApp.getCloudManager().listBuckets();
+            System.out.println("login success");
+            this.mainApp.getMainController().getRemoteBucketCache().addAll(buckets);
             
-            this.mainApp.getS3m().setAwsCredentials((AWSCredentials) currentCredentials);
-            System.out.println("Listing Buckets");
-            S3Bucket[] buckets = this.mainApp.getS3m().listBuckets();
+        } catch (IllegalCredentialsException ex) {
+            ex.printStackTrace();
+        } catch (ServiceException ex) {
+            System.out.println("Invalid accounts");
+            clearUserInput();
+            return;
+        }
 
-            for (S3Bucket b : buckets) {
-                System.out.println(b.getName());
-            }
+        //let combobox knows it
+        if (this.selectedCredentials.getFriendlyName() == null) {
+            System.out.println("direct login, we will not display it in combobox");
+        } else {
+            this.mainApp.getMainController().getCbSwitchAccount().setValue(this.selectedCredentials.getFriendlyName());
+        }
+        clearUserInput();
+        try {
             this.mainApp.getLoginStage().close();
-        } catch (S3ServiceException ex) {
-            System.out.println("Unable to connect to S3");
         } catch (IOException ex) {
             Logger.getLogger(LoginViewController.class.getName()).log(Level.SEVERE, null, ex);
         }
+        //logout button enabled  
+        this.mainApp.getMainController().getBtnLogout().setDisable(false); 
     }
     
     @FXML private void handleChooseFolderAction() {
@@ -379,7 +349,7 @@ public class LoginViewController implements Initializable {
         
         File file = directoryChooser.showDialog(null);
         if(file != null) {
-            this.homeFolder = file;
+            this.selectedFolder = file;
             tfHomeFolder.setText(file.getAbsolutePath());
             refreshStoredCredentials();
         }
@@ -387,6 +357,7 @@ public class LoginViewController implements Initializable {
     
     @FXML private void handleCancelAction() {
         try {
+            clearUserInput();
             this.mainApp.getLoginStage().close();
         } catch (IOException ex) {
             Logger.getLogger(LoginViewController.class.getName()).log(Level.SEVERE, null, ex);

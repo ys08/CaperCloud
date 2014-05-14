@@ -46,7 +46,9 @@ public class AccountManagerViewController implements Initializable {
         tfNickname.setText("");
 
     }
-    
+    /**
+     * check if nickname(friendly name) already exists
+     */
     @FXML private void handleOkAction() {
         if (tfAccessKey.getText().equals("") || tfSecretKey.getText().equals("") || tfNickname.getText().equals("")) {
             System.out.println("All fields are needed");
@@ -54,7 +56,7 @@ public class AccountManagerViewController implements Initializable {
             return;
         }
         //nickname must unique
-        if (this.mainApp.getLoginAwsCredentialsMap().containsKey(tfNickname.getText())) {
+        if (this.mainApp.getCloudManager().hasCredentialsOfFriendlyName(tfNickname.getText())) {
             System.out.println("already have nickname:" + tfNickname.getText());
             clear();
             return;
@@ -66,7 +68,7 @@ public class AccountManagerViewController implements Initializable {
                 tfNickname.getText()
         );
         
-        this.mainApp.getLoginController().setCredentials(credentials);
+        this.mainApp.getLoginController().setNewCredentials(credentials);
         
         try {
             clear();
@@ -77,7 +79,7 @@ public class AccountManagerViewController implements Initializable {
     }
     
     @FXML private void handleCancelAction() {
-        this.mainApp.getLoginController().setCredentials(null);
+        this.mainApp.getLoginController().setNewCredentials(null);
         clear();
         try {
             this.mainApp.getNewAccountStage().close();

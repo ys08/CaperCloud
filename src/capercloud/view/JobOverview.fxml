@@ -130,9 +130,9 @@
                               <center>
                                 <TableView fx:id="tvRemote" prefHeight="200.0" prefWidth="200.0">
                                   <columns>
-                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="206.0" style="" text="File Name" />
-                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="140.0" text="File Size" />
-                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="219.0" text="Upload Time" />
+                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="206.0" style="" text="File Name" fx:id="tcRemoteFilename" />
+                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="140.0" text="File Size" fx:id="tcRemoteFilesize" />
+                                    <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="219.0" text="Upload Time" fx:id="tcRemoteUploadTime" />
                                   </columns>
                                   <BorderPane.margin>
                                     <Insets bottom="1.0" left="1.0" right="1.0" />
@@ -349,7 +349,7 @@
         </Tab>
         <Tab closable="false" text="Job">
           <content>
-            <SplitPane dividerPositions="0.7150684931506849" focusTraversable="true" maxWidth="-1.0" orientation="VERTICAL" prefHeight="-1.0" prefWidth="-1.0">
+            <SplitPane dividerPositions="0.7156462585034014" focusTraversable="true" maxWidth="-1.0" orientation="VERTICAL" prefHeight="-1.0" prefWidth="-1.0">
               <items>
                 <AnchorPane id="AnchorPane" minHeight="0.0" minWidth="0.0" prefHeight="513.0" prefWidth="1278.0">
                   <children>
