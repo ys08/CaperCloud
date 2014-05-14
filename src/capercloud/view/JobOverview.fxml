@@ -16,7 +16,7 @@
       <tabs>
         <Tab closable="false" style="" text="File">
           <content>
-            <SplitPane dividerPositions="0.6506849315068494" focusTraversable="true" orientation="VERTICAL" prefHeight="-1.0" prefWidth="-1.0">
+            <SplitPane dividerPositions="0.6503401360544218" focusTraversable="true" orientation="VERTICAL" prefHeight="-1.0" prefWidth="-1.0">
               <items>
                 <BorderPane prefHeight="-1.0" prefWidth="-1.0">
                   <center>
@@ -321,7 +321,7 @@
                               <children>
                                 <BorderPane padding="$x1" prefHeight="350.0" prefWidth="1278.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                   <center>
-                                    <TextArea editable="false" prefWidth="200.0" wrapText="true" />
+                                    <TextArea fx:id="fileLog" editable="false" prefWidth="200.0" wrapText="true" />
                                   </center>
                                   <top>
                                     <HBox id="HBox" alignment="BOTTOM_LEFT" prefWidth="1242.0" spacing="5.0">
