@@ -38,6 +38,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellDataFeatures;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.ProgressBarTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -83,6 +84,7 @@ public class JobOverviewController implements Initializable {
     @FXML private TableColumn tcLocalFilesize;
     @FXML private TableColumn tcLocalModifiedTime;
     @FXML private TextField tfLocalPath;
+    @FXML private TextArea fileLog;
     
     //Job Tab
     @FXML private ComboBox cbJobType;
@@ -216,6 +218,10 @@ public class JobOverviewController implements Initializable {
         });
         this.cbSwitchAccount.setItems(nickList);
     }    
+    // log message in a TextArea
+    public void logFile(String message) {
+        this.fileLog.appendText(message);
+    }
     
     @FXML
     private void handleManageAccountsAction() {

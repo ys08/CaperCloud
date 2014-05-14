@@ -28,7 +28,9 @@ import javafx.scene.control.TextField;
 import javafx.stage.DirectoryChooser;
 import org.jets3t.service.Constants;
 import org.jets3t.service.Jets3tProperties;
+import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
+import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.security.AWSCredentials;
 import org.jets3t.service.security.ProviderCredentials;
 
@@ -302,7 +304,7 @@ public class LoginViewController implements Initializable {
         storeCredentialsInDirectory(this.getHomeFolder(), this.getPassword());
     }
     
-    @FXML private void handleLoginAction() {
+    @FXML private void handleLoginAction() throws ServiceException {
         loginMode = tpLogin.getSelectionModel().getSelectedIndex();
         if (loginMode == LOGIN_MODE_LOCAL_FOLDER) {
             try {
@@ -355,8 +357,17 @@ public class LoginViewController implements Initializable {
             this.mainApp.getMainController().getCbSwitchAccount().setValue(currentCredentials.getFriendlyName());
             //logout button enabled
             this.mainApp.getMainController().getBtnLogout().setDisable(false);
+            
+            this.mainApp.getS3m().setAwsCredentials((AWSCredentials) currentCredentials);
+            System.out.println("Listing Buckets");
+            S3Bucket[] buckets = this.mainApp.getS3m().listBuckets();
 
+            for (S3Bucket b : buckets) {
+                System.out.println(b.getName());
+            }
             this.mainApp.getLoginStage().close();
+        } catch (S3ServiceException ex) {
+            System.out.println("Unable to connect to S3");
         } catch (IOException ex) {
             Logger.getLogger(LoginViewController.class.getName()).log(Level.SEVERE, null, ex);
         }

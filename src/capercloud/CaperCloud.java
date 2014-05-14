@@ -6,8 +6,8 @@
 
 package capercloud;
 
-import capercloud.s3.S3Manager;
 import capercloud.ec2.EC2Manager;
+import capercloud.s3.S3Manager;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.logging.Level;
@@ -19,6 +19,8 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.jets3t.service.Constants;
@@ -33,6 +35,7 @@ import org.jets3t.service.security.AWSCredentials;
 public class CaperCloud extends Application {
     
     public static final String APPLICATION_DESCRIPTION = "CaperCloud";
+    public static Log log = LogFactory.getLog(CaperCloud.class);
     
     private Stage primaryStage;
     private Stage loginStage;
@@ -68,14 +71,10 @@ public class CaperCloud extends Application {
      */
     public CaperCloud() {
         System.out.println("in CaperCloud constructor");
-        try {
-            this.jets3tProperties = Jets3tProperties.getInstance(getClass().getResourceAsStream("config/" + 
-                    Constants.JETS3T_PROPERTIES_FILENAME), "default Jets3t Properties");
-        } catch (IOException ex) {
-            this.jets3tProperties = Jets3tProperties.getInstance(Constants.JETS3T_PROPERTIES_FILENAME);
-        }
+        this.jets3tProperties = Jets3tProperties.getInstance(Constants.JETS3T_PROPERTIES_FILENAME);
         this.mCredentialProvider = new BasicCredentialsProvider();
         this.jets3tProperties.getProperties().list(System.out);
+        log.error("text");
     }
     
     //geters and setters
