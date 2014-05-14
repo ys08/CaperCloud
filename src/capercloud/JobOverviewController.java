@@ -10,10 +10,12 @@ import capercloud.model.DataTransferTask;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
@@ -32,8 +34,10 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellDataFeatures;
 import javafx.scene.control.TableRow;
@@ -42,13 +46,20 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.ProgressBarTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.text.Text;
 import javafx.stage.DirectoryChooser;
 import javafx.util.Callback;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.comparator.DefaultFileComparator;
+import org.apache.commons.io.comparator.DirectoryFileComparator;
+import org.jets3t.service.model.S3Bucket;
+import org.jets3t.service.model.S3Object;
 
 /**
  * FXML Controller class
@@ -65,13 +76,20 @@ public class JobOverviewController implements Initializable {
             "AS",
             "Custom Protein Database"
     );
-    //data for localFileTableView
+    
+//data for local TableView
     private ObservableList<File> localFileCache;
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    private final File homeDirectory = new File(System.getProperty("user.home"));
+    private File homeDirectory;
     
-    @FXML private TabPane mainTab;
-    //File Tab
+    
+//data for remote TableView
+    private ObservableList<S3Bucket> remoteBucketCache;
+    private ObservableList<S3Object> remoteObjectCache;
+    
+//main tab
+    @FXML private TabPane mainTab;  
+//File Tab
     @FXML private Button btnManageAccounts;
     @FXML private Button btnTransferPreferences;
     @FXML private Button btnLogout;
@@ -83,10 +101,13 @@ public class JobOverviewController implements Initializable {
     @FXML private TableColumn tcLocalFilename;
     @FXML private TableColumn tcLocalFilesize;
     @FXML private TableColumn tcLocalModifiedTime;
+    @FXML private TableColumn tcRemoteFilename;
+    @FXML private TableColumn tcRemoteFilesize;
+    @FXML private TableColumn tcRemoteUploadTime;
     @FXML private TextField tfLocalPath;
     @FXML private TextArea fileLog;
     
-    //Job Tab
+//Job Tab
     @FXML private ComboBox cbJobType;
     @FXML private BorderPane bpJobType;
     @FXML private TableView tvInput;
@@ -94,11 +115,11 @@ public class JobOverviewController implements Initializable {
     @FXML private TableView tvVariableModifications;
     @FXML private TableView tvModifications;
     
-    //Status Tab
+//Status Tab
     @FXML private TableView tvJobMonitor;
     @FXML private TableView tvInstanceMonitor;
-    
-    //Result Tab
+        
+//Result Tab
     @FXML private TableView tvResults;
     
     public JobOverviewController() {
@@ -106,8 +127,8 @@ public class JobOverviewController implements Initializable {
         this.nickList = FXCollections.observableArrayList();
     }
 
-    public ObservableList<File> getLocalFileCache() {
-        //lazy init
+    public ObservableList<File> getLocalFileCache() {  
+//lazy init
         if (this.localFileCache == null) {
             this.localFileCache = FXCollections.observableArrayList();
         }
@@ -129,6 +150,13 @@ public class JobOverviewController implements Initializable {
     public Button getBtnLogout() {
         return btnLogout;
     }
+
+    public ObservableList<S3Bucket> getRemoteBucketCache() {
+        if (this.remoteBucketCache == null) {
+            this.remoteBucketCache = FXCollections.observableArrayList();
+        }
+        return remoteBucketCache;
+    }
     
     public void setMainApp(CaperCloud mainApp) {
         this.mainApp = mainApp;   
@@ -140,53 +168,72 @@ public class JobOverviewController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         System.out.println("in JobOverviewController initialize");
-        //File tab init
+    
+//File tab init
         this.cbSwitchAccount.setItems(this.nickList);
         this.tvLocal.setPlaceholder(new Text(""));
         this.tvLocal.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         this.tvRemote.setPlaceholder(new Text(""));
         this.tvTransferLog.setPlaceholder(new Text(""));
-        this.tfLocalPath.setText(this.homeDirectory.getAbsolutePath());
-        //Job tab init
+     
+//Job tab init
         this.cbJobType.setItems(jobTypes);
         this.tvInput.setPlaceholder(new Text(""));
         this.tvFixedModifications.setPlaceholder(new Text(""));
         this.tvVariableModifications.setPlaceholder(new Text(""));
         this.tvModifications.setPlaceholder(new Text());
-        //Status tab init
+     
+//Status tab init
         this.tvJobMonitor.setPlaceholder(new Text(""));
         this.tvInstanceMonitor.setPlaceholder(new Text(""));
-        //Result tab init
+           
+//Result tab init
         this.tvResults.setPlaceholder(new Text(""));
-        
-        //init local table data
-        Iterator<File> filesinFolder = FileUtils.iterateFiles(this.homeDirectory, null, false);
-        while (filesinFolder.hasNext()) {
-            this.getLocalFileCache().add(filesinFolder.next());
-        }
-        this.getLocalFileCache();
+          
+//init local table data
+        this.homeDirectory = new File(System.getProperty("user.home"));
+        this.updateLocalFileCache();
         this.tcLocalFilename.setCellValueFactory(new Callback<CellDataFeatures<File, String>, ObservableValue<String>>() {
             @Override
             public ObservableValue<String> call(CellDataFeatures<File, String> p) {
                 return new SimpleStringProperty(p.getValue().getName());
             }
         });
+        this.tcLocalFilename.setCellFactory(new Callback<TableColumn<File, String>, TableCell<File, String>>() {
+            @Override
+            public TableCell<File, String> call(TableColumn<File, String> p) {
+                TableCell<File, String> cell = new TableCell<File, String>() {
+                    @Override
+                    protected void updateItem(String t, boolean empty) {
+                        super.updateItem(t, empty);
+                        if (t != null) {
+                            HBox box= new HBox();
+                            box.setSpacing(10);
+                            
+                            Label fileName = new Label(t);
+                            ImageView imageview = new ImageView();
+                            imageview.setFitHeight(15);
+                            imageview.setFitWidth(12);
+                            File f = (File) this.getTableRow().getItem();
+                            if (f.isDirectory()) {
+                                imageview.setImage(new Image(CaperCloud.class.getResource("res/images/folder.png").toString()));
+                            } else {
+                                imageview.setImage(new Image(CaperCloud.class.getResource("res/images/file.png").toString()));
+                            }
+                            box.getChildren().addAll(imageview,fileName); 
+                            setGraphic(box);
+                        }
+                    }
+                };
+                return cell;
+            }
+            
+        });
         this.tcLocalFilesize.setCellValueFactory(new Callback<CellDataFeatures<File, String>, ObservableValue<String>>() {
             @Override
             public ObservableValue<String> call(CellDataFeatures<File, String> p) {
-                long fSize = p.getValue().length();
-                DecimalFormat df = new DecimalFormat("#.00");
-                String fileSizeString;
-                if (fSize < 1024) {
-                    fileSizeString = df.format(fSize) + "B";
-                } else if (fSize < 1048576) {
-                    fileSizeString = df.format(fSize / 1024) + "K";
-                } else if (fSize < 1073741824) {
-                    fileSizeString = df.format((double) fSize / 1048576) + "M";
-                } else {
-                    fileSizeString = df.format((double) fSize / 1073741824) + "G";
-                }           
-                return new SimpleStringProperty(fileSizeString);
+                long fSize = p.getValue().length();         
+                return new SimpleStringProperty(FileUtils.byteCountToDisplaySize(fSize));
             }
         });
         this.tcLocalModifiedTime.setCellValueFactory(new Callback<CellDataFeatures<File, String>, ObservableValue<String>>() {
@@ -198,29 +245,40 @@ public class JobOverviewController implements Initializable {
         });
         this.tvLocal.setItems(this.getLocalFileCache());
         
-        //local table clear selection
+//local table double click
         tvLocal.setRowFactory(new Callback<TableView<File>, TableRow<File>>() {  
             @Override  
             public TableRow<File> call(TableView<File> tableView2) {  
-            final TableRow<File> row = new TableRow<>();  
-            row.addEventFilter(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {  
-                @Override  
-                public void handle(MouseEvent event) {  
-                    final int index = row.getIndex();  
-                    if (index >= 0 && index < tvLocal.getItems().size() && tvLocal.getSelectionModel().isSelected(index)  ) {
-                        tvLocal.getSelectionModel().clearSelection();
-                        event.consume();  
-                    }  
-                }  
-            });  
+            final TableRow<File> row = new TableRow<>();
+            row.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent event) {
+                    if (event.getClickCount() > 1) {
+                        System.out.println("double clicked!");
+                        TableRow tr = (TableRow) event.getSource();
+                        File f = (File) tr.getItem();
+                        if (f.isDirectory()) {
+                            JobOverviewController.this.homeDirectory = f;
+                            JobOverviewController.this.updateLocalFileCache();
+                        }
+                    }      
+                }
+            });
             return row;  
-            }  
+            }
         });
-        this.cbSwitchAccount.setItems(nickList);
-    }    
-    // log message in a TextArea
-    public void logFile(String message) {
-        this.fileLog.appendText(message);
+        this.cbSwitchAccount.setItems(nickList); 
+//list S3bucket object
+        this.tvRemote.setItems(this.getRemoteBucketCache());
+    }
+    
+//update localfilecache when homeDirectory is changed
+    private void updateLocalFileCache() {
+        getLocalFileCache().clear();
+        File[] tmp = this.homeDirectory.listFiles();
+        Arrays.sort(tmp, DirectoryFileComparator.DIRECTORY_COMPARATOR);
+        getLocalFileCache().addAll(tmp);
+        tfLocalPath.setText(homeDirectory.getAbsolutePath());
     }
     
     @FXML
@@ -237,12 +295,8 @@ public class JobOverviewController implements Initializable {
         if (folder == null) {
             return;
         }
-        this.tfLocalPath.setText(folder.getAbsolutePath());
-        this.getLocalFileCache().clear();
-        Iterator<File> filesinFolder = FileUtils.iterateFiles(folder, null, false);
-        while (filesinFolder.hasNext()) {
-            this.getLocalFileCache().add(filesinFolder.next());
-        }
+        this.homeDirectory = folder;
+        this.updateLocalFileCache();
     }
     
     @FXML

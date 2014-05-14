@@ -6,10 +6,7 @@
 
 package capercloud;
 
-import capercloud.ec2.EC2Manager;
-import capercloud.s3.S3Manager;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -21,12 +18,6 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.jets3t.service.Constants;
-import org.jets3t.service.Jets3tProperties;
-import org.jets3t.service.ServiceException;
-import org.jets3t.service.security.AWSCredentials;
 
 /**
  *
@@ -34,8 +25,9 @@ import org.jets3t.service.security.AWSCredentials;
  */
 public class CaperCloud extends Application {
     
-    public static final String APPLICATION_DESCRIPTION = "CaperCloud";
+    public static final String APPLICATION_DESCRIPTION = "CaperCloud/1.0";
     public static Log log = LogFactory.getLog(CaperCloud.class);
+    private CloudManager cloudManager;
     
     private Stage primaryStage;
     private Stage loginStage;
@@ -53,14 +45,6 @@ public class CaperCloud extends Application {
     private AnchorPane preferenceView;
     private TransferPreferenceViewController preferenceController;
     
-    //store login account
-    private HashMap<String, AWSCredentials> loginAwsCredentialsMap = new HashMap<>();
-    private AWSCredentials currentCredentials; 
-    private S3Manager s3m;
-    private Jets3tProperties jets3tProperties;
-    private CredentialsProvider mCredentialProvider;
-    private EC2Manager ec2m;
-    
     /**
      * CaperCloud is a Cloud-based Proteogenomics pipeline.
      * Main features:
@@ -70,14 +54,15 @@ public class CaperCloud extends Application {
      * @author Yang Shuai
      */
     public CaperCloud() {
-        System.out.println("in CaperCloud constructor");
-        this.jets3tProperties = Jets3tProperties.getInstance(Constants.JETS3T_PROPERTIES_FILENAME);
-        this.mCredentialProvider = new BasicCredentialsProvider();
-        this.jets3tProperties.getProperties().list(System.out);
-        log.error("text");
+        this.cloudManager = CloudManager.getInstance();
+        log.debug("CaperCloud constructor");
     }
     
     //geters and setters
+    public CloudManager getCloudManager() {
+        return this.cloudManager;
+    }
+    
     public Stage getPrimaryStage() {
         return primaryStage;
     }
@@ -172,54 +157,10 @@ public class CaperCloud extends Application {
     public TransferPreferenceViewController getPreferenceController() {
         return preferenceController;
     }
-
-    
-    public S3Manager getS3m() throws ServiceException {
-        if (this.s3m == null) {
-            //no credentials provided, so let controller set it
-            if (this.currentCredentials == null) {
-                this.s3m = new S3Manager(this, jets3tProperties, mCredentialProvider);
-            } else {
-                //change login credentials
-                this.s3m.setAwsCredentials(currentCredentials);
-            }
-        }
-        return s3m;
-    }
-
-    public EC2Manager getEc2m() {
-        if (this.ec2m == null) {
-            if (this.currentCredentials == null) {
-                this.ec2m = new EC2Manager(this);
-            } else {
-                this.ec2m.setAwsCredentials(currentCredentials);
-            }
-        }
-        return ec2m;
-    }
-
-    public AWSCredentials getCurrentCredentials() {
-        return currentCredentials;
-    }
-
-    public void setCurrentCredentials(AWSCredentials currentCredentials) throws ServiceException {
-        this.currentCredentials = currentCredentials;
-        //set ec2m and s3m at the same time
-        this.getEc2m().setAwsCredentials(currentCredentials);
-        this.getS3m().setAwsCredentials(currentCredentials);
-    }
-
-    public Jets3tProperties getJets3tProperties() {
-        return jets3tProperties;
-    }
-
-    public HashMap<String, AWSCredentials> getLoginAwsCredentialsMap() {
-        return loginAwsCredentialsMap;
-    }
     
     @Override
     public void start(Stage stage) throws Exception {
-        System.out.println("in start method");
+        log.debug("CaperCloud start method");
         this.setPrimaryStage(stage);
         
         Scene scene = new Scene(this.getRootLayout());

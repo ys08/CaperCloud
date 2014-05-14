@@ -20,28 +20,11 @@ import org.jets3t.service.security.AWSCredentials;
  *
  */
 public class EC2Manager {
-    
-    private CaperCloud mainApp;
-    
     private Jec2 ec2;
-    private AWSCredentials awsCredentials;
 
-    public EC2Manager(CaperCloud mainApp) {
-        this.mainApp = mainApp;
+    public EC2Manager(AWSCredentials currentCredentials) {
+        ec2 = new Jec2(currentCredentials.getAccessKey(), currentCredentials.getSecretKey());	
     }
-
-    public Jec2 getEc2() {
-        return ec2;
-    }
-
-    public AWSCredentials getAwsCredentials() {
-        return awsCredentials;
-    }
-
-    public void setAwsCredentials(AWSCredentials awsCredentials) {
-        this.awsCredentials = awsCredentials;
-    }
-
     
     /**
      * This method launches the instances.
