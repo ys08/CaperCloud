@@ -114,6 +114,11 @@ public class CloudManager {
     }
     
     public void logoutCloud(String friendlyName) throws IllegalCredentialsException {
+        
+//direct login's logout, do nothing
+        if (friendlyName == null) {
+            return;
+        }
         if (!hasCredentialsOfFriendlyName(friendlyName)) {
             throw new IllegalCredentialsException("FriendlyName " + friendlyName
                     + "does not exist");
