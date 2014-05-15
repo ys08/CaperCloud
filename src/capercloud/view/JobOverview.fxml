@@ -55,7 +55,7 @@
                                     <Tooltip text="Browse" />
                                   </tooltip>
                                 </Button>
-                                <Button cancelButton="false" contentDisplay="CENTER" graphicTextGap="0.0" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" style="" text="">
+                                <Button cancelButton="false" contentDisplay="CENTER" graphicTextGap="0.0" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#handelLocalRefreshActon" prefHeight="22.0" prefWidth="22.0" style="" text="">
                                   <graphic>
                                     <ImageView fitHeight="20.0" fitWidth="20.0" pickOnBounds="true" preserveRatio="true">
                                       <image>
@@ -67,7 +67,7 @@
                                     <Tooltip text="Refresh Folder" />
                                   </tooltip>
                                 </Button>
-                                <Button contentDisplay="CENTER" graphicTextGap="0.0" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" text="">
+                                <Button contentDisplay="CENTER" graphicTextGap="0.0" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#handleLocalUpAction" prefHeight="22.0" prefWidth="22.0" text="">
                                   <graphic>
                                     <ImageView fitHeight="22.0" fitWidth="22.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
                                       <image>
@@ -79,7 +79,7 @@
                                     <Tooltip text="Up One Directory" />
                                   </tooltip>
                                 </Button>
-                                <Button minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" text="">
+                                <Button minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#handelLocalDeleteAction" prefHeight="22.0" prefWidth="22.0" text="">
                                   <graphic>
                                     <ImageView fitHeight="22.0" fitWidth="22.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
                                       <image>

@@ -6,6 +6,7 @@
 
 package capercloud;
 
+import capercloud.exception.IllegalCredentialsException;
 import capercloud.model.DataTransferTask;
 import java.io.File;
 import java.io.IOException;
@@ -276,9 +277,19 @@ public class JobOverviewController implements Initializable {
     private void updateLocalFileCache() {
         getLocalFileCache().clear();
         File[] tmp = this.homeDirectory.listFiles();
+        if (tmp == null) {
+            System.out.println("can not access directory" + this.homeDirectory.getAbsolutePath());
+            tfLocalPath.setText(homeDirectory.getAbsolutePath());
+            return;
+        }
         Arrays.sort(tmp, DirectoryFileComparator.DIRECTORY_COMPARATOR);
         getLocalFileCache().addAll(tmp);
         tfLocalPath.setText(homeDirectory.getAbsolutePath());
+    }
+    
+//get selected file in local table
+    private Iterator<File> getSelectedFiles() {
+        return tvLocal.getSelectionModel().getSelectedItems().iterator();
     }
     
     @FXML
@@ -383,7 +394,46 @@ public class JobOverviewController implements Initializable {
     @FXML
     private void handleLogoutAction() {
         String currentLogin = (String) cbSwitchAccount.getValue();
-        this.nickList.remove(currentLogin);
+        try {
+            this.mainApp.getCloudManager().logoutCloud(currentLogin);
+        } catch (IllegalCredentialsException ex) {
+            ex.printStackTrace();
+            return;
+        }
+        if (currentLogin != null) {
+            this.nickList.remove(currentLogin);
+        }
         cbSwitchAccount.setValue(null);
+    }
+    
+    @FXML
+    private void handelLocalRefreshActon() {
+        System.out.println("refresh button clicked");
+        updateLocalFileCache();
+    }
+    
+    @FXML
+    private void handleLocalUpAction() {
+        System.out.println("up button clicked");
+        File parentFile = homeDirectory.getParentFile();
+        if (parentFile == null) {
+            System.out.println("root directory, can not up");
+            return;
+        }
+        this.homeDirectory = parentFile;
+        updateLocalFileCache();
+    }
+    @FXML
+    private void handelLocalDeleteAction() {
+        Iterator fileIterator = getSelectedFiles();
+        if (!fileIterator.hasNext()) {
+            System.out.println("no files are selected");
+        }
+        while(fileIterator.hasNext()) {
+            File f = (File) fileIterator.next();
+            FileUtils.deleteQuietly(f);
+            System.out.println(f.getName() + " has been deleted");
+        }
+        updateLocalFileCache();
     }
 }
