@@ -16,6 +16,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -26,13 +27,14 @@ import org.apache.commons.logging.LogFactory;
 public class CaperCloud extends Application {
     
     public static final String APPLICATION_DESCRIPTION = "CaperCloud/1.0";
-    public static Log log = LogFactory.getLog(CaperCloud.class);
+    private Log log = LogFactory.getLog(getClass());
     private CloudManager cloudManager;
     
     private Stage primaryStage;
     private Stage loginStage;
     private Stage newAccountStage;
     private Stage transferPreferenceStage;
+    private Stage progressViewStage;
     
     private BorderPane rootLayout;
     private RootLayoutController rootController;
@@ -55,7 +57,6 @@ public class CaperCloud extends Application {
      */
     public CaperCloud() {
         this.cloudManager = CloudManager.getInstance();
-        log.debug("CaperCloud constructor");
     }
     
     //geters and setters
@@ -71,7 +72,7 @@ public class CaperCloud extends Application {
         this.primaryStage = primaryStage;
     }
 
-    public Stage getLoginStage() throws IOException {
+    public Stage getLoginStage() {
         if (this.loginStage == null) {
             this.loginStage = new Stage();
         }
@@ -160,7 +161,6 @@ public class CaperCloud extends Application {
     
     @Override
     public void start(Stage stage) throws Exception {
-        log.debug("CaperCloud start method");
         this.setPrimaryStage(stage);
         
         Scene scene = new Scene(this.getRootLayout());
@@ -232,7 +232,6 @@ public class CaperCloud extends Application {
             Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
     public void showAccountManagerView() {
         try {
             if (this.getNewAccountStage().getScene() == null) {
@@ -269,6 +268,50 @@ public class CaperCloud extends Application {
             } else {
                 this.getTransferPreferenceStage().showAndWait();
             }
+        } catch (IOException ex) {
+            Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    public Stage createProgressDialog(String title, String message, Stage parentStage) {
+        Stage progressDialog = new Stage();
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/ProgressView.fxml"));
+            AnchorPane progressView = (AnchorPane) loader.load();
+            ProgressViewController controller = loader.getController();
+            
+            progressDialog.setTitle(title);
+            progressDialog.initModality(Modality.WINDOW_MODAL);
+            progressDialog.initOwner(parentStage);
+            
+            Scene scene = new Scene(progressView);
+            controller.displayMessage(message);
+            progressDialog.setScene(scene);
+            controller.setStage(progressDialog);
+            
+            return progressDialog;
+        } catch (IOException ex) {
+            Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return progressDialog;
+    }
+    
+    public void showTextFieldDialog() {
+        try {
+            Stage textFieldDialog = new Stage();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TextFieldView.fxml"));
+            AnchorPane textFieldView = (AnchorPane) loader.load();
+            TextFieldViewController controller = loader.getController();
+            
+            textFieldDialog.setTitle("Create Bucket");
+            textFieldDialog.initModality(Modality.WINDOW_MODAL);
+            textFieldDialog.initOwner(this.getPrimaryStage());
+            
+            Scene scene = new Scene(textFieldView);
+            textFieldDialog.setScene(scene);
+            controller.setMainApp(this);
+            controller.setStage(textFieldDialog);
+            
+            textFieldDialog.showAndWait();
         } catch (IOException ex) {
             Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
         }
