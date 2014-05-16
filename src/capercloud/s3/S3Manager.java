@@ -1,15 +1,14 @@
 package capercloud.s3;
 
 import capercloud.CaperCloud;
+import capercloud.model.DataTransferTask;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.Credentials;
 import org.apache.http.auth.NTCredentials;
@@ -23,7 +22,6 @@ import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
-import org.jets3t.service.model.StorageObject;
 import org.jets3t.service.multi.DownloadPackage;
 import org.jets3t.service.multi.StorageServiceEventListener;
 import org.jets3t.service.multi.ThreadWatcher;
@@ -51,24 +49,14 @@ import org.jets3t.service.utils.TimeFormatter;
  */
 public class S3Manager implements StorageServiceEventListener, CredentialsProvider{
 
+    private Log log = LogFactory.getLog(getClass());
     public static Jets3tProperties jets3tProperties = Jets3tProperties.getInstance(Constants.JETS3T_PROPERTIES_FILENAME);;
     private CredentialsProvider mCredentialProvider;
     
     private RestS3Service s3Service;
-    //for monitor progress
     private ThreadedS3Service storageService;
-    
-    //data
-    private List<S3Object> uploadingObjects = new ArrayList<>();
-    private Set<String> uploadedObjects = new HashSet<>();
-    private boolean isUploadingErrorOccured = true;
+    private DataTransferTask transferTask;
     private final ByteFormatter byteFormatter = new ByteFormatter();
-    private final TimeFormatter timeFormatter = new TimeFormatter();
-    
-    private List<S3Object> downloadingObjects = new ArrayList<>();
-    private Set<String> downloadedObjects = new HashSet<>();
-    private List<DownloadPackage> downloadPackages = new ArrayList<>();
-    private boolean isDownloadingErrorOccured = true;
 
     /**
      * 
@@ -76,9 +64,21 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
      * @throws ServiceException 
      */
     public S3Manager(AWSCredentials currentCredentials) throws ServiceException {
+//constructor for listing action
         this.mCredentialProvider = new BasicCredentialsProvider();
         this.s3Service = new RestS3Service(currentCredentials, CaperCloud.APPLICATION_DESCRIPTION, this, this.jets3tProperties);
         this.storageService = new ThreadedS3Service(this.s3Service, this);
+        
+        this.transferTask = null;
+    }
+    
+    public S3Manager(AWSCredentials currentCredentials, DataTransferTask transferTask) throws ServiceException {
+//constructor for data transfers task
+        this.mCredentialProvider = new BasicCredentialsProvider();
+        this.s3Service = new RestS3Service(currentCredentials, CaperCloud.APPLICATION_DESCRIPTION, this, this.jets3tProperties);
+        this.storageService = new ThreadedS3Service(this.s3Service, this);
+        
+        this.transferTask = transferTask;
     }
 
     public Jets3tProperties getJets3tProperties() {
@@ -89,55 +89,46 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
         return this.s3Service.listAllBuckets();
     }
 
-    public S3Object[] listObjects(String bucket) throws S3ServiceException {
-        return this.s3Service.listObjects(bucket);
-    }
-
-    public S3Bucket getBucket(String name) throws S3ServiceException{
-        return s3Service.getBucket(name);
+    public S3Object[] listObjects(String bucketName) throws S3ServiceException {
+        return this.s3Service.listObjects(bucketName);
     }
     
-    public void uploadFiles(ArrayList<File> files, S3Bucket bucket) throws NoSuchAlgorithmException, IOException {
-        System.out.println("Uploading" + files.size() + "files");
-        uploadingObjects.clear();
-        isUploadingErrorOccured = false;
-        uploadedObjects.clear();
-        //building uploadingObjects ArrayList
-        for(File f : files) {
-            String key = f.getName();
-            S3Object s3Obj = new S3Object(bucket, f);
-            s3Obj.setKey(key);
-            s3Obj.setContentType(Mimetypes.getInstance().getMimetype(s3Obj.getKey()));
-            uploadingObjects.add(s3Obj);
-        }
-        //upload objects in uploadingObjects ArrayList
-        storageService.putObjects(bucket.getName(), uploadingObjects.toArray(new S3Object[uploadingObjects.size()]));
-        
-        //yibu
-        if(isUploadingErrorOccured || uploadingObjects.size() != uploadedObjects.size()) {
-            System.out.println("Have to try uploading a few objects again for folder " + 
-                    " - Completed = " + uploadedObjects.size() + " and Total =" + uploadingObjects.size());
-        }        
-    }    
+    public S3Bucket createBucket(String bucketName) throws S3ServiceException {
+        return this.s3Service.createBucket(bucketName);
+    }
     
-    //bucketName - name of the bucket containing the objects
-    public void downloadObjects(String bucketName, ArrayList<S3Object> s3Objs, File downloadDirectory) throws ServiceException {
-        System.out.println("Downloading" + s3Objs.size() + "Objects");
-        downloadingObjects.clear();
-        isDownloadingErrorOccured = false;
-        downloadedObjects.clear();
-        downloadPackages.clear();
-        //building downloadPackages
-        for (S3Object o : s3Objs) {  
-            downloadPackages.add(new DownloadPackage(o, new File(downloadDirectory, o.getKey())));
-        }
-        this.storageService.downloadObjects(bucketName, (DownloadPackage[]) downloadPackages.toArray());
+    public void deleteObject(S3Object obj) throws ServiceException {
+        this.s3Service.deleteObject(obj.getBucketName(), obj.getKey());
+    }
+    
+    public void deleteBucket(S3Bucket bucket) throws ServiceException {
+        this.s3Service.deleteBucket(bucket.getName());
+    }
+    
+    public void uploadFile(File file, S3Bucket bucket) throws NoSuchAlgorithmException, IOException {
+        S3Object obj = new S3Object(bucket, file);
         
-        //yibu
-        if(isDownloadingErrorOccured || downloadingObjects.size() != downloadedObjects.size()) {
-            System.out.println("Have to try uploading a few objects again for folder " + 
-                    " - Completed = " + downloadedObjects.size() + " and Total =" + downloadingObjects.size());
-        }    
+        obj.setKey(file.getName());
+        obj.setContentType(Mimetypes.getInstance().getMimetype(file));
+        
+        S3Object[] objs = new S3Object[1];
+        objs[0] = obj;
+        log.debug(file.getName() + " " + bucket.getName());
+        this.storageService.putObjects(bucket.getName(), objs);
+    } 
+    
+    public void downloadObject(S3Object obj, File folder) throws ServiceException {
+        if (!folder.isDirectory()) {
+            log.error(folder.getAbsolutePath() + " is not a directory!");
+            return;
+        }
+        log.debug(obj.getName());
+        DownloadPackage[] packages = new DownloadPackage[1];
+        log.debug(folder.getAbsolutePath());
+        File outFile = new File(folder, obj.getName());
+        log.debug(outFile.getAbsolutePath());
+        packages[0] = new DownloadPackage(obj, outFile);
+        this.storageService.downloadObjects(obj.getBucketName(), packages);
     }
     
     @Override
@@ -145,7 +136,6 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
         mCredentialProvider.setCredentials(as, c);
     }
     
-
     /**
      * Implementation method for the CredentialsProvider interface.
      * <p>
@@ -212,44 +202,29 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
 
     @Override
     public void event(CreateObjectsEvent event) {
-        if (ServiceEvent.EVENT_IGNORED_ERRORS == event.getEventCode()) {
-            Throwable[] throwables = event.getIgnoredErrors();
-            for (int i = 0; i < throwables.length; i++) {
-                System.out.println("Ignoring error: " + throwables[i].getMessage());
-            }
-        }else if(ServiceEvent.EVENT_STARTED == event.getEventCode()) {
-            System.out.println("**********************************Upload Event Started***********************************");
+        if(ServiceEvent.EVENT_STARTED == event.getEventCode()) {
+            this.transferTask.updateMessage("starting");
+            log.debug("CreateObjectsEvent Start");
         }else if(event.getEventCode() == ServiceEvent.EVENT_ERROR) {
-            isUploadingErrorOccured = true;
+            this.transferTask.updateMessage("Failed");
+            log.debug("CreateObjectsEvent Error");
         }else if(event.getEventCode() == ServiceEvent.EVENT_IN_PROGRESS) {
-            StorageObject[] storeObjs = event.getCreatedObjects();
-            for(StorageObject storeObj : storeObjs) {
-                uploadedObjects.add(storeObj.getKey());
-            }
+            log.debug("CreateObjectsEvent In Progress");
             ThreadWatcher watcher = event.getThreadWatcher();
             if (watcher.getBytesTransferred() >= watcher.getBytesTotal()) {
-                System.out.println("Upload Completed.. Verifying");
-            }else {
-                int percentage = (int) (((double) watcher.getBytesTransferred() / watcher.getBytesTotal()) * 100);
-
+                this.transferTask.updateMessage("Verifying");
+            } else {
+                double percentage = ((double)watcher.getBytesTransferred()) / watcher.getBytesTotal();
+                this.transferTask.updateProgress(percentage, 1);
                 long bytesPerSecond = watcher.getBytesPerSecond();
-                StringBuilder transferDetailsText=new StringBuilder("Uploading.... ");
-                transferDetailsText.append("Speed: " + byteFormatter.formatByteSize(bytesPerSecond) + "/s");
-
-                if (watcher.isTimeRemainingAvailable()) {
-                    long secondsRemaining = watcher.getTimeRemaining();
-                    if (transferDetailsText.length() > 0) {
-                        transferDetailsText.append(" - ");
-                    }
-                    transferDetailsText.append("Time remaining: " + timeFormatter.formatTime(secondsRemaining));
-                }
-                System.out.println(transferDetailsText.toString()+" "+percentage);
+                StringBuilder transferDetailsText=new StringBuilder("Uploading : ");
+                transferDetailsText.append(byteFormatter.formatByteSize(bytesPerSecond) + "/s");
+                this.transferTask.updateMessage(transferDetailsText.toString());
             }
-        }else if(ServiceEvent.EVENT_COMPLETED==event.getEventCode()) {
-            System.out.println("**********************************Upload Event Completed***********************************");
-            if(isUploadingErrorOccured) {
-                System.out.println("**********************But with errors, have to retry failed uploads**************************");
-            }
+        }else if(ServiceEvent.EVENT_COMPLETED == event.getEventCode()) {
+            this.transferTask.updateMessage("completed");
+            this.transferTask.updateProgress(1, 1);
+            log.debug("CreateObjectsEvent Completed");
         }
     }
 
@@ -264,8 +239,17 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
     }
 
     @Override
-    public void event(DeleteObjectsEvent doe) {
+    public void event(DeleteObjectsEvent event) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+//        if (ServiceEvent.EVENT_STARTED == event.getEventCode()) {
+//            log.debug("DeleteObjectsEvent Start");
+//        } else if (ServiceEvent.EVENT_IN_PROGRESS == event.getEventCode()) {
+//            log.debug("DeleteObjectsEvent In Progress");
+//        } else if (ServiceEvent.EVENT_COMPLETED == event.getEventCode()) {
+//            log.debug("DeleteObjectsEvent Completed");
+//        } else if (ServiceEvent.EVENT_ERROR == event.getEventCode()) {
+//            log.debug("DeleteObjectsEvent Error");
+//        }
     }
 
     @Override
@@ -291,56 +275,28 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
     @Override
     public void event(DownloadObjectsEvent event) {
         if (ServiceEvent.EVENT_STARTED == event.getEventCode()) {
+            this.transferTask.updateMessage("starting");
+            log.debug("DownloadObjectsEvent Start");
+        } else if (ServiceEvent.EVENT_IN_PROGRESS == event.getEventCode()) {
+            log.debug("DownloadObjectsEvent In Progress");
             ThreadWatcher watcher = event.getThreadWatcher();
-            // Show percentage of bytes transferred, if this info is available.
-            if (watcher.isBytesTransferredInfoAvailable()) {
-                System.out.println("Downloaded " +
-                    watcher.getCompletedThreads() + "/" + watcher.getThreadCount() + " - " +
-                    byteFormatter.formatByteSize(watcher.getBytesTransferred())
-                    + " of " + byteFormatter.formatByteSize(watcher.getBytesTotal()));
-            // ... otherwise just show the number of completed threads.
+            if (watcher.getBytesTransferred() >= watcher.getBytesTotal()) {
+                this.transferTask.updateMessage("Verifying");
             } else {
-                System.out.println("Downloaded " + watcher.getCompletedThreads()
-                    + " of " + watcher.getThreadCount() + " objects");
-            }
-        }
-        else if (ServiceEvent.EVENT_IN_PROGRESS == event.getEventCode()) {
-            StorageObject[] storeObjs = event.getDownloadedObjects();
-            for(StorageObject storeObj : storeObjs) {
-                uploadedObjects.add(storeObj.getKey());
-            }
-            ThreadWatcher watcher = event.getThreadWatcher();
-            // Show percentage of bytes transferred, if this info is available.
-            if (watcher.isBytesTransferredInfoAvailable()) {
-                String bytesCompletedStr = byteFormatter.formatByteSize(watcher.getBytesTransferred());
-                String bytesTotalStr = byteFormatter.formatByteSize(watcher.getBytesTotal());
-                String statusText = "Downloaded " +
-                    watcher.getCompletedThreads() + "/" + watcher.getThreadCount() + " - " +
-                    bytesCompletedStr + " of " + bytesTotalStr;
-
-                int percentage = (int)
-                    (((double)watcher.getBytesTransferred() / watcher.getBytesTotal()) * 100);
-                System.out.println("statusText: " + statusText);
-                System.out.println("percentage: " + percentage);
-            }
-            // ... otherwise just show the number of completed threads.
-            else {
-                ThreadWatcher progressStatus = event.getThreadWatcher();
-                String statusText = "Downloaded " + progressStatus.getCompletedThreads()
-                    + " of " + progressStatus.getThreadCount() + " objects";
-                System.out.println(statusText);
+                double percentage = ((double)watcher.getBytesTransferred()) / watcher.getBytesTotal();
+                this.transferTask.updateProgress(percentage, 1);
+                long bytesPerSecond = watcher.getBytesPerSecond();
+                StringBuilder transferDetailsText=new StringBuilder("Downloading : ");
+                transferDetailsText.append(byteFormatter.formatByteSize(bytesPerSecond) + "/s");
+                this.transferTask.updateMessage(transferDetailsText.toString());
             }
         } else if (ServiceEvent.EVENT_COMPLETED == event.getEventCode()) {
-            System.out.println("Download complete");
-        }
-        else if (ServiceEvent.EVENT_CANCELLED == event.getEventCode()) {
-            System.out.println("Download canceled");
-        }
-        else if (ServiceEvent.EVENT_ERROR == event.getEventCode()) {
-            System.out.print("Download error");
-
-            String message = "Unable to download objects";
-            System.out.println(message);
+            log.debug("DownloadObjectsEvent Completed");
+            this.transferTask.updateMessage("completed");
+            this.transferTask.updateProgress(1, 1);
+        } else if (ServiceEvent.EVENT_ERROR == event.getEventCode()) {
+            log.debug("DownloadObjectsEvent Error");
+            this.transferTask.updateMessage("Failed");
         }
     }
 }
