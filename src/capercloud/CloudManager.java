@@ -7,16 +7,19 @@
 package capercloud;
 
 import capercloud.ec2.EC2Manager;
-import capercloud.exception.IllegalCredentialsException;
 import capercloud.s3.S3Manager;
-import java.util.HashMap;
-import java.util.Iterator;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.ec2.model.DescribeInstancesResult;
+import com.amazonaws.services.ec2.model.Instance;
+import com.amazonaws.services.ec2.model.Reservation;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.stage.Stage;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.jets3t.service.Jets3tProperties;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.model.S3Bucket;
@@ -28,18 +31,15 @@ import org.jets3t.service.security.AWSCredentials;
  * @author shuai
  */
 public class CloudManager {
-    
     private Log log = LogFactory.getLog(getClass());
     private static CloudManager singleton = null;
     private AWSCredentials currentCredentials; 
-    private HashMap<String, AWSCredentials> loginAwsCredentialsMap;
     private S3Manager s3m;
     private EC2Manager ec2m;
 //multithread will set it;
     public static boolean isCanceled[] = new boolean[1];
     
     private CloudManager() {
-        loginAwsCredentialsMap = new HashMap<>();
     }
     /**
      * dan li
@@ -50,35 +50,6 @@ public class CloudManager {
             singleton = new CloudManager();
         }
         return singleton;
-    }
-    
-    /**
-     * 
-     * @return 
-     */
-    public Jets3tProperties getJets3tProperties() {
-        return s3m.getJets3tProperties();
-    }
-    
-    /**
-     * get credentials by friendly name
-     * @param friendlyName
-     * @return 
-     */
-    public AWSCredentials getCredentialsByFriendlyName(String friendlyName) throws IllegalCredentialsException {
-        if (!hasCredentialsOfFriendlyName(friendlyName)) {
-            throw new IllegalCredentialsException("FriendlyName " + friendlyName
-                    + " does not exist");
-        }
-        return loginAwsCredentialsMap.get(friendlyName);
-    }
-    
-    /**
-     * 
-     * @return 
-     */
-    public Iterator<AWSCredentials> getAllCredentials() {
-        return loginAwsCredentialsMap.values().iterator();
     }
     
     /**
@@ -95,64 +66,23 @@ public class CloudManager {
      * set it to current credentials
      * @param credentials 
      * @throws org.jets3t.service.ServiceException 
-     * @throws capercloud.exception.IllegalCredentialsException 
      */
-    public void loginCloud(AWSCredentials credentials) throws ServiceException, IllegalCredentialsException {
-        if (credentials.getFriendlyName() != null) {
-            if (hasCredentialsOfFriendlyName(credentials.getFriendlyName())) {
-            throw new IllegalCredentialsException("FriendlyName " + credentials.getFriendlyName() 
-                    + "already exists");
-        }
-            loginAwsCredentialsMap.put(credentials.getFriendlyName(), credentials);
-        }
+    public void loginCloud(AWSCredentials credentials) throws ServiceException {
         this.currentCredentials = credentials;
         this.s3m = new S3Manager(currentCredentials);
-        this.ec2m = new EC2Manager(currentCredentials);  
-    }
-    /**
-     * 
-     * @param friendlyName
-     * @throws IllegalCredentialsException
-     * @throws ServiceException 
-     */
-    public void switchLogin(String friendlyName) throws IllegalCredentialsException, ServiceException {
-        //we don't examine if the current credentials is the same to the switch one
-        this.currentCredentials = this.getCredentialsByFriendlyName(friendlyName);
-        this.s3m = new S3Manager(currentCredentials);
-        this.ec2m = new EC2Manager(currentCredentials);  
+        this.ec2m = new EC2Manager(new BasicAWSCredentials(currentCredentials.getAccessKey(), currentCredentials.getSecretKey()));  
     }
     
-    public void logoutCloud(String friendlyName) throws IllegalCredentialsException {
-        
-//direct login's logout, do nothing
-        if (friendlyName == null) {
+    public void logoutCloud() {
+        if (this.currentCredentials == null) {
+            log.debug("Something goes wrong");
             return;
         }
-        if (!hasCredentialsOfFriendlyName(friendlyName)) {
-            throw new IllegalCredentialsException("FriendlyName " + friendlyName
-                    + "does not exist");
-        }
-        loginAwsCredentialsMap.remove(friendlyName);
+        this.s3m = null;
+        this.ec2m = null;
         this.currentCredentials = null;
     }
-    
-    /**
-     * 
-     * @param friendlyName
-     * @return 
-     */
-    public boolean hasCredentialsOfFriendlyName(String friendlyName) {
-        return loginAwsCredentialsMap.containsKey(friendlyName);
-    }
-    
-    /**
-     * 
-     * @param credentials 
-     */
-    public void logoutOfCredentials(AWSCredentials credentials) {
-        loginAwsCredentialsMap.remove(credentials.getFriendlyName());
-    }
-    
+
 //S3
     public S3Bucket[] listBuckets() throws S3ServiceException {
         return s3m.listBuckets();
@@ -185,6 +115,7 @@ public class CloudManager {
                     }
                 };
             }
+            
             @Override
             protected void succeeded() {
                 super.succeeded();
@@ -192,20 +123,20 @@ public class CloudManager {
                 progressDialog.close();
                 
             }
+            
             @Override
             protected void cancelled() {
                 super.cancelled(); 
                 log.debug("Lising Buckets Cancelled!");
                 progressDialog.close();
             }
-
+            
             @Override
             protected void failed() {
                 super.failed(); 
                 log.debug("Lising Buckets Failed!");
                 progressDialog.close();
             }
-            
         };
     }
     
@@ -339,5 +270,21 @@ public class CloudManager {
                 progressDialog.close();
             }
         };
+    }
+    
+//ec2 management
+    public List<Instance> getAllInstances() {
+        List<Instance> instances = new ArrayList<>();
+        try {
+            DescribeInstancesResult res = this.ec2m.describeAllInstances().get();
+            for (Reservation r : res.getReservations()) {
+                for (Instance i : r.getInstances()) {
+                    instances.add(i);
+                }
+            }
+        } catch (InterruptedException | ExecutionException ex) {
+            log.error(ex.getMessage());
+        }
+        return instances;
     }
 }

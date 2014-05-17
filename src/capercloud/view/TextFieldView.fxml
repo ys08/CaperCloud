@@ -8,13 +8,18 @@
 
 <AnchorPane id="AnchorPane" prefHeight="200.0" prefWidth="350.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.TextFieldViewController">
   <children>
-    <TextField fx:id="tfInput" layoutX="132.0" layoutY="40.0" prefWidth="182.0" />
-    <Label layoutX="28.0" layoutY="43.0" text="Bucket Name" />
-    <HBox id="HBox" alignment="CENTER" layoutX="212.0" layoutY="143.0" spacing="5.0">
+    <HBox id="HBox" alignment="CENTER" layoutX="43.0" layoutY="21.0" spacing="5.0">
+      <children>
+        <Label text="Bucket Name" />
+        <TextField fx:id="tfInput" prefWidth="182.0" />
+      </children>
+    </HBox>
+    <HBox id="HBox" alignment="CENTER" layoutX="234.0" layoutY="163.0" spacing="5.0">
       <children>
         <Button fx:id="btnOK" mnemonicParsing="false" onAction="#handleOkAction" text="OK" />
         <Button fx:id="btnCancel" mnemonicParsing="false" onAction="#handleCancelAction" text="Cancel" />
       </children>
     </HBox>
+    <TextArea layoutX="22.0" layoutY="59.0" prefHeight="82.0" prefWidth="307.0" text="Amazon S3 bucket names are globally unique, so once a bucket name has been taken by any user, you can't create another bucket with that same name." wrapText="true" />
   </children>
 </AnchorPane>

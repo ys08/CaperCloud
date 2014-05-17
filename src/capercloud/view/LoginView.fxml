@@ -16,7 +16,7 @@
             <HBox id="HBox" alignment="CENTER" layoutX="394.0" layoutY="0.0" spacing="5.0">
               <children>
                 <Button fx:id="btnSave" disable="false" mnemonicParsing="false" onAction="#handleSaveAction" text="Store Credentials" />
-                <Button fx:id="btnLogin" mnemonicParsing="false" onAction="#handleLoginAction" text="Login" />
+                <Button fx:id="btnLogin" disable="true" mnemonicParsing="false" onAction="#handleLoginAction" text="Login" />
               </children>
             </HBox>
             <Button layoutX="31.0" layoutY="0.0" mnemonicParsing="false" onAction="#handleCancelAction" text="Cancel" />
@@ -34,7 +34,7 @@
                     <Text layoutX="83.0" layoutY="89.0" scaleX="1.0" scaleY="1.0" strokeType="OUTSIDE" strokeWidth="0.0" text="You need to store your credentials before you can use this login method." />
                     <HBox id="HBox" alignment="CENTER" layoutX="24.0" layoutY="109.0" spacing="5.0">
                       <children>
-                        <TextField fx:id="tfHomeFolder" disable="false" editable="false" prefWidth="428.0" />
+                        <TextField id="tfHomeFolder" fx:id="tfSelectedFolder" disable="false" editable="false" prefWidth="428.0" />
                         <Button mnemonicParsing="false" onAction="#handleChooseFolderAction" text="Choose Folder" />
                       </children>
                     </HBox>
