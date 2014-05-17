@@ -9,6 +9,7 @@ package capercloud;
 import capercloud.exception.IllegalCredentialsException;
 import capercloud.model.DataTransferTask;
 import capercloud.model.DownloadTask;
+import capercloud.model.InputCloudTableModel;
 import capercloud.model.UploadTask;
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -104,7 +106,7 @@ public class JobOverviewController implements Initializable {
     private ObservableList<DataTransferTask> dataTransferTasks;
     
 //JobTab
-    private ObservableList<S3Object> inputCloudCache;
+    private ObservableList<InputCloudTableModel> inputCloudCache;
     
     
 
@@ -160,7 +162,7 @@ public class JobOverviewController implements Initializable {
         return this.localFileCache;
     }
     
-    public ObservableList<S3Object> getInputCloudCache() {
+    public ObservableList<InputCloudTableModel> getInputCloudCache() {
         if (this.inputCloudCache == null) {
             this.inputCloudCache = FXCollections.observableArrayList();
         }
@@ -493,19 +495,19 @@ public class JobOverviewController implements Initializable {
         });
         this.cbBucketSelection.setItems(this.getRemoteBucketCache());
         
-//init input TableView
-        TableColumn checkOnInputCol = (TableColumn) this.tvInput.getColumns().get(0);
+//init cloud input TableView
+        TableColumn<InputCloudTableModel, Boolean> checkOnInputCol = (TableColumn) this.tvInput.getColumns().get(0);
         checkOnInputCol.setCellFactory(CheckBoxTableCell.forTableColumn(checkOnInputCol));
-        
+        checkOnInputCol.setCellValueFactory(new PropertyValueFactory<InputCloudTableModel, Boolean>("selected"));
+
         ((TableColumn) this.tvInput.getColumns().get(1))
-                .setCellValueFactory(new Callback<CellDataFeatures<S3Object, String>, ObservableValue>() {
+                .setCellValueFactory(new Callback<CellDataFeatures<InputCloudTableModel, String>, ObservableValue>() {
             @Override
-            public ObservableValue call(CellDataFeatures<S3Object, String> p) {
+            public ObservableValue call(CellDataFeatures<InputCloudTableModel, String> p) {
                 return new SimpleStringProperty(p.getValue().getName());
             }
                 });
-        this.tvInput.setItems(getInputCloudCache());
-        
+        this.tvInput.setItems(getInputCloudCache());  
     }
     
     public void enableButton() {
@@ -563,7 +565,9 @@ public class JobOverviewController implements Initializable {
         if (State.SUCCEEDED == s.getState()) {
             S3Object[] res = s.getValue();
             getInputCloudCache().clear();
-            getInputCloudCache().addAll(res);
+            for (S3Object obj : res) {
+                getInputCloudCache().add(new InputCloudTableModel(obj));
+            }
         } else {
             if (State.CANCELLED != s.getState()) {
                 log.debug(s.getState());
@@ -851,5 +855,18 @@ public class JobOverviewController implements Initializable {
             }
             return;
         }
+    }
+    
+//Job tab event
+    @FXML
+    private void handleRunJobAction() {
+        for (InputCloudTableModel i : this.getInputCloudCache()) {
+            log.debug(i.selectedProperty().getValue());
+        }
+    }
+    
+    @FXML
+    private void handelLaunchInstances() {
+        log.debug("TO DO");
     }
 }
