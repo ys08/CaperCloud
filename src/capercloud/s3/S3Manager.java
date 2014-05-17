@@ -40,7 +40,6 @@ import org.jets3t.service.multi.s3.ThreadedS3Service;
 import org.jets3t.service.security.AWSCredentials;
 import org.jets3t.service.utils.ByteFormatter;
 import org.jets3t.service.utils.Mimetypes;
-import org.jets3t.service.utils.TimeFormatter;
 
 /**
  * List buckets, multiple files uploading and downloading 

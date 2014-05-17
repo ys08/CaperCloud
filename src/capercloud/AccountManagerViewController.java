@@ -6,14 +6,17 @@
 
 package capercloud;
 
+import capercloud.s3.S3Manager;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.TextField;
+import javafx.stage.Stage;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.jets3t.service.security.AWSCredentials;
 
 /**
@@ -22,15 +25,20 @@ import org.jets3t.service.security.AWSCredentials;
  * @author shuai
  */
 public class AccountManagerViewController implements Initializable {
-    private CaperCloud mainApp;
+    private Log log = LogFactory.getLog(getClass());
+    LoginViewController parentController;
+    private Stage me;
     
     @FXML TextField tfNickname;
     @FXML TextField tfAccessKey;
     @FXML TextField tfSecretKey;
     
-
-    public void setMainApp(CaperCloud mainApp) {
-        this.mainApp = mainApp;
+    public void setParentController(LoginViewController parentController) {
+        this.parentController = parentController;
+    }
+    
+    public void setStage(Stage me) {
+        this.me = me;
     }
     
     /**
@@ -44,47 +52,42 @@ public class AccountManagerViewController implements Initializable {
         tfAccessKey.setText("");
         tfSecretKey.setText("");
         tfNickname.setText("");
-
     }
     /**
      * check if nickname(friendly name) already exists
      */
     @FXML private void handleOkAction() {
         if (tfAccessKey.getText().equals("") || tfSecretKey.getText().equals("") || tfNickname.getText().equals("")) {
-            System.out.println("All fields are needed");
+            log.warn("All fields are needed");
             clear();
             return;
         }
-        //nickname must unique
-        if (this.mainApp.getCloudManager().hasCredentialsOfFriendlyName(tfNickname.getText())) {
-            System.out.println("already have nickname:" + tfNickname.getText());
-            clear();
-            return;
-        }
-        
         AWSCredentials credentials = new AWSCredentials(
                 tfAccessKey.getText(),
                 tfSecretKey.getText(),
                 tfNickname.getText()
         );
         
-        this.mainApp.getLoginController().setNewCredentials(credentials);
-        
+//save the credentials to file
+        File credentialsFile = new File(this.parentController.getHomeFolder(), credentials.getFriendlyName() + ".enc");
+        String algorithm = S3Manager.jets3tProperties.getStringProperty("crypto.algorithm", "PBEWithMD5AndDES");
         try {
+            credentials.save(this.parentController.getPassword(), credentialsFile, algorithm);
+        } catch (Exception e) {
+            log.error(e.getMessage());
             clear();
-            this.mainApp.getNewAccountStage().close();
-        } catch (IOException ex) {
-            Logger.getLogger(AccountManagerViewController.class.getName()).log(Level.SEVERE, null, ex);
+            return;
         }
+        this.parentController.updateCredentialsFiles();   
+            
+        clear();
+        log.info("A new AWSCredentials is created");
+        this.me.close();
     }
     
     @FXML private void handleCancelAction() {
-        this.mainApp.getLoginController().setNewCredentials(null);
         clear();
-        try {
-            this.mainApp.getNewAccountStage().close();
-        } catch (IOException ex) {
-            Logger.getLogger(AccountManagerViewController.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        log.info("Canceled by user");
+        this.me.close();
     }
 }

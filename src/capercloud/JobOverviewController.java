@@ -6,11 +6,18 @@
 
 package capercloud;
 
-import capercloud.exception.IllegalCredentialsException;
 import capercloud.model.DataTransferTask;
 import capercloud.model.DownloadTask;
 import capercloud.model.InputCloudTableModel;
+import capercloud.model.InstanceModel;
 import capercloud.model.UploadTask;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.handlers.AsyncHandler;
+import com.amazonaws.services.ec2.AmazonEC2AsyncClient;
+import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
+import com.amazonaws.services.ec2.model.DescribeInstancesResult;
+import com.amazonaws.services.ec2.model.Instance;
+import com.amazonaws.services.ec2.model.Reservation;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -27,7 +34,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -74,6 +80,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
+import org.jets3t.service.security.AWSCredentials;
 
 /**
  * FXML Controller class
@@ -83,7 +90,6 @@ import org.jets3t.service.model.S3Object;
 public class JobOverviewController implements Initializable {
     private Log log = LogFactory.getLog(getClass());
     private CaperCloud mainApp;
-    private ObservableList<String> nickList;
     private final ObservableList jobTypes = FXCollections.observableArrayList(
             "Novel Protein", 
             "SAP", 
@@ -98,22 +104,19 @@ public class JobOverviewController implements Initializable {
     
 //data for remote TableView
     private S3Bucket currentBucket;
-    private HashMap<String, S3Object> remoteCacheMap;
     private ObservableList<S3Bucket> remoteBucketCache;
     private ObservableList<S3Object> remoteObjectCache;
     
 //data for transfer TableView
     private ObservableList<DataTransferTask> dataTransferTasks;
     
-//JobTab
+//Job Tab
     private ObservableList<InputCloudTableModel> inputCloudCache;
     
-    
+//Status Tab    
+    private ObservableList<InstanceModel> instancesCache;
 
-    @FXML private TabPane mainTab;  
 //File Tab
-    @FXML private Button btnManageAccounts;
-    @FXML private Button btnTransferPreferences;
     @FXML private Button btnLogout;
     @FXML private Button btnLocalBrowse;
     @FXML private Button btnRemoteUp;
@@ -132,7 +135,8 @@ public class JobOverviewController implements Initializable {
     @FXML private TableColumn tcRemoteUploadTime;
     @FXML private TextField tfLocalPath;
     @FXML private TextField tfRemotePath;
-    @FXML private TextArea fileLog;
+    @FXML private TextArea taFileLog;
+    @FXML private Label username;
     
 //Job Tab
     @FXML private ComboBox cbJobType;
@@ -151,11 +155,11 @@ public class JobOverviewController implements Initializable {
     @FXML private TableView tvResults;
     
     public JobOverviewController() {
-        this.nickList = FXCollections.observableArrayList();
     }
 
+//getters and setters, lazy init
     public ObservableList<File> getLocalFileCache() {  
-//lazy init
+
         if (this.localFileCache == null) {
             this.localFileCache = FXCollections.observableArrayList();
         }
@@ -176,22 +180,13 @@ public class JobOverviewController implements Initializable {
         return this.dataTransferTasks;
     }
     
-    public void setLocalFileCache(ObservableList<File> localFileCache) {
-        this.localFileCache = localFileCache;
+    public ObservableList<InstanceModel> getInstancesCache() {
+        if (this.instancesCache == null) {
+            this.instancesCache = FXCollections.observableArrayList();
+        }
+        return this.instancesCache;
     }
-
-    public ObservableList getNickLists() {
-        return nickList;
-    }
-
-    public ComboBox getCbSwitchAccount() {
-        return cbSwitchAccount;
-    }
-
-    public Button getBtnLogout() {
-        return btnLogout;
-    }
-
+    
     public ObservableList<S3Bucket> getRemoteBucketCache() {
         if (this.remoteBucketCache == null) {
             this.remoteBucketCache = FXCollections.observableArrayList();
@@ -206,22 +201,16 @@ public class JobOverviewController implements Initializable {
         return this.remoteObjectCache;
     }
     
-    public Iterator getSelectedObjects() {
-// return S3Bucket iterator
-        if (this.currentBucket == null) {
-            List<S3Bucket> selected = this.tvRemote.getSelectionModel().getSelectedItems();
-            if (selected == null) {
-                return null;
-            }
-            return selected.iterator();
-        } else {
-// return S3Object
-            List<S3Object> selected = this.tvRemote.getSelectionModel().getSelectedItems();
-            if (selected == null) {
-                return null;
-            }
-            return selected.iterator();
-        }
+    public void setLocalFileCache(ObservableList<File> localFileCache) {
+        this.localFileCache = localFileCache;
+    }
+    
+    public void setUsername(String username) {
+        this.username.setText(username);
+    }
+
+    public Button getBtnLogout() {
+        return btnLogout;
     }
     
     public void setMainApp(CaperCloud mainApp) {
@@ -234,7 +223,6 @@ public class JobOverviewController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
 //File tab init
-        this.cbSwitchAccount.setItems(this.nickList);
         this.tvLocal.setPlaceholder(new Text(""));
         this.tvLocal.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         this.tvRemote.setPlaceholder(new Text(""));
@@ -272,8 +260,7 @@ public class JobOverviewController implements Initializable {
                         super.updateItem(t, empty);
                         if (t != null) {
                             HBox box= new HBox();
-                            box.setSpacing(10);
-                            
+                            box.setSpacing(10);        
                             Label fileName = new Label(t);
                             ImageView imageview = new ImageView();
                             imageview.setFitHeight(15);
@@ -291,7 +278,6 @@ public class JobOverviewController implements Initializable {
                 };
                 return cell;
             }
-            
         });
         this.tcLocalFilesize.setCellValueFactory(new Callback<CellDataFeatures<File, String>, ObservableValue<String>>() {
             @Override
@@ -307,6 +293,7 @@ public class JobOverviewController implements Initializable {
                 return new SimpleStringProperty(sdf.format(d));
             }
         });   
+        
 //local table double click
         tvLocal.setRowFactory(new Callback<TableView<File>, TableRow<File>>() {  
             @Override  
@@ -330,6 +317,7 @@ public class JobOverviewController implements Initializable {
             }
         });
         this.tvLocal.setItems(this.getLocalFileCache());
+        
 //remote table init
         this.tfRemotePath.setText("/");
         this.tcRemoteFilename.setCellValueFactory(new Callback<CellDataFeatures, ObservableValue>() {
@@ -376,6 +364,7 @@ public class JobOverviewController implements Initializable {
                 return new SimpleStringProperty("unsupported type");
             }     
         });
+        
 //remote table double click
         tvRemote.setRowFactory(new Callback<TableView, TableRow>() {  
             @Override  
@@ -447,9 +436,6 @@ public class JobOverviewController implements Initializable {
         ((TableColumn) this.tvTransferLog.getColumns().get(5))
                 .setCellValueFactory(new PropertyValueFactory<DataTransferTask, String>("message"));
         this.tvTransferLog.setItems(this.getDataTransferTasks());
-        
-//nickname combobox       
-        this.cbSwitchAccount.setItems(nickList); 
                 
 //bucket selection combobox
         this.cbBucketSelection.setCellFactory(new Callback<ListView<S3Bucket>, ListCell<S3Bucket>>() {
@@ -508,6 +494,31 @@ public class JobOverviewController implements Initializable {
             }
                 });
         this.tvInput.setItems(getInputCloudCache());  
+        
+//init instance monitor TableView
+        ((TableColumn) this.tvInstanceMonitor.getColumns().get(0))
+                .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("instanceId"));
+        ((TableColumn) this.tvInstanceMonitor.getColumns().get(1))
+                .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("imageId"));
+        ((TableColumn) this.tvInstanceMonitor.getColumns().get(2))
+                .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("stateName"));
+        ((TableColumn) this.tvInstanceMonitor.getColumns().get(3))
+                .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("instanceType"));
+        ((TableColumn) this.tvInstanceMonitor.getColumns().get(4))
+                .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("platform"));
+        ((TableColumn) this.tvInstanceMonitor.getColumns().get(5))
+                .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("architecture"));
+        ((TableColumn) this.tvInstanceMonitor.getColumns().get(6))
+                .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("rootDevice"));
+        ((TableColumn) this.tvInstanceMonitor.getColumns().get(7))
+                .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("keyName"));
+        ((TableColumn) this.tvInstanceMonitor.getColumns().get(8))
+                .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("launchTime"));
+        ((TableColumn) this.tvInstanceMonitor.getColumns().get(9))
+                .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("availabilityZone"));
+        ((TableColumn) this.tvInstanceMonitor.getColumns().get(10))
+                .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("blockDevice"));
+        this.tvInstanceMonitor.setItems(this.getInstancesCache());
     }
     
     public void enableButton() {
@@ -530,10 +541,11 @@ public class JobOverviewController implements Initializable {
         getLocalFileCache().addAll(tmp);
         tfLocalPath.setText(homeDirectory.getAbsolutePath());
     }
+    
 //update remote objects cache
     private void updateRemoteObjectCache(S3Bucket bucket) {
-        String message = "Listing Objects";
-        Stage dialog = this.mainApp.createProgressDialog(bucket.getName(), message, this.mainApp.getPrimaryStage());
+        String message = "Listing Objects in Bucket " + bucket.getName();
+        Stage dialog = this.mainApp.createProgressDialog("Please Wait", message, this.mainApp.getPrimaryStage());
         Service<S3Object[]> s = this.mainApp.getCloudManager().createListObjectsService(bucket, dialog);
         s.start();
         
@@ -555,8 +567,8 @@ public class JobOverviewController implements Initializable {
     }
     
     private void updateInputCloudCache(S3Bucket bucket) {
-        String message = "Listing Objects";
-        Stage dialog = this.mainApp.createProgressDialog(bucket.getName(), message, this.mainApp.getPrimaryStage());
+        String message = "Listing Objects in Bucket " + bucket.getName();
+        Stage dialog = this.mainApp.createProgressDialog("Please Wait", message, this.mainApp.getPrimaryStage());
         Service<S3Object[]> s = this.mainApp.getCloudManager().createListObjectsService(bucket, dialog);
         s.start();
         
@@ -579,7 +591,7 @@ public class JobOverviewController implements Initializable {
     
     private void updateRemoteBucketCache() {
         String message = "Listing Buckets";
-        Stage dialog = this.mainApp.createProgressDialog("Updating", message, this.mainApp.getPrimaryStage());
+        Stage dialog = this.mainApp.createProgressDialog("Please Wait", message, this.mainApp.getPrimaryStage());
         Service<S3Bucket[]> s = this.mainApp.getCloudManager().createListBucketsService(dialog);  
         s.start();
         
@@ -596,6 +608,31 @@ public class JobOverviewController implements Initializable {
                 log.debug(s.getState());
             }
         }
+    }
+
+//instance
+    public void updateInstancesCache() {
+        AWSCredentials jet = this.mainApp.getCloudManager().getCurrentCredentials();
+        BasicAWSCredentials  aws = new BasicAWSCredentials(jet.getAccessKey(), jet.getSecretKey());
+        final AmazonEC2AsyncClient ec2 = new AmazonEC2AsyncClient(aws);
+        ec2.describeInstancesAsync(new DescribeInstancesRequest(), new AsyncHandler<DescribeInstancesRequest,DescribeInstancesResult>() {
+            @Override
+            public void onError(Exception excptn) {
+                log.debug(excptn.getMessage());
+                ec2.shutdown();
+            }
+
+            @Override
+            public void onSuccess(DescribeInstancesRequest rqst, DescribeInstancesResult result) {
+                JobOverviewController.this.getInstancesCache().clear();
+                for (Reservation r : result.getReservations()) {
+                    for (Instance i : r.getInstances()) {
+                        JobOverviewController.this.getInstancesCache().add(new InstanceModel(i));
+                    }
+                }
+                ec2.shutdown();
+            }
+        });
     }
     
 //get selected file in local table
@@ -660,17 +697,18 @@ public class JobOverviewController implements Initializable {
             }
         }
     }
+    
     @FXML
     private void handleUploadAction() {
         ObservableList<File> selectedFiles = this.tvLocal.getSelectionModel().getSelectedItems();
 // do nothing if no files are selected
         if (selectedFiles.isEmpty()) {
-            log.info("No files are selected");
+            log.warn("No files are selected");
             return;
         }
         
         if (currentBucket == null) {
-            log.info("No bucket is selected");
+            log.warn("No bucket is selected");
             return;
         }
         
@@ -702,11 +740,11 @@ public class JobOverviewController implements Initializable {
         log.debug("Selected " + selectedObjects.get(0).getName());
 // do nothing if no files are selected
         if (selectedObjects.isEmpty()) {
-            log.info("No s3objects are selected");
+            log.warn("No s3objects are selected");
             return;
         }
         if (homeDirectory == null) {
-            log.info("No download directory is selected");
+            log.warn("No download directory is selected");
             return;
         }
         
@@ -740,18 +778,8 @@ public class JobOverviewController implements Initializable {
     
     @FXML
     private void handleLogoutAction() {
-        String currentLogin = (String) cbSwitchAccount.getValue();
-        try {
-            this.mainApp.getCloudManager().logoutCloud(currentLogin);
-        } catch (IllegalCredentialsException ex) {
-            ex.printStackTrace();
-            return;
-        }
-        if (currentLogin != null) {
-            this.nickList.remove(currentLogin);
-        }
+        this.mainApp.getCloudManager().logoutCloud();
 //clear 
-        cbSwitchAccount.setValue(null);
         this.currentBucket = null;
         getRemoteBucketCache().clear();
         getRemoteObjectCache().clear();
@@ -868,5 +896,10 @@ public class JobOverviewController implements Initializable {
     @FXML
     private void handelLaunchInstances() {
         log.debug("TO DO");
+    }
+    
+    @FXML
+    private void handleInstanceMonitorRefreshAction() {
+        this.updateInstancesCache();
     }
 }

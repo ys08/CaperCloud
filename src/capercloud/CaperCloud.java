@@ -242,7 +242,7 @@ public class CaperCloud extends Application {
                 Scene scene = new Scene(this.getAccountView());
                 this.getNewAccountStage().setScene(scene);
                 //will not raise nullpointer error here 
-                this.getAccountController().setMainApp(this);
+                this.getAccountController().setParentController(this.getLoginController());
 
                 this.getNewAccountStage().showAndWait();   
             } else {
@@ -290,7 +290,7 @@ public class CaperCloud extends Application {
             
             return progressDialog;
         } catch (IOException ex) {
-            Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
+            log.error(ex.getMessage());
         }
         return progressDialog;
     }

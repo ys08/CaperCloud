@@ -24,14 +24,14 @@ import org.apache.commons.logging.LogFactory;
  */
 public class ProgressViewController implements Initializable {
     private Log log = LogFactory.getLog(getClass());
-    Stage stage;
+    Stage me;
     
     @FXML private Label title;
     @FXML private ProgressBar pbProgress;
     @FXML private Button btnCancel;
     
-    public void setStage(Stage stage) {
-        this.stage = stage;
+    public void setStage(Stage me) {
+        this.me = me;
     }
     /**
      * Initializes the controller class.
@@ -39,7 +39,8 @@ public class ProgressViewController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         pbProgress.setProgress(-1);
-    }    
+    } 
+    
     public void displayMessage(String message) {
         this.title.setText(message);
     }
@@ -47,6 +48,6 @@ public class ProgressViewController implements Initializable {
     @FXML
     private void handleCancelAction() {
         log.debug("Canceled by user");
-        this.stage.close();
+        this.me.close();
     }
 }
