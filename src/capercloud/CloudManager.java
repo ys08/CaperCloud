@@ -6,15 +6,9 @@
 
 package capercloud;
 
-import capercloud.ec2.EC2Manager;
 import capercloud.s3.S3Manager;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.ec2.model.DescribeInstancesResult;
-import com.amazonaws.services.ec2.model.Instance;
-import com.amazonaws.services.ec2.model.Reservation;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
+import com.amazonaws.services.ec2.AmazonEC2AsyncClient;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.stage.Stage;
@@ -35,9 +29,7 @@ public class CloudManager {
     private static CloudManager singleton = null;
     private AWSCredentials currentCredentials; 
     private S3Manager s3m;
-    private EC2Manager ec2m;
-//multithread will set it;
-    public static boolean isCanceled[] = new boolean[1];
+    private AmazonEC2AsyncClient ec2m;
     
     private CloudManager() {
     }
@@ -60,6 +52,10 @@ public class CloudManager {
         return currentCredentials;
     }
     
+    public AmazonEC2AsyncClient getEc2Manager() {
+        return this.ec2m;
+    }
+    
     /**
      * create S3Manager and EC2Manager instance
      * add credentials to hashmap
@@ -70,7 +66,7 @@ public class CloudManager {
     public void loginCloud(AWSCredentials credentials) throws ServiceException {
         this.currentCredentials = credentials;
         this.s3m = new S3Manager(currentCredentials);
-        this.ec2m = new EC2Manager(new BasicAWSCredentials(currentCredentials.getAccessKey(), currentCredentials.getSecretKey()));  
+        this.ec2m = new AmazonEC2AsyncClient(new BasicAWSCredentials(currentCredentials.getAccessKey(), currentCredentials.getSecretKey()));  
     }
     
     public void logoutCloud() {
@@ -206,6 +202,7 @@ public class CloudManager {
     
     public Service<Void> createDeleteObjectService(final S3Object obj, final Stage progressDialog) {
         return new Service<Void>() {
+            
             @Override
             protected Task<Void> createTask() {
                 return new Task<Void>() {
@@ -270,21 +267,5 @@ public class CloudManager {
                 progressDialog.close();
             }
         };
-    }
-    
-//ec2 management
-    public List<Instance> getAllInstances() {
-        List<Instance> instances = new ArrayList<>();
-        try {
-            DescribeInstancesResult res = this.ec2m.describeAllInstances().get();
-            for (Reservation r : res.getReservations()) {
-                for (Instance i : r.getInstances()) {
-                    instances.add(i);
-                }
-            }
-        } catch (InterruptedException | ExecutionException ex) {
-            log.error(ex.getMessage());
-        }
-        return instances;
     }
 }

@@ -20,6 +20,6 @@
         <Button fx:id="btnCancel" mnemonicParsing="false" onAction="#handleCancelAction" text="Cancel" />
       </children>
     </HBox>
-    <TextArea layoutX="22.0" layoutY="59.0" prefHeight="82.0" prefWidth="307.0" text="Amazon S3 bucket names are globally unique, so once a bucket name has been taken by any user, you can't create another bucket with that same name." wrapText="true" />
+    <TextArea editable="false" layoutX="22.0" layoutY="59.0" prefHeight="82.0" prefWidth="307.0" text="Amazon S3 bucket names are globally unique, so once a bucket name has been taken by any user, you can't create another bucket with that same name." wrapText="true" />
   </children>
 </AnchorPane>

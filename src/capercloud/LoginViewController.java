@@ -215,7 +215,7 @@ public class LoginViewController implements Initializable {
         try {
             this.mainApp.getCloudManager().loginCloud(this.currentCredentials);
             log.info("checking your account information");
-            Stage checkingDialog = this.mainApp.createProgressDialog("Checking", "Checking your account...", this.mainApp.getLoginStage());
+            Stage checkingDialog = this.mainApp.createStripedProgressDialog("Checking Your Account", this.mainApp.getLoginStage());
             Service<S3Bucket[]> s = this.mainApp.getCloudManager().createListBucketsService(checkingDialog);
             s.start();
 //wait for cancel or success event

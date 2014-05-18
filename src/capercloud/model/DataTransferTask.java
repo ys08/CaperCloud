@@ -27,6 +27,7 @@ public abstract class DataTransferTask extends Task<Void>{
     public void updateProgress(double d, double d1) {
         super.updateProgress(d, d1); 
     }
+    
 }
 
     

@@ -9,14 +9,32 @@ package capercloud;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.concurrent.Service;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.ButtonBuilder;
+import javafx.scene.control.LabelBuilder;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.HBoxBuilder;
+import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.util.Duration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -29,6 +47,8 @@ public class CaperCloud extends Application {
     public static final String APPLICATION_DESCRIPTION = "CaperCloud/1.0";
     private Log log = LogFactory.getLog(getClass());
     private CloudManager cloudManager;
+//Modal Confirm Dialog will set it
+    private boolean canceled = false;
     
     private Stage primaryStage;
     private Stage loginStage;
@@ -159,9 +179,25 @@ public class CaperCloud extends Application {
         return preferenceController;
     }
     
+    public boolean isCanceled() {
+        return this.canceled;
+    }
+    
+    public void resetCanceled() {
+        this.canceled = false;
+    }
+    
     @Override
     public void start(Stage stage) throws Exception {
         this.setPrimaryStage(stage);
+        this.getPrimaryStage().setOnHidden(new EventHandler() {
+            @Override
+            public void handle(Event t) {
+                if (CaperCloud.this.getCloudManager().getEc2Manager() != null) {
+                    CaperCloud.this.getCloudManager().getEc2Manager().shutdown();
+                }
+            }
+        });
         
         Scene scene = new Scene(this.getRootLayout());
         
@@ -272,28 +308,6 @@ public class CaperCloud extends Application {
             Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    public Stage createProgressDialog(String title, String message, Stage parentStage) {
-        Stage progressDialog = new Stage();
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/ProgressView.fxml"));
-            AnchorPane progressView = (AnchorPane) loader.load();
-            ProgressViewController controller = loader.getController();
-            
-            progressDialog.setTitle(title);
-            progressDialog.initModality(Modality.WINDOW_MODAL);
-            progressDialog.initOwner(parentStage);
-            
-            Scene scene = new Scene(progressView);
-            controller.displayMessage(message);
-            progressDialog.setScene(scene);
-            controller.setStage(progressDialog);
-            
-            return progressDialog;
-        } catch (IOException ex) {
-            log.error(ex.getMessage());
-        }
-        return progressDialog;
-    }
     
     public void showTextFieldDialog() {
         try {
@@ -316,4 +330,89 @@ public class CaperCloud extends Application {
             Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    
+    public Stage createModalConfirmDialog(String msg, final Stage parentStage) {
+        final Stage dialog = new Stage(StageStyle.TRANSPARENT);
+        dialog.initModality(Modality.WINDOW_MODAL);
+        dialog.initOwner(parentStage);
+        dialog.setScene(new Scene(
+                HBoxBuilder.create().styleClass("modal-dialog").children(
+                        LabelBuilder.create().text(msg).build(),
+                        ButtonBuilder.create().text("Yes").defaultButton(true).onAction(new EventHandler<ActionEvent>() {
+                            @Override public void handle(ActionEvent actionEvent) {
+                                parentStage.getScene().getRoot().setEffect(null); 
+                                dialog.close();
+                            }
+                        }).build(),
+                        ButtonBuilder.create().text("No").cancelButton(true).onAction(new EventHandler<ActionEvent>() {
+                            @Override public void handle(ActionEvent actionEvent) {
+                                parentStage.getScene().getRoot().setEffect(null);
+                                CaperCloud.this.canceled = true;
+                                dialog.close();
+                            }
+                        }).build()
+                ).build()
+                , Color.TRANSPARENT)
+        );
+        dialog.getScene().getStylesheets().add(getClass().getResource("res/theme.css").toExternalForm());
+// allow the dialog to be dragged around.
+        final Node root = dialog.getScene().getRoot();
+        final Delta dragDelta = new Delta();
+        root.setOnMousePressed(new EventHandler<MouseEvent>() {
+          @Override public void handle(MouseEvent mouseEvent) {
+// record a delta distance for the drag and drop operation.
+            dragDelta.x = dialog.getX() - mouseEvent.getScreenX();
+            dragDelta.y = dialog.getY() - mouseEvent.getScreenY();
+          }
+        });
+        root.setOnMouseDragged(new EventHandler<MouseEvent>() {
+          @Override public void handle(MouseEvent mouseEvent) {
+            dialog.setX(mouseEvent.getScreenX() + dragDelta.x);
+            dialog.setY(mouseEvent.getScreenY() + dragDelta.y);
+          }
+        });
+        return dialog;
+    }
+    
+    public Stage createStripedProgressDialog(String title, Stage parentStage) {
+        Stage dialog = new Stage();
+        final ProgressBar bar = new ProgressBar(0);
+        bar.setPrefSize(400, 24);
+ 
+        final Timeline task = new Timeline(
+            new KeyFrame(
+                    Duration.ZERO,       
+                    new KeyValue(bar.progressProperty(), 0)
+            ),
+            new KeyFrame(
+                    Duration.seconds(2), 
+                    new KeyValue(bar.progressProperty(), 1)
+            )
+        );
+        
+        task.setOnFinished(new EventHandler() {
+            @Override
+            public void handle(Event t) {
+                bar.setProgress(-1);
+            }
+        });
+        task.playFromStart();
+        
+        HBox layout = new HBox(10);
+        layout.getChildren().setAll(bar);
+        layout.setPadding(new Insets(10));
+        layout.setAlignment(Pos.CENTER);
+
+        layout.getStylesheets().add(
+            getClass().getResource("res/theme.css").toExternalForm()
+        );
+        dialog.setTitle(title);
+        dialog.initModality(Modality.WINDOW_MODAL);
+        dialog.initOwner(parentStage);
+        dialog.setScene(new Scene(layout));
+        
+        return dialog;
+    }
+// records relative x and y co-ordinates.
+    class Delta { double x, y; }
 }

@@ -28,7 +28,6 @@ public class ProgressViewController implements Initializable {
     
     @FXML private Label title;
     @FXML private ProgressBar pbProgress;
-    @FXML private Button btnCancel;
     
     public void setStage(Stage me) {
         this.me = me;

@@ -9,7 +9,6 @@ package capercloud;
 import java.net.URL;
 import java.util.ResourceBundle;
 import javafx.concurrent.Service;
-import javafx.concurrent.Worker;
 import javafx.concurrent.Worker.State;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -57,12 +56,12 @@ public class TextFieldViewController implements Initializable {
         if (tfInput.getText().equals("")) {
             return;
         }
-        String message = "Creating Bucket " + tfInput.getText() + " ...";
-        Stage dialog = this.mainApp.createProgressDialog("Creating Bucket", message, me);
-        Service<S3Bucket> s = this.mainApp.getCloudManager().createCreateBucketService(tfInput.getText(), dialog);
+        String msg = "Creating Bucket " + tfInput.getText();
+        Stage progressDialog = this.mainApp.createStripedProgressDialog(msg, this.me);
+        Service<S3Bucket> s = this.mainApp.getCloudManager().createCreateBucketService(tfInput.getText(), progressDialog);
         s.start();
         
-        dialog.showAndWait();
+        progressDialog.showAndWait();
         
         if (State.SUCCEEDED == s.getState()) {
             S3Bucket res = s.getValue();
@@ -71,7 +70,6 @@ public class TextFieldViewController implements Initializable {
             if (State.CANCELLED != s.getState()) {
                 log.debug(s.getState());
                 s.cancel();
-                log.debug(s.getState());
             }
         }
         clear();
