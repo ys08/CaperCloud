@@ -264,7 +264,7 @@
                                   <top>
                                     <HBox id="HBox" alignment="CENTER" prefHeight="28.0" prefWidth="1278.0" spacing="5.0">
                                       <children>
-                                        <Button minHeight="-Infinity" mnemonicParsing="false" prefHeight="21.0" text="Cancel">
+                                        <Button minHeight="-Infinity" mnemonicParsing="false" onAction="#handleDataTransferCancelAction" prefHeight="21.0" text="Cancel">
                                           <graphic>
                                             <ImageView fitHeight="21.0" fitWidth="21.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
                                               <image>
@@ -350,7 +350,7 @@
                       <center>
                         <AnchorPane id="AnchorPane" minHeight="0.0" minWidth="0.0">
                           <children>
-                            <SplitPane dividerPositions="0.18759811616954475, 0.5518053375196232" focusTraversable="true" maxHeight="-1.0" maxWidth="1.7976931348623157E308" prefHeight="434.0" prefWidth="1276.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                            <SplitPane dividerPositions="0.25274725274725274, 0.5839874411302983" focusTraversable="true" maxHeight="-1.0" maxWidth="1.7976931348623157E308" prefHeight="434.0" prefWidth="1276.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                               <items>
                                 <BorderPane maxWidth="1.7976931348623157E308" prefHeight="491.0" prefWidth="238.0">
                                   <bottom>
@@ -376,7 +376,7 @@
                                     <HBox id="HBox" alignment="CENTER" spacing="20.0">
                                       <children>
                                         <Label text="Inut File" />
-                                        <ComboBox fx:id="cbBucketSelection" prefHeight="21.0" prefWidth="160.0" promptText="Please select a bucket">
+                                        <ComboBox fx:id="cbBucketSelection" prefHeight="21.0" prefWidth="124.0" promptText="select a bucket">
                                           <items>
                                             <FXCollections fx:factory="observableArrayList">
                                               <String fx:value="项 1" />
@@ -385,6 +385,15 @@
                                             </FXCollections>
                                           </items>
                                         </ComboBox>
+                                        <Button minHeight="-Infinity" minWidth="22.0" mnemonicParsing="false" onAction="#handleInputCloudRefreshAction" prefHeight="22.0" prefWidth="22.0" text="">
+                                          <graphic>
+                                            <ImageView fitHeight="20.0" fitWidth="20.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
+                                              <image>
+                                                <Image url="@../res/images/Button-Refresh-icon.png" />
+                                              </image>
+                                            </ImageView>
+                                          </graphic>
+                                        </Button>
                                       </children>
                                       <padding>
                                         <Insets bottom="1.0" />
@@ -561,8 +570,8 @@
                       <top>
                         <HBox id="HBox" alignment="CENTER" spacing="5.0">
                           <children>
-                            <Label text="Regions" />
-                            <ComboBox>
+                            <Label text="Instance Type" />
+                            <ComboBox fx:id="cbInstanceType">
                               <items>
                                 <FXCollections fx:factory="observableArrayList">
                                   <String fx:value="项 1" />
@@ -669,7 +678,7 @@
                                         <Tooltip text="refresh" />
                                       </tooltip>
                                     </Button>
-                                    <Button mnemonicParsing="false" text="">
+                                    <Button mnemonicParsing="false" onAction="#handleInstanceMonitorStopAction" text="">
                                       <graphic>
                                         <ImageView fitHeight="22.0" fitWidth="22.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
                                           <image>
@@ -681,7 +690,7 @@
                                         <Tooltip text="stop instance" />
                                       </tooltip>
                                     </Button>
-                                    <Button mnemonicParsing="false" text="">
+                                    <Button mnemonicParsing="false" onAction="#handleInstanceMonitorTerminateAction" text="">
                                       <graphic>
                                         <ImageView fitHeight="22.0" fitWidth="22.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
                                           <image>
@@ -693,7 +702,7 @@
                                         <Tooltip text="terminate instance" />
                                       </tooltip>
                                     </Button>
-                                    <Button mnemonicParsing="false" text="">
+                                    <Button mnemonicParsing="false" onAction="#handleInstanceMonitorRebootAction" text="">
                                       <graphic>
                                         <ImageView fitHeight="22.0" fitWidth="22.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
                                           <image>

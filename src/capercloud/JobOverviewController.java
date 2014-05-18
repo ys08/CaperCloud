@@ -11,13 +11,22 @@ import capercloud.model.DownloadTask;
 import capercloud.model.InputCloudTableModel;
 import capercloud.model.InstanceModel;
 import capercloud.model.UploadTask;
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.handlers.AsyncHandler;
 import com.amazonaws.services.ec2.AmazonEC2AsyncClient;
+import com.amazonaws.services.ec2.model.CreateKeyPairRequest;
+import com.amazonaws.services.ec2.model.CreateKeyPairResult;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.Instance;
+import com.amazonaws.services.ec2.model.InstanceStateChange;
+import com.amazonaws.services.ec2.model.InstanceType;
 import com.amazonaws.services.ec2.model.Reservation;
+import com.amazonaws.services.ec2.model.RunInstancesRequest;
+import com.amazonaws.services.ec2.model.RunInstancesResult;
+import com.amazonaws.services.ec2.model.StopInstancesRequest;
+import com.amazonaws.services.ec2.model.StopInstancesResult;
+import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -42,6 +51,7 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Worker.State;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -52,7 +62,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TabPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellDataFeatures;
@@ -80,7 +89,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
-import org.jets3t.service.security.AWSCredentials;
 
 /**
  * FXML Controller class
@@ -112,9 +120,11 @@ public class JobOverviewController implements Initializable {
     
 //Job Tab
     private ObservableList<InputCloudTableModel> inputCloudCache;
+    private ObservableList<InstanceType> instanceTypes;
     
 //Status Tab    
     private ObservableList<InstanceModel> instancesCache;
+    private HashMap<String, InstanceModel> instancesMap;
 
 //File Tab
     @FXML private Button btnLogout;
@@ -123,7 +133,6 @@ public class JobOverviewController implements Initializable {
     @FXML private Button btnRemoteNew;
     @FXML private Button btnRemoteRefresh;
     @FXML private Button btnRemoteDelete;
-    @FXML private ComboBox cbSwitchAccount;
     @FXML private TableView tvLocal;
     @FXML private TableView tvRemote;
     @FXML private TableView tvTransferLog;
@@ -139,6 +148,7 @@ public class JobOverviewController implements Initializable {
     @FXML private Label username;
     
 //Job Tab
+    @FXML private ComboBox cbInstanceType;
     @FXML private ComboBox cbJobType;
     @FXML private BorderPane bpJobType;
     @FXML private TableView tvInput;
@@ -155,6 +165,9 @@ public class JobOverviewController implements Initializable {
     @FXML private TableView tvResults;
     
     public JobOverviewController() {
+//init instance type
+        this.instanceTypes = FXCollections.observableArrayList();
+        this.instanceTypes.addAll(Arrays.asList(InstanceType.values()));
     }
 
 //getters and setters, lazy init
@@ -185,6 +198,13 @@ public class JobOverviewController implements Initializable {
             this.instancesCache = FXCollections.observableArrayList();
         }
         return this.instancesCache;
+    }
+    
+    public HashMap<String, InstanceModel> getInstancesMap() {
+        if (this.instancesMap == null) {
+            this.instancesMap = new HashMap<>();
+        }
+        return this.instancesMap;
     }
     
     public ObservableList<S3Bucket> getRemoteBucketCache() {
@@ -519,6 +539,9 @@ public class JobOverviewController implements Initializable {
         ((TableColumn) this.tvInstanceMonitor.getColumns().get(10))
                 .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("blockDevice"));
         this.tvInstanceMonitor.setItems(this.getInstancesCache());
+        
+//init instance types ComboBox
+        this.cbInstanceType.setItems(this.instanceTypes);
     }
     
     public void enableButton() {
@@ -544,8 +567,8 @@ public class JobOverviewController implements Initializable {
     
 //update remote objects cache
     private void updateRemoteObjectCache(S3Bucket bucket) {
-        String message = "Listing Objects in Bucket " + bucket.getName();
-        Stage dialog = this.mainApp.createProgressDialog("Please Wait", message, this.mainApp.getPrimaryStage());
+        String message = "Listing " + bucket.getName();
+        Stage dialog = this.mainApp.createStripedProgressDialog(message, this.mainApp.getPrimaryStage());
         Service<S3Object[]> s = this.mainApp.getCloudManager().createListObjectsService(bucket, dialog);
         s.start();
         
@@ -567,8 +590,8 @@ public class JobOverviewController implements Initializable {
     }
     
     private void updateInputCloudCache(S3Bucket bucket) {
-        String message = "Listing Objects in Bucket " + bucket.getName();
-        Stage dialog = this.mainApp.createProgressDialog("Please Wait", message, this.mainApp.getPrimaryStage());
+        String message = "Listing Bucket " + bucket.getName();
+        Stage dialog = this.mainApp.createStripedProgressDialog(message, this.mainApp.getPrimaryStage());
         Service<S3Object[]> s = this.mainApp.getCloudManager().createListObjectsService(bucket, dialog);
         s.start();
         
@@ -591,7 +614,7 @@ public class JobOverviewController implements Initializable {
     
     private void updateRemoteBucketCache() {
         String message = "Listing Buckets";
-        Stage dialog = this.mainApp.createProgressDialog("Please Wait", message, this.mainApp.getPrimaryStage());
+        Stage dialog = this.mainApp.createStripedProgressDialog(message, this.mainApp.getPrimaryStage());
         Service<S3Bucket[]> s = this.mainApp.getCloudManager().createListBucketsService(dialog);  
         s.start();
         
@@ -612,14 +635,11 @@ public class JobOverviewController implements Initializable {
 
 //instance
     public void updateInstancesCache() {
-        AWSCredentials jet = this.mainApp.getCloudManager().getCurrentCredentials();
-        BasicAWSCredentials  aws = new BasicAWSCredentials(jet.getAccessKey(), jet.getSecretKey());
-        final AmazonEC2AsyncClient ec2 = new AmazonEC2AsyncClient(aws);
-        ec2.describeInstancesAsync(new DescribeInstancesRequest(), new AsyncHandler<DescribeInstancesRequest,DescribeInstancesResult>() {
+        final AmazonEC2AsyncClient ec2m = this.mainApp.getCloudManager().getEc2Manager();
+        ec2m.describeInstancesAsync(new DescribeInstancesRequest(), new AsyncHandler<DescribeInstancesRequest,DescribeInstancesResult>() {
             @Override
             public void onError(Exception excptn) {
                 log.debug(excptn.getMessage());
-                ec2.shutdown();
             }
 
             @Override
@@ -627,10 +647,11 @@ public class JobOverviewController implements Initializable {
                 JobOverviewController.this.getInstancesCache().clear();
                 for (Reservation r : result.getReservations()) {
                     for (Instance i : r.getInstances()) {
-                        JobOverviewController.this.getInstancesCache().add(new InstanceModel(i));
+                        InstanceModel im = new InstanceModel(i);
+                        JobOverviewController.this.getInstancesCache().add(im);
+                        JobOverviewController.this.getInstancesMap().put(i.getInstanceId(), im);
                     }
                 }
-                ec2.shutdown();
             }
         });
     }
@@ -715,10 +736,17 @@ public class JobOverviewController implements Initializable {
         List<DataTransferTask> newTasks = new ArrayList<>();
 //create transfer task
         for (File f : selectedFiles) {
-            newTasks.add(
-                new UploadTask(f, currentBucket, this.mainApp.getCloudManager().getCurrentCredentials()));
+            final DataTransferTask task = new UploadTask(f, currentBucket, this.mainApp.getCloudManager().getCurrentCredentials());
+            task.setOnCancelled(new EventHandler() {
+                @Override
+                public void handle(Event t) {
+                    task.updateMessage("Canceled");
+                    task.updateProgress(0, 1);
+                }
+            });
+            newTasks.add(task);
         }
-        
+
         ExecutorService executor = Executors.newFixedThreadPool(newTasks.size(), new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
@@ -727,7 +755,6 @@ public class JobOverviewController implements Initializable {
                 return t;
             }
         });
-
         for (Iterator it = newTasks.iterator(); it.hasNext();) {
             executor.execute((DataTransferTask) it.next());
         }
@@ -847,12 +874,18 @@ public class JobOverviewController implements Initializable {
         if (obj instanceof S3Bucket) {
             S3Bucket tmp = (S3Bucket) obj;
             String msg = "Delete Bucket " + tmp.getName();
-            Stage stage = this.mainApp.createProgressDialog("Delete", msg, this.mainApp.getPrimaryStage());
-            Service<Void> s = this.mainApp.getCloudManager().createDeleteBucketService((S3Bucket) obj, stage);
-            log.debug(s.getState());
+
+            Stage confirmDialog = this.mainApp.createModalConfirmDialog(msg + "?", this.mainApp.getPrimaryStage());
+            confirmDialog.showAndWait();
+            if (this.mainApp.isCanceled()) {
+                return;
+            }
+            this.mainApp.resetCanceled();            
+            Stage progressDialog = this.mainApp.createStripedProgressDialog(msg, this.mainApp.getPrimaryStage());
+            Service<Void> s = this.mainApp.getCloudManager().createDeleteBucketService((S3Bucket) obj, progressDialog);
+
             s.start();
-            
-            stage.showAndWait();
+            progressDialog.showAndWait();
             
             if (State.SUCCEEDED == s.getState()) {
                 log.debug(this.getRemoteBucketCache().size());
@@ -860,6 +893,9 @@ public class JobOverviewController implements Initializable {
                 log.debug(this.getRemoteBucketCache().size());
             } else {
                 log.debug(s.getState());
+                if (State.CANCELLED != s.getState()) {
+                    s.cancel();
+                }
             }
             return;
         }
@@ -867,12 +903,17 @@ public class JobOverviewController implements Initializable {
         if (obj instanceof S3Object) {
             S3Object tmp = (S3Object) obj;
             String msg = "Delete Object " + tmp.getName();
-            Stage stage = this.mainApp.createProgressDialog("Delete", msg, this.mainApp.getPrimaryStage());
-            Service<Void> s = this.mainApp.getCloudManager().createDeleteObjectService((S3Object) obj, stage);
-            log.debug(s.getState());
-            s.start();
+            Stage confirmDialog = this.mainApp.createModalConfirmDialog(msg + "?", this.mainApp.getPrimaryStage());
+            confirmDialog.showAndWait();
+            if (this.mainApp.isCanceled()) {
+                return;
+            }
+            this.mainApp.resetCanceled();
             
-            stage.showAndWait();
+            Stage progressDialog = this.mainApp.createStripedProgressDialog(msg, this.mainApp.getPrimaryStage());
+            Service<Void> s = this.mainApp.getCloudManager().createDeleteObjectService((S3Object) obj, progressDialog);
+            s.start();
+            progressDialog.showAndWait();
             
             if (State.SUCCEEDED == s.getState()) {
                 log.debug(this.getRemoteObjectCache().size());
@@ -880,8 +921,10 @@ public class JobOverviewController implements Initializable {
                 log.debug(this.getRemoteObjectCache().size());
             } else {
                 log.debug(s.getState());
+                if (State.CANCELLED != s.getState()) {
+                    s.cancel();
+                }
             }
-            return;
         }
     }
     
@@ -895,11 +938,106 @@ public class JobOverviewController implements Initializable {
     
     @FXML
     private void handelLaunchInstances() {
-        log.debug("TO DO");
+//for free test
+        CreateKeyPairRequest ckprqt = new CreateKeyPairRequest("capercloud");
+        CreateKeyPairResult ckpres = this.mainApp.getCloudManager().getEc2Manager().createKeyPair(ckprqt);
+        
+        RunInstancesRequest rirqt = new RunInstancesRequest("ami-018c9568", 1, 1);
+        rirqt.setInstanceType(InstanceType.T1Micro);
+        rirqt.setKeyName(ckpres.getKeyPair().getKeyName());
+        
+        this.mainApp.getCloudManager().getEc2Manager().runInstancesAsync(rirqt, new AsyncHandler<RunInstancesRequest,RunInstancesResult>() {
+            @Override
+            public void onError(Exception excptn) {
+                log.error(excptn.getMessage());
+            }
+            @Override
+            public void onSuccess(RunInstancesRequest rqst, RunInstancesResult result) {
+                for (Instance i : result.getReservation().getInstances()) {
+                    log.debug(i);
+                    InstanceModel im = new InstanceModel(i);
+                    JobOverviewController.this.getInstancesCache().add(im);
+                    JobOverviewController.this.getInstancesMap().put(i.getInstanceId(), im);
+                }
+            }
+        });
     }
     
     @FXML
     private void handleInstanceMonitorRefreshAction() {
         this.updateInstancesCache();
+    }
+    
+    @FXML
+    private void handleInstanceMonitorStopAction() {
+        List<String> instanceIds = new ArrayList<>();
+        InstanceModel selectedInstance = (InstanceModel) this.tvInstanceMonitor.getSelectionModel().getSelectedItem();
+        if (selectedInstance == null) {
+            return;
+        }
+        instanceIds.add(selectedInstance.instanceIdProperty().getValue());
+        
+        final AmazonEC2AsyncClient ec2m = this.mainApp.getCloudManager().getEc2Manager();
+        ec2m.stopInstancesAsync(new StopInstancesRequest(instanceIds), new  AsyncHandler<StopInstancesRequest,StopInstancesResult>() {
+            @Override
+            public void onError(Exception excptn) {
+                log.debug(excptn.getMessage());
+            }
+
+            @Override
+            public void onSuccess(StopInstancesRequest rqst, StopInstancesResult result) {
+                List<InstanceStateChange> res = result.getStoppingInstances();
+                for (InstanceStateChange isc : res) {
+                    InstanceModel im = JobOverviewController.this.getInstancesMap().get(isc.getInstanceId());
+                    im.setState(isc.getCurrentState().getName());
+                }
+            }
+        });
+    }
+    
+    @FXML
+    private void handleInstanceMonitorTerminateAction() {
+        List<String> instanceIds = new ArrayList<>();
+        InstanceModel selectedInstance = (InstanceModel) this.tvInstanceMonitor.getSelectionModel().getSelectedItem();
+        if (selectedInstance == null) {
+            return;
+        }
+        instanceIds.add(selectedInstance.instanceIdProperty().getValue());
+        final AmazonEC2AsyncClient ec2m = this.mainApp.getCloudManager().getEc2Manager();
+        ec2m.terminateInstancesAsync(new TerminateInstancesRequest(instanceIds), new AsyncHandler<TerminateInstancesRequest,TerminateInstancesResult>() {
+            @Override
+            public void onError(Exception excptn) {
+                log.error(excptn.getMessage());
+            }
+
+            @Override
+            public void onSuccess(TerminateInstancesRequest rqst, TerminateInstancesResult result) {
+                List<InstanceStateChange> res = result.getTerminatingInstances();
+                for (InstanceStateChange isc : res) {
+                    InstanceModel im = JobOverviewController.this.getInstancesMap().get(isc.getInstanceId());
+                    im.setState(isc.getCurrentState().getName());
+                }
+            }
+        });
+    }
+    
+    @FXML
+    private void handleInstanceMonitorRebootAction() {
+        
+    }
+    
+    @FXML
+    private void handleDataTransferCancelAction() {
+        DataTransferTask task = (DataTransferTask) this.tvTransferLog.getSelectionModel().getSelectedItem();
+        if (task == null) {
+            return;
+        }
+        task.cancel();
+    }
+    
+    @FXML
+    private void handleInputCloudRefreshAction() {
+        S3Bucket bucket = (S3Bucket) this.cbBucketSelection.getValue();
+        this.updateInputCloudCache(bucket);
     }
 }

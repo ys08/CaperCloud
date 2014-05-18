@@ -17,7 +17,6 @@ import javafx.beans.property.StringProperty;
  * @author shuai
  */
 public class InstanceModel {
-    private Instance instance;
     SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
     
     private StringProperty instanceId;
@@ -33,54 +32,68 @@ public class InstanceModel {
     private StringProperty blockDevice;
     
     public InstanceModel(Instance instance) {
-        this.instance = instance;
-    }
-    
-    public StringProperty instanceIdProperty() {
-        return new SimpleStringProperty(instance.getInstanceId());
-    }
-    
-    public StringProperty imageIdProperty() {
-        return new SimpleStringProperty(instance.getImageId());
-    }
-    
-    public StringProperty stateNameProperty() {
-        return new SimpleStringProperty(instance.getState().getName());
-    }
-    
-    public StringProperty instanceTypeProperty() {
-        return new SimpleStringProperty(instance.getInstanceType());
-    }
-    
-    public StringProperty platformProperty() {
-        return new SimpleStringProperty(instance.getHypervisor());
-    }
-    
-    public StringProperty architectureProperty() {
-        return new SimpleStringProperty(instance.getArchitecture());
-    }
-    
-    public StringProperty rootDeviceProperty() {
-        return new SimpleStringProperty(instance.getRootDeviceName() + " " + instance.getRootDeviceType());
-    }
-    
-    public StringProperty keyNameProperty() {
-        return new SimpleStringProperty(instance.getKeyName());
-    }
-    
-    public StringProperty launchTimeProperty() {
-        return new SimpleStringProperty(df.format(instance.getLaunchTime().getTime()));
-    }
-    
-    public StringProperty availabilityZoneProperty() {
-        return new SimpleStringProperty(instance.getPlacement().getAvailabilityZone());
-    }
-    
-    public StringProperty blockDeviceProperty() {
+        this.instanceId = new SimpleStringProperty(instance.getInstanceId());
+        this.imageId = new SimpleStringProperty(instance.getImageId());
+        this.stateName = new SimpleStringProperty(instance.getState().getName());
+        this.instanceType = new SimpleStringProperty(instance.getInstanceType());
+        this.platform = new SimpleStringProperty(instance.getHypervisor());
+        this.architecture = new SimpleStringProperty(instance.getArchitecture());
+        this.rootDevice = new SimpleStringProperty(instance.getRootDeviceName() + " " + instance.getRootDeviceType());
+        this.keyName = new SimpleStringProperty(instance.getKeyName());
+        this.launchTime = new SimpleStringProperty(df.format(instance.getLaunchTime().getTime()));
+        this.availabilityZone = new SimpleStringProperty(instance.getPlacement().getAvailabilityZone());
         StringBuilder sb = new StringBuilder();
         for (InstanceBlockDeviceMapping i : instance.getBlockDeviceMappings()) {
             sb.append("|").append(i.getEbs().getVolumeId());
         }
-        return new SimpleStringProperty(sb.toString());
+        this.blockDevice = new SimpleStringProperty(sb.toString());
+    }
+    
+    public StringProperty instanceIdProperty() {
+        return this.instanceId;
+    }
+    
+    public StringProperty imageIdProperty() {
+        return this.imageId;
+    }
+    
+    public StringProperty stateNameProperty() {
+        return this.stateName;
+    }
+    
+    public StringProperty instanceTypeProperty() {
+        return this.instanceType;
+    }
+    
+    public StringProperty platformProperty() {
+        return this.platform;
+    }
+    
+    public StringProperty architectureProperty() {
+        return this.architecture;
+    }
+    
+    public StringProperty rootDeviceProperty() {
+        return this.rootDevice;
+    }
+    
+    public StringProperty keyNameProperty() {
+        return this.keyName;
+    }
+    
+    public StringProperty launchTimeProperty() {
+        return this.launchTime;
+    }
+    
+    public StringProperty availabilityZoneProperty() {
+        return this.availabilityZone;
+    }
+    
+    public StringProperty blockDeviceProperty() {
+        return this.blockDevice;
+    }
+    
+    public void setState(String stateName) {
+        this.stateName.setValue(stateName);
     }
 }
