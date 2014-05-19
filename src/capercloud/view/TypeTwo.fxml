@@ -11,7 +11,7 @@
   <children>
     <CheckBox mnemonicParsing="false" text="Use custom data" AnchorPane.leftAnchor="50.0" AnchorPane.topAnchor="45.0" />
     <Button disable="true" mnemonicParsing="false" text="Generate databases" AnchorPane.rightAnchor="50.0" AnchorPane.topAnchor="45.0" />
-    <Label text="Filter Stage" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="255.0" />
+    <Label layoutX="10.0" layoutY="255.0" text="Filter Stage" />
     <VBox id="VBox" alignment="CENTER_RIGHT" spacing="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="100.0">
       <children>
         <Button disable="true" mnemonicParsing="false" text="Import VCF File" />
@@ -19,8 +19,8 @@
         <Button disable="true" mnemonicParsing="false" text="Import Fasta File" />
       </children>
     </VBox>
-    <TextArea editable="false" prefHeight="66.0" prefWidth="438.0" style="" text="When &quot;Use custom data&quot; is selected, you should select VCF file, gene annotation file and Fasta file containing mRNA sequence from left panel, and import them." wrapText="true" AnchorPane.bottomAnchor="70.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" />
-    <HBox id="HBox" alignment="CENTER_LEFT" prefWidth="247.0" spacing="50.0" AnchorPane.bottomAnchor="160.0" AnchorPane.leftAnchor="50.0">
+    <TextArea editable="false" layoutX="10.0" layoutY="334.0" prefHeight="66.0" prefWidth="430.0" style="" text="When &quot;Use custom data&quot; is selected, you should select VCF file, gene annotation file and Fasta file containing mRNA sequence from left panel, and import them." wrapText="true" />
+    <HBox id="HBox" alignment="CENTER_LEFT" layoutX="50.0" layoutY="288.0" prefWidth="247.0" spacing="50.0">
       <children>
         <Label text="FDR" />
         <TextField prefWidth="149.0" />

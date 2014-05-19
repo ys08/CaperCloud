@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import java.lang.*?>
+<?import java.net.*?>
 <?import java.util.*?>
 <?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane id="AnchorPane" prefHeight="200.0" prefWidth="350.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.TextFieldViewController">
+<AnchorPane id="AnchorPane" opacity="1.0" prefHeight="200.0" prefWidth="350.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.TextFieldViewController">
   <children>
     <HBox id="HBox" alignment="CENTER" layoutX="43.0" layoutY="21.0" spacing="5.0">
       <children>
@@ -20,6 +21,13 @@
         <Button fx:id="btnCancel" mnemonicParsing="false" onAction="#handleCancelAction" text="Cancel" />
       </children>
     </HBox>
-    <TextArea editable="false" layoutX="22.0" layoutY="59.0" prefHeight="82.0" prefWidth="307.0" text="Amazon S3 bucket names are globally unique, so once a bucket name has been taken by any user, you can't create another bucket with that same name." wrapText="true" />
+    <TextArea editable="false" layoutX="22.0" layoutY="59.0" prefHeight="82.0" prefWidth="307.0" styleClass="notice-textarea" text="Amazon S3 bucket names are globally unique, so once a bucket name has been taken by any user, you can't create another bucket with that same name." wrapText="true">
+      <stylesheets>
+        <URL value="@../res/theme.css" />
+      </stylesheets>
+    </TextArea>
   </children>
+  <stylesheets>
+    <URL value="@../res/theme.css" />
+  </stylesheets>
 </AnchorPane>
