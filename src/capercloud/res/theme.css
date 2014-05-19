@@ -1,19 +1,9 @@
-/**
- * modal-dialog.css
- * place in same directory as WebViewConfirm.java
- * ensure your build system copies the file to your build output directory
- */
- 
-.root {
-  -fx-glass-color: rgba(95, 158, 160, 0.9);
-}
- 
 .modal-dialog {
   -fx-padding: 20;
   -fx-spacing: 10;
   -fx-alignment: center;
   -fx-font-size: 20;
-  -fx-background-color: linear-gradient(to bottom, derive(-fx-glass-color, 20%), -fx-glass-color);
+  -fx-background-color: linear-gradient(to bottom, derive(rgba(95, 158, 160, 0.9), 20%), -fx-glass-color);
   -fx-border-color: derive(-fx-glass-color, -20%);
   -fx-border-width: 5;
   -fx-background-insets: 12;
@@ -39,4 +29,78 @@
         derive(-fx-accent, 30%) 50%,
         derive(-fx-accent, 30%) 99%
     );
+}
+
+.notice-textarea {
+    -fx-background-insets:0;
+    -fx-border-color: black;
+    -fx-focus-color: transparent;
+    -fx-text-fill: red;
+}
+
+.tab-pane
+{
+    -fx-tab-min-width:90px;
+}
+
+.tab-pane *.tab-header-background {
+    -fx-background-color: derive(#cccccc, 20%);
+    -fx-effect: innershadow(two-pass-box , rgba(0,0,0,0.6) , 4, 0.0 , 0 , 0);
+}
+
+.table-view {
+    -fx-focus-color: transparent;
+}
+
+.table-view:focused .table-row-cell:filled:focused:selected {
+    -fx-background-color: #0093ff;
+}
+
+.table-view .column-header .label {
+    -fx-font-size: 13;
+    -fx-font-family: "Arial";
+    -fx-text-fill: #555555;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+    -fx-opacity: 1;
+}
+
+.button {
+    -fx-background-color: 
+        rgba(0,0,0,0.08),
+        linear-gradient(#9a9a9a, #909090),
+        linear-gradient(white 0%, #f3f3f3 50%, #ececec 51%, #f2f2f2 100%);
+    -fx-background-insets: 0 0 -1 0,0,1;
+    -fx-background-radius: 5,5,4;
+    -fx-padding: 3 10 3 10;
+    -fx-text-fill: #242d35;
+    -fx-font-size: 12px;
+}
+
+.button:pressed:hover{
+    -fx-effect: innershadow( three-pass-box , rgba(0,0,0,0.7) , 6, 0.0 , 0 , 2 );
+}
+.button:hover{
+    -fx-effect: dropshadow(three-pass-box, rgba(95, 158, 160, 0.9), 10, 0, 0, 0);;
+}
+
+.split-pane:horizontal > * > .split-pane-divider {
+    -fx-border-color: transparent #cccccc transparent #cccccc;
+    -fx-background-color: transparent, derive(#cccccc,20%);
+}
+
+.custom-label {
+    -fx-font: bold 18pt "Arial";
+    -fx-effect: dropshadow( one-pass-box , #999999 , 4 , 0.0 , 1 , 0 );
+}
+
+.combo-box {
+    -fx-background-color: 
+        linear-gradient(#020b02, #3a3a3a),
+        linear-gradient(#b9b9b9 0%, #c2c2c2 20%, #afafaf 80%, #c8c8c8 100%),
+        linear-gradient(#f5f5f5 0%, #dbdbdb 50%, #cacaca 51%, #d7d7d7 100%);
+}
+
+.combo-box:hover{
+    -fx-effect: dropshadow(three-pass-box, rgba(95, 158, 160, 0.9), 10, 0, 0, 0);;
 }

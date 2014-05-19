@@ -6,6 +6,7 @@
 
 package capercloud;
 
+import capercloud.log.TextAreaAppender;
 import capercloud.model.DataTransferTask;
 import capercloud.model.DownloadTask;
 import capercloud.model.InputCloudTableModel;
@@ -144,7 +145,6 @@ public class JobOverviewController implements Initializable {
     @FXML private TableColumn tcRemoteUploadTime;
     @FXML private TextField tfLocalPath;
     @FXML private TextField tfRemotePath;
-    @FXML private TextArea taFileLog;
     @FXML private Label username;
     
 //Job Tab
@@ -156,6 +156,7 @@ public class JobOverviewController implements Initializable {
     @FXML private TableView tvVariableModifications;
     @FXML private TableView tvModifications;
     @FXML private ComboBox cbBucketSelection;
+    @FXML private TextArea taLog;
     
 //Status Tab
     @FXML private TableView tvJobMonitor;
@@ -325,7 +326,6 @@ public class JobOverviewController implements Initializable {
                     if (event.getClickCount() > 1) {
                         TableRow tr = (TableRow) event.getSource();
                         File f = (File) tr.getItem();
-                        log.debug("Double click on file " + f.getName());
                         if (f.isDirectory()) {
                             JobOverviewController.this.homeDirectory = f;
                             JobOverviewController.this.updateLocalFileCache();
@@ -542,6 +542,8 @@ public class JobOverviewController implements Initializable {
         
 //init instance types ComboBox
         this.cbInstanceType.setItems(this.instanceTypes);
+//        
+        TextAreaAppender.setTextArea(taLog);
     }
     
     public void enableButton() {
