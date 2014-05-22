@@ -28,7 +28,14 @@ import com.amazonaws.services.ec2.model.StopInstancesRequest;
 import com.amazonaws.services.ec2.model.StopInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
+import com.compomics.util.experiment.biology.Enzyme;
+import com.compomics.util.experiment.biology.EnzymeFactory;
+import com.compomics.util.experiment.identification.SearchParameters;
+import com.compomics.util.experiment.identification.SearchParameters.MassAccuracyType;
+import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -58,6 +65,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -85,11 +93,13 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.comparator.DirectoryFileComparator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
+import org.xmlpull.v1.XmlPullParserException;
 
 /**
  * FXML Controller class
@@ -99,12 +109,32 @@ import org.jets3t.service.model.S3Object;
 public class JobOverviewController implements Initializable {
     private Log log = LogFactory.getLog(getClass());
     private CaperCloud mainApp;
+    private EnzymeFactory enzymeFactory;
+    private ObservableList<String> cleavageSites;
+    private ObservableList<MassAccuracyType> massAccuracyTypes;
     private final ObservableList jobTypes = FXCollections.observableArrayList(
             "Novel Protein", 
             "SAP", 
             "AS",
             "Custom Protein Database"
     );
+    private final ObservableList refinementExpects = FXCollections.observableArrayList(
+            "0",
+            "-1",
+            "-2",
+            "-3",
+            "-4",
+            "-5",
+            "-6",
+            "-7",
+            "-8",
+            "-9"
+    );
+    
+    private TypeOneController t1c;
+    private TypeTwoController t2c;
+    private TypeThreeController t3c;
+    private TypeFourController t4c;
 //File Tab    
 //data for local TableView
     private ObservableList<File> localFileCache;
@@ -152,11 +182,13 @@ public class JobOverviewController implements Initializable {
     @FXML private ComboBox cbJobType;
     @FXML private BorderPane bpJobType;
     @FXML private TableView tvInput;
-    @FXML private TableView tvFixedModifications;
-    @FXML private TableView tvVariableModifications;
-    @FXML private TableView tvModifications;
     @FXML private ComboBox cbBucketSelection;
     @FXML private TextArea taLog;
+    @FXML private ComboBox cbCleavageSites;
+    @FXML private CheckBox cbSemiCleavage;
+    @FXML private TextField tfFragmentMassError;
+    @FXML private ComboBox cbFragmentMassType;
+    @FXML private ComboBox cbRefinementExpect;
     
 //Status Tab
     @FXML private TableView tvJobMonitor;
@@ -166,9 +198,22 @@ public class JobOverviewController implements Initializable {
     @FXML private TableView tvResults;
     
     public JobOverviewController() {
-//init instance type
         this.instanceTypes = FXCollections.observableArrayList();
         this.instanceTypes.addAll(Arrays.asList(InstanceType.values()));
+        this.cleavageSites = FXCollections.observableArrayList();
+        this.massAccuracyTypes = FXCollections.observableArrayList(MassAccuracyType.values());
+        
+        try {
+            this.enzymeFactory = EnzymeFactory.getInstance();
+            File enzymesFile = new File("enzymes.xml");
+            this.enzymeFactory.importEnzymes(enzymesFile);
+            List<Enzyme> enzymes = this.enzymeFactory.getEnzymes();
+            for (Enzyme e : enzymes) {
+                this.cleavageSites.add(e.getName());
+            }
+        } catch (XmlPullParserException | IOException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
 //getters and setters, lazy init
@@ -252,9 +297,6 @@ public class JobOverviewController implements Initializable {
 //Job tab init
         this.cbJobType.setItems(jobTypes);
         this.tvInput.setPlaceholder(new Text(""));
-        this.tvFixedModifications.setPlaceholder(new Text(""));
-        this.tvVariableModifications.setPlaceholder(new Text(""));
-        this.tvModifications.setPlaceholder(new Text());
      
 //Status tab init
         this.tvJobMonitor.setPlaceholder(new Text(""));
@@ -544,6 +586,15 @@ public class JobOverviewController implements Initializable {
         this.cbInstanceType.setItems(this.instanceTypes);
 //        
         TextAreaAppender.setTextArea(taLog);
+        
+//
+        this.cbCleavageSites.setItems(this.cleavageSites);
+//
+        this.cbFragmentMassType.setItems(this.massAccuracyTypes);
+        this.cbFragmentMassType.getSelectionModel().selectFirst();
+        
+//
+        this.cbRefinementExpect.setItems(this.refinementExpects);
     }
     
     public void enableButton() {
@@ -663,6 +714,80 @@ public class JobOverviewController implements Initializable {
         return tvLocal.getSelectionModel().getSelectedItems().iterator();
     }
     
+    public S3Object getSelectedObject() {
+        InputCloudTableModel ictm = (InputCloudTableModel) this.tvInput.getSelectionModel().getSelectedItem();
+        if (ictm == null) {
+            return null;
+        }
+        return ictm.getObj();
+    }
+    
+    private void createInputFile(SearchParameters sp, File inputFile, File taxonomyFile, String spectrumFile, String outputPath) {
+        String fragmentUnit = "ppm";
+        String enzymeIsSemiSpecific = "no";
+        String sep = IOUtils.LINE_SEPARATOR;
+        XtandemParameters xp = (XtandemParameters) sp.getIdentificationAlgorithmParameter(1);
+        if (sp.getFragmentAccuracyType() == SearchParameters.MassAccuracyType.PPM) {
+            fragmentUnit = "ppm";
+        } else if (sp.getFragmentAccuracyType() == SearchParameters.MassAccuracyType.DA) {
+            fragmentUnit = "Daltons";
+        }
+        if (sp.getEnzyme().isSemiSpecific()) {
+            enzymeIsSemiSpecific = "yes";
+        } else {
+            enzymeIsSemiSpecific = "no";
+        }
+        
+        try {
+            BufferedWriter bw = new BufferedWriter(new FileWriter(inputFile));
+            bw.write("<?xml version=\"1.0\"?>" + sep
+                    + "<bioml>" + sep
+                    + "\t<note type=\"input\" label=\"list path, default parameters\"> default_input.xml </note>" + sep
+                    + "\t<note type=\"input\" label=\"list path, taxonomy information\">" + taxonomyFile.getName() + "</note>" + sep
+                    + "\t<note type=\"input\" label=\"protein, taxon\">all</note>" + sep
+                    + "\t<note type=\"input\" label=\"spectrum, path\">" + spectrumFile + "</note>" + sep
+                    + "\t<note type=\"input\" label=\"output, path\">" + outputPath + "</note>" + sep
+                    + "\t<note type=\"input\" label=\"protein, cleavage site\">" + sp.getEnzyme().getXTandemFormat() + "</note>" + sep
+                    + "\t<note type=\"input\" label=\"protein, cleavage semi\">" + enzymeIsSemiSpecific + "</note>" + sep
+                    + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error\">" + sp.getFragmentIonAccuracy() + "</note>" + sep
+                    + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error units\">" + fragmentUnit + "</note>" + sep
+                    + "\t<note type=\"input\" label=\"output, maximum valid expectation value\">" + xp.getMaxEValue() + "</note>" + sep
+                    + "</bioml>" + sep);
+            bw.flush();
+            bw.close();
+        } catch (IOException ioe) {
+            log.error(ioe.getMessage());
+        }
+    }
+    
+    private void createTaxonomyFile(File taxonomyFile, String dataBase) {
+        String sep = IOUtils.LINE_SEPARATOR;
+        try {
+            BufferedWriter bw = new BufferedWriter(new FileWriter(taxonomyFile));
+            bw.write(
+                    "<?xml version=\"1.0\"?>" + sep
+                    + "<bioml label=\"x! taxon-to-file matching list\">" + sep
+                    + "\t<taxon label=\"all\">" + sep
+                    + "\t\t<file format=\"peptide\" URL=\"" + dataBase + "\" />" + sep
+                    + "\t</taxon>" + sep
+                    + "</bioml>");
+            bw.flush();
+            bw.close();
+        } catch (IOException ioe) {
+            log.error(ioe.getMessage());
+        }
+    }
+    
+    private List<S3Object> getSelectedSpectra() {
+        List<S3Object> objs = new ArrayList<>();
+        for (InputCloudTableModel i : this.getInputCloudCache()) {
+            if (i.selectedProperty().getValue()) {
+                objs.add(i.getObj());
+            }
+        }
+        return objs;
+    }
+    
     @FXML
     private void handleManageAccountsAction() {
         this.mainApp.showLoginView();
@@ -714,6 +839,8 @@ public class JobOverviewController implements Initializable {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeFour.fxml"));
                 AnchorPane ap = (AnchorPane) loader.load();
+                this.t4c = loader.getController();
+                this.t4c.setMainApp(mainApp);
                 bpJobType.setCenter(ap);
             } catch (IOException ex) {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
@@ -1041,5 +1168,71 @@ public class JobOverviewController implements Initializable {
     private void handleInputCloudRefreshAction() {
         S3Bucket bucket = (S3Bucket) this.cbBucketSelection.getValue();
         this.updateInputCloudCache(bucket);
+    }
+    
+    @FXML
+    private void handleJobSaveAction() {
+        int jobType = this.cbJobType.getSelectionModel().getSelectedIndex() + 1;
+        S3Bucket saveToBucket = (S3Bucket) this.cbBucketSelection.getValue();
+        String sep = IOUtils.LINE_SEPARATOR;
+        if (jobType == 0) {
+            return;
+        }
+        
+        if (jobType == 4) {
+            String timestamp = Long.toString(System.currentTimeMillis());
+            String tmpPath = FileUtils.getTempDirectoryPath() + "capercloud";
+            String jobTypeFilename = timestamp + ".txt";
+            String taxonomyFilename = timestamp + "taxonomy.xml";
+            File taxonomyFile = new File(tmpPath, taxonomyFilename);
+            
+            String databaseURI = this.t4c.getDatabaseURI();
+            if (databaseURI == null) {
+                log.info("Please import a database");
+                return;
+            }
+            String databaseName = this.t4c.getDatabaseName();
+            this.createTaxonomyFile(taxonomyFile, databaseName);
+            
+            List<S3Object> selectedSpectra = this.getSelectedSpectra();
+            if (selectedSpectra.isEmpty()) {
+                log.warn("Please select one or more spectra");
+                return;
+            }
+
+            SearchParameters sp = new SearchParameters();
+            XtandemParameters xp = new XtandemParameters();
+            sp.setIdentificationAlgorithmParameter(1, xp);
+            String enzymeName = (String) this.cbCleavageSites.getValue();
+            log.debug(enzymeName);
+            Enzyme e = this.enzymeFactory.getEnzyme(enzymeName);
+            log.debug(e);
+            e.setSemiSpecific(this.cbSemiCleavage.isSelected());
+            sp.setEnzyme(e);
+            String fragmentError = this.tfFragmentMassError.getText();
+            sp.setFragmentIonAccuracy(Double.parseDouble(fragmentError));
+            sp.setFragmentAccuracyType((MassAccuracyType) this.cbFragmentMassType.getValue());
+            String refinementExpect = (String) this.cbRefinementExpect.getValue();
+            xp.setMaximumExpectationValueRefinement(Double.parseDouble(refinementExpect));
+            
+            for (S3Object obj : selectedSpectra) {
+                String inputFilename = timestamp + "." + obj.getName() + ".xml";
+                File inputFile = new File(tmpPath, inputFilename);
+                this.createInputFile(sp, inputFile, taxonomyFile, obj.getName(), obj.getName()+"output");
+            }
+            
+            File jobTypeFile = new File(tmpPath, jobTypeFilename);
+            
+            List<String> jobTypeFileContent = new ArrayList<>();
+            jobTypeFileContent.add("4");
+            jobTypeFileContent.add(this.mainApp.getCloudManager().getCurrentCredentials().getAccessKey());
+            jobTypeFileContent.add(this.mainApp.getCloudManager().getCurrentCredentials().getSecretKey());
+            jobTypeFileContent.add(databaseURI);
+            try {
+                FileUtils.writeLines(jobTypeFile, jobTypeFileContent);
+            } catch (IOException ex) {
+                log.error(ex.getMessage());
+            }
+        }
     }
 }
