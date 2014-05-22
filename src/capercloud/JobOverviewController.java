@@ -751,7 +751,7 @@ public class JobOverviewController implements Initializable {
                     + "\t<note type=\"input\" label=\"protein, cleavage semi\">" + enzymeIsSemiSpecific + "</note>" + sep
                     + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error\">" + sp.getFragmentIonAccuracy() + "</note>" + sep
                     + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error units\">" + fragmentUnit + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"output, maximum valid expectation value\">" + xp.getMaxEValue() + "</note>" + sep
+                    + "\t<note type=\"input\" label=\"refine, maximum valid expectation value\">" + xp.getMaximumExpectationValueRefinement() + "</note>" + sep
                     + "</bioml>" + sep);
             bw.flush();
             bw.close();
