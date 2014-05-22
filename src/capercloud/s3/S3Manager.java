@@ -51,12 +51,11 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
     private Log log = LogFactory.getLog(getClass());
     public static Jets3tProperties jets3tProperties = Jets3tProperties.getInstance(Constants.JETS3T_PROPERTIES_FILENAME);;
     private CredentialsProvider mCredentialProvider;
-    
     private RestS3Service s3Service;
     private ThreadedS3Service storageService;
-    private DataTransferTask transferTask;
     private final ByteFormatter byteFormatter = new ByteFormatter();
-
+    
+    private DataTransferTask transferTask;
     /**
      * 
      * @param currentCredentials

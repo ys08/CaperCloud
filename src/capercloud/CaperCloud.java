@@ -13,7 +13,6 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.concurrent.Service;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -45,6 +44,11 @@ import org.apache.commons.logging.LogFactory;
 public class CaperCloud extends Application {
     
     public static final String APPLICATION_DESCRIPTION = "CaperCloud/1.0";
+    public static final int NOVEL_GENE = 1;
+    public static final int SAP = 2;
+    public static final int AS = 3;
+    public static final int CUSTOM_DB = 4;
+    
     private Log log = LogFactory.getLog(getClass());
     private CloudManager cloudManager;
 //Modal Confirm Dialog will set it

@@ -6,9 +6,10 @@
 
 package capercloud.model;
 
+import com.amazonaws.services.ec2.model.GroupIdentifier;
 import com.amazonaws.services.ec2.model.Instance;
-import com.amazonaws.services.ec2.model.InstanceBlockDeviceMapping;
 import java.text.SimpleDateFormat;
+import java.util.List;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
@@ -23,30 +24,31 @@ public class InstanceModel {
     private StringProperty imageId;
     private StringProperty stateName;
     private StringProperty instanceType;
-    private StringProperty platform;
+    private StringProperty publicIp;
     private StringProperty architecture;
     private StringProperty rootDevice;
     private StringProperty keyName;
     private StringProperty launchTime;
     private StringProperty availabilityZone;
-    private StringProperty blockDevice;
+    private StringProperty securityGroup;
     
     public InstanceModel(Instance instance) {
         this.instanceId = new SimpleStringProperty(instance.getInstanceId());
         this.imageId = new SimpleStringProperty(instance.getImageId());
         this.stateName = new SimpleStringProperty(instance.getState().getName());
         this.instanceType = new SimpleStringProperty(instance.getInstanceType());
-        this.platform = new SimpleStringProperty(instance.getHypervisor());
+        this.publicIp = new SimpleStringProperty(instance.getPublicIpAddress());
         this.architecture = new SimpleStringProperty(instance.getArchitecture());
-        this.rootDevice = new SimpleStringProperty(instance.getRootDeviceName() + " " + instance.getRootDeviceType());
+        this.rootDevice = new SimpleStringProperty(instance.getRootDeviceType() + ":" + instance.getRootDeviceName());
         this.keyName = new SimpleStringProperty(instance.getKeyName());
         this.launchTime = new SimpleStringProperty(df.format(instance.getLaunchTime().getTime()));
         this.availabilityZone = new SimpleStringProperty(instance.getPlacement().getAvailabilityZone());
         StringBuilder sb = new StringBuilder();
-        for (InstanceBlockDeviceMapping i : instance.getBlockDeviceMappings()) {
-            sb.append("|").append(i.getEbs().getVolumeId());
+        List<GroupIdentifier> groupIds = instance.getSecurityGroups();
+        for (GroupIdentifier gi : groupIds) {
+            sb.append(gi.getGroupName()).append(",");
         }
-        this.blockDevice = new SimpleStringProperty(sb.toString());
+        this.securityGroup = new SimpleStringProperty(sb.toString());
     }
     
     public StringProperty instanceIdProperty() {
@@ -66,7 +68,7 @@ public class InstanceModel {
     }
     
     public StringProperty platformProperty() {
-        return this.platform;
+        return this.publicIp;
     }
     
     public StringProperty architectureProperty() {
@@ -90,7 +92,7 @@ public class InstanceModel {
     }
     
     public StringProperty blockDeviceProperty() {
-        return this.blockDevice;
+        return this.securityGroup;
     }
     
     public void setState(String stateName) {
