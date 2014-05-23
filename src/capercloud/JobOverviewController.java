@@ -7,9 +7,11 @@
 package capercloud;
 
 import capercloud.log.TextAreaAppender;
+import capercloud.model.CloudJob;
+import capercloud.model.ClusterConfigs;
 import capercloud.model.DataTransferTask;
 import capercloud.model.DownloadTask;
-import capercloud.model.InputCloudTableModel;
+import capercloud.model.InputObjectModel;
 import capercloud.model.InstanceModel;
 import capercloud.model.UploadTask;
 import com.amazonaws.handlers.AsyncHandler;
@@ -33,11 +35,10 @@ import com.compomics.util.experiment.biology.EnzymeFactory;
 import com.compomics.util.experiment.identification.SearchParameters;
 import com.compomics.util.experiment.identification.SearchParameters.MassAccuracyType;
 import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -97,6 +98,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.comparator.DirectoryFileComparator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 import org.xmlpull.v1.XmlPullParserException;
@@ -109,6 +111,7 @@ import org.xmlpull.v1.XmlPullParserException;
 public class JobOverviewController implements Initializable {
     private Log log = LogFactory.getLog(getClass());
     private CaperCloud mainApp;
+    private List<CloudJob> jobs;
     private EnzymeFactory enzymeFactory;
     private ObservableList<String> cleavageSites;
     private ObservableList<MassAccuracyType> massAccuracyTypes;
@@ -130,6 +133,7 @@ public class JobOverviewController implements Initializable {
             "-8",
             "-9"
     );
+    private S3Bucket inputBucket;
     
     private TypeOneController t1c;
     private TypeTwoController t2c;
@@ -150,7 +154,7 @@ public class JobOverviewController implements Initializable {
     private ObservableList<DataTransferTask> dataTransferTasks;
     
 //Job Tab
-    private ObservableList<InputCloudTableModel> inputCloudCache;
+    private ObservableList<InputObjectModel> inputObjectCache;
     private ObservableList<InstanceType> instanceTypes;
     
 //Status Tab    
@@ -189,6 +193,8 @@ public class JobOverviewController implements Initializable {
     @FXML private TextField tfFragmentMassError;
     @FXML private ComboBox cbFragmentMassType;
     @FXML private ComboBox cbRefinementExpect;
+    @FXML private TextField tfNumOfInstances;
+    @FXML public static TextField tfSelectedNumOfInputSpectra;
     
 //Status Tab
     @FXML private TableView tvJobMonitor;
@@ -198,6 +204,7 @@ public class JobOverviewController implements Initializable {
     @FXML private TableView tvResults;
     
     public JobOverviewController() {
+        this.jobs = new ArrayList<>();
         this.instanceTypes = FXCollections.observableArrayList();
         this.instanceTypes.addAll(Arrays.asList(InstanceType.values()));
         this.cleavageSites = FXCollections.observableArrayList();
@@ -225,11 +232,11 @@ public class JobOverviewController implements Initializable {
         return this.localFileCache;
     }
     
-    public ObservableList<InputCloudTableModel> getInputCloudCache() {
-        if (this.inputCloudCache == null) {
-            this.inputCloudCache = FXCollections.observableArrayList();
+    public ObservableList<InputObjectModel> getInputObjectCache() {
+        if (this.inputObjectCache == null) {
+            this.inputObjectCache = FXCollections.observableArrayList();
         }
-        return this.inputCloudCache;
+        return this.inputObjectCache;
     }
 
     public ObservableList<DataTransferTask> getDataTransferTasks() {
@@ -538,24 +545,25 @@ public class JobOverviewController implements Initializable {
         this.cbBucketSelection.valueProperty().addListener(new ChangeListener<S3Bucket>() {
             @Override
             public void changed(ObservableValue<? extends S3Bucket> ov, S3Bucket t, S3Bucket t1) {
-                JobOverviewController.this.updateInputCloudCache(t1);
+                JobOverviewController.this.updateInputObjectCache(t1);
+                JobOverviewController.this.inputBucket = t1;
             }
         });
         this.cbBucketSelection.setItems(this.getRemoteBucketCache());
         
 //init cloud input TableView
-        TableColumn<InputCloudTableModel, Boolean> checkOnInputCol = (TableColumn) this.tvInput.getColumns().get(0);
+        TableColumn<InputObjectModel, Boolean> checkOnInputCol = (TableColumn) this.tvInput.getColumns().get(0);
         checkOnInputCol.setCellFactory(CheckBoxTableCell.forTableColumn(checkOnInputCol));
-        checkOnInputCol.setCellValueFactory(new PropertyValueFactory<InputCloudTableModel, Boolean>("selected"));
+        checkOnInputCol.setCellValueFactory(new PropertyValueFactory<InputObjectModel, Boolean>("selected"));
 
         ((TableColumn) this.tvInput.getColumns().get(1))
-                .setCellValueFactory(new Callback<CellDataFeatures<InputCloudTableModel, String>, ObservableValue>() {
+                .setCellValueFactory(new Callback<CellDataFeatures<InputObjectModel, String>, ObservableValue>() {
             @Override
-            public ObservableValue call(CellDataFeatures<InputCloudTableModel, String> p) {
+            public ObservableValue call(CellDataFeatures<InputObjectModel, String> p) {
                 return new SimpleStringProperty(p.getValue().getName());
             }
                 });
-        this.tvInput.setItems(getInputCloudCache());  
+        this.tvInput.setItems(getInputObjectCache());  
         
 //init instance monitor TableView
         ((TableColumn) this.tvInstanceMonitor.getColumns().get(0))
@@ -595,6 +603,7 @@ public class JobOverviewController implements Initializable {
         
 //
         this.cbRefinementExpect.setItems(this.refinementExpects);
+        this.cbRefinementExpect.getSelectionModel().select(2);
     }
     
     public void enableButton() {
@@ -642,7 +651,7 @@ public class JobOverviewController implements Initializable {
         }
     }
     
-    private void updateInputCloudCache(S3Bucket bucket) {
+    private void updateInputObjectCache(S3Bucket bucket) {
         String message = "Listing Bucket " + bucket.getName();
         Stage dialog = this.mainApp.createStripedProgressDialog(message, this.mainApp.getPrimaryStage());
         Service<S3Object[]> s = this.mainApp.getCloudManager().createListObjectsService(bucket, dialog);
@@ -652,9 +661,9 @@ public class JobOverviewController implements Initializable {
 //stuck until user click cancel button
         if (State.SUCCEEDED == s.getState()) {
             S3Object[] res = s.getValue();
-            getInputCloudCache().clear();
+            getInputObjectCache().clear();
             for (S3Object obj : res) {
-                getInputCloudCache().add(new InputCloudTableModel(obj));
+                getInputObjectCache().add(new InputObjectModel(obj));
             }
         } else {
             if (State.CANCELLED != s.getState()) {
@@ -715,72 +724,16 @@ public class JobOverviewController implements Initializable {
     }
     
     public S3Object getSelectedObject() {
-        InputCloudTableModel ictm = (InputCloudTableModel) this.tvInput.getSelectionModel().getSelectedItem();
+        InputObjectModel ictm = (InputObjectModel) this.tvInput.getSelectionModel().getSelectedItem();
         if (ictm == null) {
             return null;
         }
         return ictm.getObj();
     }
     
-    private void createInputFile(SearchParameters sp, File inputFile, File taxonomyFile, String spectrumFile, String outputPath) {
-        String fragmentUnit = "ppm";
-        String enzymeIsSemiSpecific = "no";
-        String sep = IOUtils.LINE_SEPARATOR;
-        XtandemParameters xp = (XtandemParameters) sp.getIdentificationAlgorithmParameter(1);
-        if (sp.getFragmentAccuracyType() == SearchParameters.MassAccuracyType.PPM) {
-            fragmentUnit = "ppm";
-        } else if (sp.getFragmentAccuracyType() == SearchParameters.MassAccuracyType.DA) {
-            fragmentUnit = "Daltons";
-        }
-        if (sp.getEnzyme().isSemiSpecific()) {
-            enzymeIsSemiSpecific = "yes";
-        } else {
-            enzymeIsSemiSpecific = "no";
-        }
-        
-        try {
-            BufferedWriter bw = new BufferedWriter(new FileWriter(inputFile));
-            bw.write("<?xml version=\"1.0\"?>" + sep
-                    + "<bioml>" + sep
-                    + "\t<note type=\"input\" label=\"list path, default parameters\"> default_input.xml </note>" + sep
-                    + "\t<note type=\"input\" label=\"list path, taxonomy information\">" + taxonomyFile.getName() + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"protein, taxon\">all</note>" + sep
-                    + "\t<note type=\"input\" label=\"spectrum, path\">" + spectrumFile + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"output, path\">" + outputPath + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"protein, cleavage site\">" + sp.getEnzyme().getXTandemFormat() + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"protein, cleavage semi\">" + enzymeIsSemiSpecific + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error\">" + sp.getFragmentIonAccuracy() + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error units\">" + fragmentUnit + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"refine, maximum valid expectation value\">" + xp.getMaximumExpectationValueRefinement() + "</note>" + sep
-                    + "</bioml>" + sep);
-            bw.flush();
-            bw.close();
-        } catch (IOException ioe) {
-            log.error(ioe.getMessage());
-        }
-    }
-    
-    private void createTaxonomyFile(File taxonomyFile, String dataBase) {
-        String sep = IOUtils.LINE_SEPARATOR;
-        try {
-            BufferedWriter bw = new BufferedWriter(new FileWriter(taxonomyFile));
-            bw.write(
-                    "<?xml version=\"1.0\"?>" + sep
-                    + "<bioml label=\"x! taxon-to-file matching list\">" + sep
-                    + "\t<taxon label=\"all\">" + sep
-                    + "\t\t<file format=\"peptide\" URL=\"" + dataBase + "\" />" + sep
-                    + "\t</taxon>" + sep
-                    + "</bioml>");
-            bw.flush();
-            bw.close();
-        } catch (IOException ioe) {
-            log.error(ioe.getMessage());
-        }
-    }
-    
     private List<S3Object> getSelectedSpectra() {
         List<S3Object> objs = new ArrayList<>();
-        for (InputCloudTableModel i : this.getInputCloudCache()) {
+        for (InputObjectModel i : this.getInputObjectCache()) {
             if (i.selectedProperty().getValue()) {
                 objs.add(i.getObj());
             }
@@ -1060,7 +1013,7 @@ public class JobOverviewController implements Initializable {
 //Job tab event
     @FXML
     private void handleRunJobAction() {
-        for (InputCloudTableModel i : this.getInputCloudCache()) {
+        for (InputObjectModel i : this.getInputObjectCache()) {
             log.debug(i.selectedProperty().getValue());
         }
     }
@@ -1167,7 +1120,7 @@ public class JobOverviewController implements Initializable {
     @FXML
     private void handleInputCloudRefreshAction() {
         S3Bucket bucket = (S3Bucket) this.cbBucketSelection.getValue();
-        this.updateInputCloudCache(bucket);
+        this.updateInputObjectCache(bucket);
     }
     
     @FXML
@@ -1178,61 +1131,52 @@ public class JobOverviewController implements Initializable {
         if (jobType == 0) {
             return;
         }
-        
-        if (jobType == 4) {
-            String timestamp = Long.toString(System.currentTimeMillis());
-            String tmpPath = FileUtils.getTempDirectoryPath() + "capercloud";
-            String jobTypeFilename = timestamp + ".txt";
-            String taxonomyFilename = timestamp + "taxonomy.xml";
-            File taxonomyFile = new File(tmpPath, taxonomyFilename);
-            
-            String databaseURI = this.t4c.getDatabaseURI();
-            if (databaseURI == null) {
-                log.info("Please import a database");
-                return;
-            }
-            String databaseName = this.t4c.getDatabaseName();
-            this.createTaxonomyFile(taxonomyFile, databaseName);
-            
-            List<S3Object> selectedSpectra = this.getSelectedSpectra();
-            if (selectedSpectra.isEmpty()) {
-                log.warn("Please select one or more spectra");
-                return;
-            }
 
-            SearchParameters sp = new SearchParameters();
-            XtandemParameters xp = new XtandemParameters();
-            sp.setIdentificationAlgorithmParameter(1, xp);
-            String enzymeName = (String) this.cbCleavageSites.getValue();
-            log.debug(enzymeName);
-            Enzyme e = this.enzymeFactory.getEnzyme(enzymeName);
-            log.debug(e);
-            e.setSemiSpecific(this.cbSemiCleavage.isSelected());
-            sp.setEnzyme(e);
-            String fragmentError = this.tfFragmentMassError.getText();
-            sp.setFragmentIonAccuracy(Double.parseDouble(fragmentError));
-            sp.setFragmentAccuracyType((MassAccuracyType) this.cbFragmentMassType.getValue());
-            String refinementExpect = (String) this.cbRefinementExpect.getValue();
-            xp.setMaximumExpectationValueRefinement(Double.parseDouble(refinementExpect));
-            
-            for (S3Object obj : selectedSpectra) {
-                String inputFilename = timestamp + "." + obj.getName() + ".xml";
-                File inputFile = new File(tmpPath, inputFilename);
-                this.createInputFile(sp, inputFile, taxonomyFile, obj.getName(), obj.getName()+"output");
-            }
-            
-            File jobTypeFile = new File(tmpPath, jobTypeFilename);
-            
-            List<String> jobTypeFileContent = new ArrayList<>();
-            jobTypeFileContent.add("4");
-            jobTypeFileContent.add(this.mainApp.getCloudManager().getCurrentCredentials().getAccessKey());
-            jobTypeFileContent.add(this.mainApp.getCloudManager().getCurrentCredentials().getSecretKey());
-            jobTypeFileContent.add(databaseURI);
-            try {
-                FileUtils.writeLines(jobTypeFile, jobTypeFileContent);
-            } catch (IOException ex) {
-                log.error(ex.getMessage());
-            }
+        List<S3Object> selectedSpectra = this.getSelectedSpectra();
+        if (selectedSpectra.isEmpty()) {
+            log.warn("Please select one or more spectra");
+            return;
         }
+
+        SearchParameters sp = new SearchParameters();
+        XtandemParameters xp = new XtandemParameters();
+        sp.setIdentificationAlgorithmParameter(1, xp);
+        String enzymeName = (String) this.cbCleavageSites.getValue();
+        Enzyme e = this.enzymeFactory.getEnzyme(enzymeName);
+        e.setSemiSpecific(this.cbSemiCleavage.isSelected());
+        sp.setEnzyme(e);
+        String fragmentError = this.tfFragmentMassError.getText();
+        sp.setFragmentIonAccuracy(Double.parseDouble(fragmentError));
+        sp.setFragmentAccuracyType((MassAccuracyType) this.cbFragmentMassType.getValue());
+        String refinementExpect = (String) this.cbRefinementExpect.getValue();
+        xp.setMaximumExpectationValueRefinement(Double.parseDouble(refinementExpect));
+        
+        int num = Integer.parseInt(this.tfNumOfInstances.getText());
+        InstanceType it = (InstanceType) this.cbInstanceType.getSelectionModel().getSelectedItem();
+        ClusterConfigs cc = new ClusterConfigs("ami-b08b6cd8", num, num, it);
+        log.debug(cc.getImageId());
+        log.debug(cc.getMaxCount());
+        log.debug(cc.getMinCount());
+        log.debug(cc.getInstanceType());
+        CloudJob cj = new CloudJob(this.mainApp, selectedSpectra, sp, cc, jobType);
+        if (jobType == CaperCloud.CUSTOM_DB) {
+            cj.setT4c(this.t4c);
+        }
+        try {
+            cj.saveToS3(this.inputBucket);
+        } catch (NoSuchAlgorithmException ex) {
+            log.error(ex.getMessage());
+            return;
+        } catch (IOException | S3ServiceException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+            return;
+        }
+        this.jobs.add(cj);
+        log.info("add job to job list: " + cj.getCloudJobId());
+    }
+    
+    @FXML
+    private void handleRunCloudJobAction() {
+        CloudJob cj = this.jobs.get(this.jobs.size()-1);
     }
 }
