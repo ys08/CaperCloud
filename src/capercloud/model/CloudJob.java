@@ -98,8 +98,10 @@ public class CloudJob {
     public void setT4c(TypeFourController t4c) {
             this.t4c = t4c;
     }
+
     
-    public void runInCloud() {
+//master node will launch slave node    
+    public void launchMasterNode() {
         this.rir.setUserData(this.userdata());
         this.mainApp.getCloudManager().getEc2Manager().runInstancesAsync(rir, new AsyncHandler<RunInstancesRequest,RunInstancesResult>() {
             @Override
@@ -174,7 +176,6 @@ public class CloudJob {
     }
     
     public void saveToLocal() throws NoSuchAlgorithmException {
-        
         if (this.jobType == CaperCloud.CUSTOM_DB) {
             this.databaseObj = this.t4c.getDatabaseObj();
         }
