@@ -1178,5 +1178,7 @@ public class JobOverviewController implements Initializable {
     @FXML
     private void handleRunCloudJobAction() {
         CloudJob cj = this.jobs.get(this.jobs.size()-1);
+        log.debug(cj.userdata());
+        cj.runInCloud();
     }
 }

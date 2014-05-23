@@ -14,6 +14,7 @@ import capercloud.TypeTwoController;
 import com.amazonaws.handlers.AsyncHandler;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
+import com.amazonaws.util.Base64;
 import com.compomics.util.experiment.identification.SearchParameters;
 import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
 import java.io.BufferedWriter;
@@ -226,11 +227,12 @@ public class CloudJob {
         return this.timestamp;
     }
     
-    private String userdata() {
+    public String userdata() {
         if (jobType == CaperCloud.CUSTOM_DB) {
-            return null;
+            String userData = "#!/bin/bash\n"
+                    + "echo \"Hello World.  The time is now $(date -R)!\" | tee ~/output.txt\n";
+            return Base64.encodeAsString(userData.getBytes());
         }
         return null;
     }
-    
 }
