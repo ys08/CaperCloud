@@ -329,8 +329,8 @@
                                   <bottom>
                                     <HBox alignment="CENTER" prefHeight="-1.0" prefWidth="-1.0" BorderPane.alignment="CENTER">
                                       <children>
-                                        <Label text="Selected:" />
-                                        <TextField prefHeight="18.0" prefWidth="24.0" text="0" />
+                                        <Label text="Selected Input Spectra:" />
+                                        <TextField fx:id="tfSelectedNumOfInputSpectra" prefHeight="18.0" prefWidth="24.0" text="0" />
                                       </children>
                                       <padding>
                                         <Insets bottom="1.0" top="1.0" />
@@ -434,7 +434,7 @@
                                             <HBox id="HBox" alignment="CENTER" spacing="5.0" GridPane.columnIndex="0" GridPane.rowIndex="4">
                                               <children>
                                                 <Label text="Fragment mass error" />
-                                                <TextField fx:id="tfFragmentMassError" prefWidth="112.0" />
+                                                <TextField fx:id="tfFragmentMassError" prefWidth="112.0" text="2.0" />
                                                 <ComboBox fx:id="cbFragmentMassType" promptText="">
                                                   <items>
                                                     <FXCollections fx:factory="observableArrayList">
@@ -516,9 +516,9 @@
                               </items>
                             </ComboBox>
                             <Label text="Number of Instances" />
-                            <TextField prefWidth="200.0" />
+                            <TextField fx:id="tfNumOfInstances" prefWidth="200.0" text="1" />
                             <Button mnemonicParsing="false" onAction="#handleJobSaveAction" text="Save" />
-                            <Button mnemonicParsing="false" onAction="#handleRunJobAction" text="Run Job" />
+                            <Button mnemonicParsing="false" onAction="#handleRunCloudJobAction" text="Run Job" />
                           </children>
                         </HBox>
                       </top>
