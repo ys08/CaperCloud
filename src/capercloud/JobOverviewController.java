@@ -829,6 +829,7 @@ public class JobOverviewController implements Initializable {
         this.homeDirectory = parentFile;
         updateLocalFileCache();
     }
+    
     @FXML
     private void handelLocalDeleteAction() {
         Iterator fileIterator = getSelectedFiles();
@@ -842,6 +843,7 @@ public class JobOverviewController implements Initializable {
         }
         updateLocalFileCache();
     }
+    
     @FXML 
     private void handleRemoteRefreshAction() {
         if (this.currentBucket != null) {
