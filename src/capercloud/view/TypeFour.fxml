@@ -18,8 +18,8 @@
       </children>
     </HBox>
     <Label text="Database Selection" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="15.0" />
-    <Button mnemonicParsing="false" text="Import Fasta File" AnchorPane.leftAnchor="50.0" AnchorPane.topAnchor="85.0" />
-    <ListView prefHeight="106.0" prefWidth="200.0" AnchorPane.rightAnchor="50.0" AnchorPane.topAnchor="50.0" />
+    <Button mnemonicParsing="false" onAction="#handelImportAction" text="Import Fasta File" AnchorPane.leftAnchor="50.0" AnchorPane.topAnchor="85.0" />
+    <ListView fx:id="lvPath" prefHeight="106.0" prefWidth="200.0" AnchorPane.rightAnchor="50.0" AnchorPane.topAnchor="50.0" />
     <Separator prefWidth="200.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="180.0" />
   </children>
 </AnchorPane>

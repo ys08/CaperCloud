@@ -3,8 +3,8 @@
   -fx-spacing: 10;
   -fx-alignment: center;
   -fx-font-size: 20;
-  -fx-background-color: linear-gradient(to bottom, derive(rgba(95, 158, 160, 0.9), 20%), -fx-glass-color);
-  -fx-border-color: derive(-fx-glass-color, -20%);
+  -fx-background-color: linear-gradient(to bottom, derive(rgba(95, 158, 160, 0.9), 20%), rgba(95, 158, 160, 0.9));
+  -fx-border-color: derive(rgba(95, 158, 160, 0.9), -20%);
   -fx-border-width: 5;
   -fx-background-insets: 12;
   -fx-border-insets: 10;

@@ -7,9 +7,11 @@
 package capercloud;
 
 import capercloud.log.TextAreaAppender;
+import capercloud.model.CloudJob;
+import capercloud.model.ClusterConfigs;
 import capercloud.model.DataTransferTask;
 import capercloud.model.DownloadTask;
-import capercloud.model.InputCloudTableModel;
+import capercloud.model.InputObjectModel;
 import capercloud.model.InstanceModel;
 import capercloud.model.UploadTask;
 import com.amazonaws.handlers.AsyncHandler;
@@ -28,9 +30,15 @@ import com.amazonaws.services.ec2.model.StopInstancesRequest;
 import com.amazonaws.services.ec2.model.StopInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
+import com.compomics.util.experiment.biology.Enzyme;
+import com.compomics.util.experiment.biology.EnzymeFactory;
+import com.compomics.util.experiment.identification.SearchParameters;
+import com.compomics.util.experiment.identification.SearchParameters.MassAccuracyType;
+import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -58,6 +66,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -85,11 +94,14 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.comparator.DirectoryFileComparator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
+import org.xmlpull.v1.XmlPullParserException;
 
 /**
  * FXML Controller class
@@ -99,12 +111,34 @@ import org.jets3t.service.model.S3Object;
 public class JobOverviewController implements Initializable {
     private Log log = LogFactory.getLog(getClass());
     private CaperCloud mainApp;
+    private List<CloudJob> jobs;
+    private EnzymeFactory enzymeFactory;
+    private ObservableList<String> cleavageSites;
+    private ObservableList<MassAccuracyType> massAccuracyTypes;
     private final ObservableList jobTypes = FXCollections.observableArrayList(
             "Novel Protein", 
             "SAP", 
             "AS",
             "Custom Protein Database"
     );
+    private final ObservableList refinementExpects = FXCollections.observableArrayList(
+            "0",
+            "-1",
+            "-2",
+            "-3",
+            "-4",
+            "-5",
+            "-6",
+            "-7",
+            "-8",
+            "-9"
+    );
+    private S3Bucket inputBucket;
+    
+    private TypeOneController t1c;
+    private TypeTwoController t2c;
+    private TypeThreeController t3c;
+    private TypeFourController t4c;
 //File Tab    
 //data for local TableView
     private ObservableList<File> localFileCache;
@@ -120,7 +154,7 @@ public class JobOverviewController implements Initializable {
     private ObservableList<DataTransferTask> dataTransferTasks;
     
 //Job Tab
-    private ObservableList<InputCloudTableModel> inputCloudCache;
+    private ObservableList<InputObjectModel> inputObjectCache;
     private ObservableList<InstanceType> instanceTypes;
     
 //Status Tab    
@@ -152,11 +186,15 @@ public class JobOverviewController implements Initializable {
     @FXML private ComboBox cbJobType;
     @FXML private BorderPane bpJobType;
     @FXML private TableView tvInput;
-    @FXML private TableView tvFixedModifications;
-    @FXML private TableView tvVariableModifications;
-    @FXML private TableView tvModifications;
     @FXML private ComboBox cbBucketSelection;
     @FXML private TextArea taLog;
+    @FXML private ComboBox cbCleavageSites;
+    @FXML private CheckBox cbSemiCleavage;
+    @FXML private TextField tfFragmentMassError;
+    @FXML private ComboBox cbFragmentMassType;
+    @FXML private ComboBox cbRefinementExpect;
+    @FXML private TextField tfNumOfInstances;
+    @FXML public static TextField tfSelectedNumOfInputSpectra;
     
 //Status Tab
     @FXML private TableView tvJobMonitor;
@@ -166,9 +204,23 @@ public class JobOverviewController implements Initializable {
     @FXML private TableView tvResults;
     
     public JobOverviewController() {
-//init instance type
+        this.jobs = new ArrayList<>();
         this.instanceTypes = FXCollections.observableArrayList();
         this.instanceTypes.addAll(Arrays.asList(InstanceType.values()));
+        this.cleavageSites = FXCollections.observableArrayList();
+        this.massAccuracyTypes = FXCollections.observableArrayList(MassAccuracyType.values());
+        
+        try {
+            this.enzymeFactory = EnzymeFactory.getInstance();
+            File enzymesFile = new File("enzymes.xml");
+            this.enzymeFactory.importEnzymes(enzymesFile);
+            List<Enzyme> enzymes = this.enzymeFactory.getEnzymes();
+            for (Enzyme e : enzymes) {
+                this.cleavageSites.add(e.getName());
+            }
+        } catch (XmlPullParserException | IOException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
 //getters and setters, lazy init
@@ -180,11 +232,11 @@ public class JobOverviewController implements Initializable {
         return this.localFileCache;
     }
     
-    public ObservableList<InputCloudTableModel> getInputCloudCache() {
-        if (this.inputCloudCache == null) {
-            this.inputCloudCache = FXCollections.observableArrayList();
+    public ObservableList<InputObjectModel> getInputObjectCache() {
+        if (this.inputObjectCache == null) {
+            this.inputObjectCache = FXCollections.observableArrayList();
         }
-        return this.inputCloudCache;
+        return this.inputObjectCache;
     }
 
     public ObservableList<DataTransferTask> getDataTransferTasks() {
@@ -252,9 +304,6 @@ public class JobOverviewController implements Initializable {
 //Job tab init
         this.cbJobType.setItems(jobTypes);
         this.tvInput.setPlaceholder(new Text(""));
-        this.tvFixedModifications.setPlaceholder(new Text(""));
-        this.tvVariableModifications.setPlaceholder(new Text(""));
-        this.tvModifications.setPlaceholder(new Text());
      
 //Status tab init
         this.tvJobMonitor.setPlaceholder(new Text(""));
@@ -496,24 +545,25 @@ public class JobOverviewController implements Initializable {
         this.cbBucketSelection.valueProperty().addListener(new ChangeListener<S3Bucket>() {
             @Override
             public void changed(ObservableValue<? extends S3Bucket> ov, S3Bucket t, S3Bucket t1) {
-                JobOverviewController.this.updateInputCloudCache(t1);
+                JobOverviewController.this.updateInputObjectCache(t1);
+                JobOverviewController.this.inputBucket = t1;
             }
         });
         this.cbBucketSelection.setItems(this.getRemoteBucketCache());
         
 //init cloud input TableView
-        TableColumn<InputCloudTableModel, Boolean> checkOnInputCol = (TableColumn) this.tvInput.getColumns().get(0);
+        TableColumn<InputObjectModel, Boolean> checkOnInputCol = (TableColumn) this.tvInput.getColumns().get(0);
         checkOnInputCol.setCellFactory(CheckBoxTableCell.forTableColumn(checkOnInputCol));
-        checkOnInputCol.setCellValueFactory(new PropertyValueFactory<InputCloudTableModel, Boolean>("selected"));
+        checkOnInputCol.setCellValueFactory(new PropertyValueFactory<InputObjectModel, Boolean>("selected"));
 
         ((TableColumn) this.tvInput.getColumns().get(1))
-                .setCellValueFactory(new Callback<CellDataFeatures<InputCloudTableModel, String>, ObservableValue>() {
+                .setCellValueFactory(new Callback<CellDataFeatures<InputObjectModel, String>, ObservableValue>() {
             @Override
-            public ObservableValue call(CellDataFeatures<InputCloudTableModel, String> p) {
+            public ObservableValue call(CellDataFeatures<InputObjectModel, String> p) {
                 return new SimpleStringProperty(p.getValue().getName());
             }
                 });
-        this.tvInput.setItems(getInputCloudCache());  
+        this.tvInput.setItems(getInputObjectCache());  
         
 //init instance monitor TableView
         ((TableColumn) this.tvInstanceMonitor.getColumns().get(0))
@@ -544,6 +594,16 @@ public class JobOverviewController implements Initializable {
         this.cbInstanceType.setItems(this.instanceTypes);
 //        
         TextAreaAppender.setTextArea(taLog);
+        
+//
+        this.cbCleavageSites.setItems(this.cleavageSites);
+//
+        this.cbFragmentMassType.setItems(this.massAccuracyTypes);
+        this.cbFragmentMassType.getSelectionModel().selectFirst();
+        
+//
+        this.cbRefinementExpect.setItems(this.refinementExpects);
+        this.cbRefinementExpect.getSelectionModel().select(2);
     }
     
     public void enableButton() {
@@ -591,7 +651,7 @@ public class JobOverviewController implements Initializable {
         }
     }
     
-    private void updateInputCloudCache(S3Bucket bucket) {
+    private void updateInputObjectCache(S3Bucket bucket) {
         String message = "Listing Bucket " + bucket.getName();
         Stage dialog = this.mainApp.createStripedProgressDialog(message, this.mainApp.getPrimaryStage());
         Service<S3Object[]> s = this.mainApp.getCloudManager().createListObjectsService(bucket, dialog);
@@ -601,9 +661,9 @@ public class JobOverviewController implements Initializable {
 //stuck until user click cancel button
         if (State.SUCCEEDED == s.getState()) {
             S3Object[] res = s.getValue();
-            getInputCloudCache().clear();
+            getInputObjectCache().clear();
             for (S3Object obj : res) {
-                getInputCloudCache().add(new InputCloudTableModel(obj));
+                getInputObjectCache().add(new InputObjectModel(obj));
             }
         } else {
             if (State.CANCELLED != s.getState()) {
@@ -663,6 +723,24 @@ public class JobOverviewController implements Initializable {
         return tvLocal.getSelectionModel().getSelectedItems().iterator();
     }
     
+    public S3Object getSelectedObject() {
+        InputObjectModel ictm = (InputObjectModel) this.tvInput.getSelectionModel().getSelectedItem();
+        if (ictm == null) {
+            return null;
+        }
+        return ictm.getObj();
+    }
+    
+    private List<S3Object> getSelectedSpectra() {
+        List<S3Object> objs = new ArrayList<>();
+        for (InputObjectModel i : this.getInputObjectCache()) {
+            if (i.selectedProperty().getValue()) {
+                objs.add(i.getObj());
+            }
+        }
+        return objs;
+    }
+    
     @FXML
     private void handleManageAccountsAction() {
         this.mainApp.showLoginView();
@@ -714,6 +792,8 @@ public class JobOverviewController implements Initializable {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeFour.fxml"));
                 AnchorPane ap = (AnchorPane) loader.load();
+                this.t4c = loader.getController();
+                this.t4c.setMainApp(mainApp);
                 bpJobType.setCenter(ap);
             } catch (IOException ex) {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
@@ -935,7 +1015,7 @@ public class JobOverviewController implements Initializable {
 //Job tab event
     @FXML
     private void handleRunJobAction() {
-        for (InputCloudTableModel i : this.getInputCloudCache()) {
+        for (InputObjectModel i : this.getInputObjectCache()) {
             log.debug(i.selectedProperty().getValue());
         }
     }
@@ -1042,6 +1122,64 @@ public class JobOverviewController implements Initializable {
     @FXML
     private void handleInputCloudRefreshAction() {
         S3Bucket bucket = (S3Bucket) this.cbBucketSelection.getValue();
-        this.updateInputCloudCache(bucket);
+        this.updateInputObjectCache(bucket);
+    }
+    
+    @FXML
+    private void handleJobSaveAction() {
+        int jobType = this.cbJobType.getSelectionModel().getSelectedIndex() + 1;
+        S3Bucket saveToBucket = (S3Bucket) this.cbBucketSelection.getValue();
+        String sep = IOUtils.LINE_SEPARATOR;
+        if (jobType == 0) {
+            return;
+        }
+
+        List<S3Object> selectedSpectra = this.getSelectedSpectra();
+        if (selectedSpectra.isEmpty()) {
+            log.warn("Please select one or more spectra");
+            return;
+        }
+
+        SearchParameters sp = new SearchParameters();
+        XtandemParameters xp = new XtandemParameters();
+        sp.setIdentificationAlgorithmParameter(1, xp);
+        String enzymeName = (String) this.cbCleavageSites.getValue();
+        Enzyme e = this.enzymeFactory.getEnzyme(enzymeName);
+        e.setSemiSpecific(this.cbSemiCleavage.isSelected());
+        sp.setEnzyme(e);
+        String fragmentError = this.tfFragmentMassError.getText();
+        sp.setFragmentIonAccuracy(Double.parseDouble(fragmentError));
+        sp.setFragmentAccuracyType((MassAccuracyType) this.cbFragmentMassType.getValue());
+        String refinementExpect = (String) this.cbRefinementExpect.getValue();
+        xp.setMaximumExpectationValueRefinement(Double.parseDouble(refinementExpect));
+        
+        int num = Integer.parseInt(this.tfNumOfInstances.getText());
+        InstanceType it = (InstanceType) this.cbInstanceType.getSelectionModel().getSelectedItem();
+        ClusterConfigs cc = new ClusterConfigs("ami-b08b6cd8", num, num, it);
+        log.debug(cc.getImageId());
+        log.debug(cc.getMaxCount());
+        log.debug(cc.getMinCount());
+        log.debug(cc.getInstanceType());
+        CloudJob cj = new CloudJob(this.mainApp, selectedSpectra, sp, cc, jobType);
+        if (jobType == CaperCloud.CUSTOM_DB) {
+            cj.setT4c(this.t4c);
+        }
+        try {
+            cj.saveToS3(this.inputBucket);
+        } catch (NoSuchAlgorithmException ex) {
+            log.error(ex.getMessage());
+            return;
+        } catch (IOException | S3ServiceException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+            return;
+        }
+        this.jobs.add(cj);
+        log.info("add job to job list: " + cj.getCloudJobId());
+    }
+    
+    @FXML
+    private void handleRunCloudJobAction() {
+        CloudJob cj = this.jobs.get(this.jobs.size()-1);
+        cj.launchMasterNode();
     }
 }
