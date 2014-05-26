@@ -35,8 +35,15 @@ import com.compomics.util.experiment.biology.EnzymeFactory;
 import com.compomics.util.experiment.identification.SearchParameters;
 import com.compomics.util.experiment.identification.SearchParameters.MassAccuracyType;
 import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
+import com.ning.http.client.AsyncCompletionHandler;
+import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.Request;
+import com.ning.http.client.RequestBuilder;
+import com.ning.http.client.RequestBuilderBase;
+import com.ning.http.client.Response;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
@@ -47,8 +54,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -98,7 +107,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.comparator.DirectoryFileComparator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 import org.xmlpull.v1.XmlPullParserException;
@@ -1128,7 +1136,7 @@ public class JobOverviewController implements Initializable {
     @FXML
     private void handleJobSaveAction() {
         int jobType = this.cbJobType.getSelectionModel().getSelectedIndex() + 1;
-        S3Bucket saveToBucket = (S3Bucket) this.cbBucketSelection.getValue();
+        //S3Bucket saveToBucket = (S3Bucket) this.cbBucketSelection.getValue();
         String sep = IOUtils.LINE_SEPARATOR;
         if (jobType == 0) {
             return;
@@ -1156,21 +1164,14 @@ public class JobOverviewController implements Initializable {
         int num = Integer.parseInt(this.tfNumOfInstances.getText());
         InstanceType it = (InstanceType) this.cbInstanceType.getSelectionModel().getSelectedItem();
         ClusterConfigs cc = new ClusterConfigs("ami-b08b6cd8", num, num, it);
-        log.debug(cc.getImageId());
-        log.debug(cc.getMaxCount());
-        log.debug(cc.getMinCount());
-        log.debug(cc.getInstanceType());
         CloudJob cj = new CloudJob(this.mainApp, selectedSpectra, sp, cc, jobType);
         if (jobType == CaperCloud.CUSTOM_DB) {
             cj.setT4c(this.t4c);
         }
         try {
-            cj.saveToS3(this.inputBucket);
+            cj.saveToLocal();
         } catch (NoSuchAlgorithmException ex) {
             log.error(ex.getMessage());
-            return;
-        } catch (IOException | S3ServiceException ex) {
-            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
             return;
         }
         this.jobs.add(cj);
@@ -1178,8 +1179,54 @@ public class JobOverviewController implements Initializable {
     }
     
     @FXML
-    private void handleRunCloudJobAction() {
-        CloudJob cj = this.jobs.get(this.jobs.size()-1);
-        cj.launchMasterNode();
+    private void handleRunCloudJobAction() throws UnsupportedEncodingException, IOException, InterruptedException {
+//        CloudJob cj = this.jobs.get(this.jobs.size()-1);
+//        cj.launchMasterNode();
+        sendPost();
+    }
+    
+    private void sendPost() throws IOException {
+        final Object lock = new Object();
+        String url = "http://127.0.0.1:5000/job4";
+        final AsyncHttpClient client = new AsyncHttpClient();
+        final Request req = new RequestBuilder("POST")
+        .setUrl(url)
+        .addParameter("test", "hello world!")
+        .build();    
+        
+        AsyncCompletionHandler<Response> handler = new AsyncCompletionHandler<Response>() {
+            @Override
+            public Response onCompleted(Response r) throws Exception {
+                client.close();
+                return r;
+            }
+            @Override
+            public void onThrowable(Throwable t) {
+                log.debug("---------");
+            }
+        };
+        Future f = null;
+        f = client.prepareRequest(req).execute(handler);
+        
+        try {
+            f.get();
+        } catch (InterruptedException ex) {
+            log.error(ex.getMessage());
+        } catch (ExecutionException ex) {
+            log.error(ex.getMessage());
+        }
+        
+//some error happened, retry
+        while(!client.isClosed()) {
+            try {
+                Thread.sleep(3000);
+                f = client.prepareRequest(req).execute(handler);
+                f.get();
+            } catch (InterruptedException ex) {
+                log.error(ex.getMessage());
+            } catch (ExecutionException ex) {
+                log.error(ex.getMessage());
+            }
+        }
     }
 }
