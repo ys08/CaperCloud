@@ -86,8 +86,12 @@ def result():
 		#TO DO
 		pass
 
+@app.route('/job4', methods=['POST'])
+def job4():
+	if request.method == 'POST':
+		return request.form['test']
 
 if __name__ == '__main__':
-	app.run(host=0.0.0.0)
+	app.run()
 
 
