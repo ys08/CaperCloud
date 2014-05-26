@@ -4,6 +4,7 @@ import os
 from flask import Flask
 from flask import request
 from boto.s3.connection import S3Connection
+from werkzeug.utils import secure_filename
 
 # from greplin import scales
 # import greplin.scales.flaskhandler as statserver
@@ -12,15 +13,18 @@ from boto.s3.connection import S3Connection
 # 	scales.IntStat('errors'),
 # 	scales.IntStat('success'))
 # statserver.serveInBackground(8765, serverName='capercloud-status-server')
+UPLOAD_FOLDER = './'
+XTANDEM = './tandem'
 
 app = Flask(__name__)
-xtandem = './mr-tandem.py'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 @app.route('/login', methods=['POST'])
 def login():
 	if request.method == 'POST':
-		global access_key
-		global secret_key
+		# global access_key
+		# global secret_key
 		access_key = request.form['access_key']
 		secret_key = request.form['secret_key']
 		return 'login success'
@@ -89,9 +93,40 @@ def result():
 @app.route('/job4', methods=['POST'])
 def job4():
 	if request.method == 'POST':
-		return request.form['test']
+		input_xml = request.form['input_xml']
+		access_key = request.form['access_key']
+		secret_key = request.form['secret_key']
+		bucket_name = request.form['bucket_name']
+		key_names = request.form['key_names'].split(',')
+
+		s3conn = S3Connection(access_key, secret_key)
+		print "+++++"
+		bucket = s3conn.get_bucket(bucket_name)
+		print "-----"
+
+		for key_name in key_names:
+			key = bucket.get_key(key_name)
+			print "downloading " + key_name
+			key.get_contents_to_filename(key_name)
+
+		print "run xtandem"
+		cmd = XTANDEM + ' ' + input_xml
+		os.system(cmd)
+		return 'success'
+
+@app.route('/', methods=['POST'])
+def upload_file():
+	if request.method == 'POST':
+		# parameter file		
+		for file in request.files.itervalues():
+			if file:
+				filename = secure_filename(file.name)
+				print filename
+				file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+				print os.path.join(app.config['UPLOAD_FOLDER'], filename)
+		return 'success'
 
 if __name__ == '__main__':
-	app.run()
+	app.run(debug=True)
 
 

@@ -37,6 +37,8 @@ import com.compomics.util.experiment.identification.SearchParameters.MassAccurac
 import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.AsyncHttpClientConfig;
+import com.ning.http.client.FilePart;
 import com.ning.http.client.Request;
 import com.ning.http.client.RequestBuilder;
 import com.ning.http.client.RequestBuilderBase;
@@ -1173,6 +1175,8 @@ public class JobOverviewController implements Initializable {
         } catch (NoSuchAlgorithmException ex) {
             log.error(ex.getMessage());
             return;
+        } catch (IOException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
         }
         this.jobs.add(cj);
         log.info("add job to job list: " + cj.getCloudJobId());
@@ -1180,19 +1184,67 @@ public class JobOverviewController implements Initializable {
     
     @FXML
     private void handleRunCloudJobAction() throws UnsupportedEncodingException, IOException, InterruptedException {
-//        CloudJob cj = this.jobs.get(this.jobs.size()-1);
 //        cj.launchMasterNode();
-        sendPost();
+        if (this.jobs.isEmpty()) {
+            log.info("Please save parameters before submit job");
+            return;
+        }
+        
+        CloudJob job = this.jobs.get(this.jobs.size() - 1);
+        try {
+            sendFiles(job).get();
+        } catch (ExecutionException ex) {
+            log.error("sth went wrong");
+            return;
+        }
+        postJob(job);
     }
     
-    private void sendPost() throws IOException {
-        final Object lock = new Object();
-        String url = "http://127.0.0.1:5000/job4";
+    private Future sendFiles(CloudJob job) throws IOException {
+        String url = "http://127.0.0.1:5000/";
         final AsyncHttpClient client = new AsyncHttpClient();
-        final Request req = new RequestBuilder("POST")
-        .setUrl(url)
-        .addParameter("test", "hello world!")
-        .build();    
+        List<File> toBeUploaded = job.getInputFiles();
+        toBeUploaded.add(job.getTaxonomyFile());
+        RequestBuilder rb = new RequestBuilder("POST")
+                .setUrl(url)
+                .setHeader("Content-Type", "multipart/form-data");
+
+        for (File f : toBeUploaded) {
+            rb.addBodyPart(new FilePart(f.getName(), f, "text/plain", "UTF-8"));
+        }
+        
+        return client.prepareRequest(rb.build()).execute(new AsyncCompletionHandler<Response>() {
+
+            @Override
+            public Response onCompleted(Response r) throws Exception {
+                client.close();
+                return r;
+            }
+            
+        });
+    }
+    
+    private void postJob(CloudJob job) throws IOException {
+        List<File> input_xmls = job.getInputFiles();
+        String url = "http://127.0.0.1:5000/job4";
+        final AsyncHttpClient client = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setIdleConnectionTimeoutInMs(10000000).setConnectionTimeoutInMs(10000000).setRequestTimeoutInMs(10000000).build());
+        RequestBuilder rb = new RequestBuilder("POST")
+            .setUrl(url)
+            .addParameter("input_xml", input_xmls.get(0).getName())
+            .addParameter("access_key", this.mainApp.getCloudManager().getCurrentCredentials().getAccessKey())
+            .addParameter("secret_key", this.mainApp.getCloudManager().getCurrentCredentials().getSecretKey())
+            .addParameter("bucket_name", this.inputBucket.getName());
+        
+        StringBuilder sb = new StringBuilder();
+        List<S3Object> objs = job.getSpectrumObjs();
+        objs.add(job.getDatabaseObj());
+        Iterator it = objs.iterator();
+        sb.append(((S3Object) it.next()).getName());
+        while(it.hasNext()) {
+            sb.append("," + ((S3Object) it.next()).getName());
+        }
+        
+        rb.addParameter("key_names", sb.toString());
         
         AsyncCompletionHandler<Response> handler = new AsyncCompletionHandler<Response>() {
             @Override
@@ -1206,27 +1258,27 @@ public class JobOverviewController implements Initializable {
             }
         };
         Future f = null;
-        f = client.prepareRequest(req).execute(handler);
+        f = client.prepareRequest(rb.build()).execute(handler);
         
-        try {
-            f.get();
-        } catch (InterruptedException ex) {
-            log.error(ex.getMessage());
-        } catch (ExecutionException ex) {
-            log.error(ex.getMessage());
-        }
+//        try {
+//            f.get();
+//        } catch (InterruptedException ex) {
+//            log.error(ex.getMessage());
+//        } catch (ExecutionException ex) {
+//            log.error(ex.getMessage());
+//        }
         
 //some error happened, retry
-        while(!client.isClosed()) {
-            try {
-                Thread.sleep(3000);
-                f = client.prepareRequest(req).execute(handler);
-                f.get();
-            } catch (InterruptedException ex) {
-                log.error(ex.getMessage());
-            } catch (ExecutionException ex) {
-                log.error(ex.getMessage());
-            }
-        }
+//        while(!client.isClosed()) {
+//            try {
+//                Thread.sleep(3000);
+//                f = client.prepareRequest(rb.build()).execute(handler);
+//                f.get();
+//            } catch (InterruptedException ex) {
+//                log.error(ex.getMessage());
+//            } catch (ExecutionException ex) {
+//                log.error(ex.getMessage());
+//            }
+//        }
     }
 }

@@ -17,9 +17,7 @@ import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.util.Base64;
 import com.compomics.util.experiment.identification.SearchParameters;
 import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -99,7 +97,22 @@ public class CloudJob {
             this.t4c = t4c;
     }
 
-    
+    public File getTaxonomyFile() {
+        return taxonomyFile;
+    }
+
+    public List<File> getInputFiles() {
+        return inputFiles;
+    }
+
+    public List<S3Object> getSpectrumObjs() {
+        return spectrumObjs;
+    }
+
+    public S3Object getDatabaseObj() {
+        return databaseObj;
+    }
+
 //master node will launch slave node    
     public void launchMasterNode() {
         this.rir.setUserData(this.userdata());
@@ -116,26 +129,33 @@ public class CloudJob {
         });
     }
     
-    private void createTaxonomyFile() throws NoSuchAlgorithmException {
-        String sep = IOUtils.LINE_SEPARATOR;
-        try {
-            BufferedWriter bw = new BufferedWriter(new FileWriter(this.taxonomyFile));
-            bw.write(
-                    "<?xml version=\"1.0\"?>" + sep
-                    + "<bioml label=\"x! taxon-to-file matching list\">" + sep
-                    + "\t<taxon label=\"all\">" + sep
-                    + "\t\t<file format=\"peptide\" URL=\"" + databaseObj.getName() + "\" />" + sep
-                    + "\t</taxon>" + sep
-                    + "</bioml>");
-            bw.flush();
-            bw.close();
-            this.taxonomyObj = new S3Object(this.taxonomyFile);
-        } catch (IOException ioe) {
-            log.error(ioe.getMessage());
-        }
+    public String getCloudJobId() {
+        return this.timestamp;
     }
     
-    private void createInputFile(File inputFile, S3Object spectrumObj) throws NoSuchAlgorithmException {
+    public String userdata() {
+        if (jobType == CaperCloud.CUSTOM_DB) {
+            String userData = "#!/bin/bash\n"
+                    + "echo \"Hello World.  The time is now $(date -R)!\" | tee ~/output.txt\n";
+            return Base64.encodeAsString(userData.getBytes());
+        }
+        return null;
+    }
+    
+    private void createTaxonomyFile() throws NoSuchAlgorithmException, IOException {
+        String sep = IOUtils.LINE_SEPARATOR;
+        String content = 
+                "<?xml version=\"1.0\"?>" + sep
+                + "<bioml label=\"x! taxon-to-file matching list\">" + sep
+                + "\t<taxon label=\"all\">" + sep
+                + "\t\t<file format=\"peptide\" URL=\"" + databaseObj.getName() + "\" />" + sep
+                + "\t</taxon>" + sep
+                + "</bioml>";
+        FileUtils.writeStringToFile(this.taxonomyFile, content);
+        this.taxonomyObj = new S3Object(this.taxonomyFile);
+    }
+    
+    private void createInputFile(File inputFile, S3Object spectrumObj) throws NoSuchAlgorithmException, IOException {
         String fragmentUnit = "ppm";
         String enzymeIsSemiSpecific = "no";
         String sep = IOUtils.LINE_SEPARATOR;
@@ -151,31 +171,26 @@ public class CloudJob {
             enzymeIsSemiSpecific = "no";
         }
         
-        try {
-            BufferedWriter bw = new BufferedWriter(new FileWriter(inputFile));
-            bw.write("<?xml version=\"1.0\"?>" + sep
-                    + "<bioml>" + sep
-                    + "\t<note type=\"input\" label=\"list path, default parameters\">default_input.xml</note>" + sep
-                    + "\t<note type=\"input\" label=\"list path, taxonomy information\">" + this.taxonomyFile.getName() + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"protein, taxon\">all</note>" + sep
-                    + "\t<note type=\"input\" label=\"spectrum, path\">" + spectrumObj.getName() + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"output, path\">output</note>" + sep
-                    + "\t<note type=\"input\" label=\"protein, cleavage site\">" + sp.getEnzyme().getXTandemFormat() + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"protein, cleavage semi\">" + enzymeIsSemiSpecific + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error\">" + sp.getFragmentIonAccuracy() + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error units\">" + fragmentUnit + "</note>" + sep
-                    + "\t<note type=\"input\" label=\"refine, maximum valid expectation value\">" + xp.getMaximumExpectationValueRefinement() + "</note>" + sep
-                    + "</bioml>" + sep);
-            bw.flush();
-            bw.close();
-            this.inputFiles.add(inputFile);
-            this.inputObjs.add(new S3Object(inputFile));
-        } catch (IOException ioe) {
-            log.error(ioe.getMessage());
-        }
+        String content = 
+                "<?xml version=\"1.0\"?>" + sep
+                + "<bioml>" + sep
+                + "\t<note type=\"input\" label=\"list path, default parameters\">default_input.xml</note>" + sep
+                + "\t<note type=\"input\" label=\"list path, taxonomy information\">" + this.taxonomyFile.getName() + "</note>" + sep
+                + "\t<note type=\"input\" label=\"protein, taxon\">all</note>" + sep
+                + "\t<note type=\"input\" label=\"spectrum, path\">" + spectrumObj.getName() + "</note>" + sep
+                + "\t<note type=\"input\" label=\"output, path\">output</note>" + sep
+                + "\t<note type=\"input\" label=\"protein, cleavage site\">" + sp.getEnzyme().getXTandemFormat() + "</note>" + sep
+                + "\t<note type=\"input\" label=\"protein, cleavage semi\">" + enzymeIsSemiSpecific + "</note>" + sep
+                + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error\">" + sp.getFragmentIonAccuracy() + "</note>" + sep
+                + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error units\">" + fragmentUnit + "</note>" + sep
+                + "\t<note type=\"input\" label=\"refine, maximum valid expectation value\">" + xp.getMaximumExpectationValueRefinement() + "</note>" + sep
+                + "</bioml>" + sep;
+        FileUtils.writeStringToFile(inputFile, content);
+        this.inputFiles.add(inputFile);
+        this.inputObjs.add(new S3Object(inputFile));
     }
     
-    public void saveToLocal() throws NoSuchAlgorithmException {
+    public void saveToLocal() throws NoSuchAlgorithmException, IOException {
         if (this.jobType == CaperCloud.CUSTOM_DB) {
             this.databaseObj = this.t4c.getDatabaseObj();
         }
@@ -224,16 +239,5 @@ public class CloudJob {
         log.info("saving...");
     }
     
-    public String getCloudJobId() {
-        return this.timestamp;
-    }
-    
-    public String userdata() {
-        if (jobType == CaperCloud.CUSTOM_DB) {
-            String userData = "#!/bin/bash\n"
-                    + "echo \"Hello World.  The time is now $(date -R)!\" | tee ~/output.txt\n";
-            return Base64.encodeAsString(userData.getBytes());
-        }
-        return null;
-    }
+
 }
