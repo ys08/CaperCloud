@@ -22,12 +22,16 @@ class Job4(threading.Thread):
         for key_name in self.key_names:
             self.state = 'downloading ' + key_name
             key = bucket.get_key(key_name)
-            try:
-                key.get_contents_to_filename(key_name)
-            except Exception, ex:
-                self.state = 'error happened when downloading ' + key_name
-                print Exception, ':', ex
-                return
+            while True:
+                try:
+                    key.get_contents_to_filename(key_name)
+                except Exception, ex:
+                    self.state = 'error happened when downloading ' + key_name
+                    print Exception, ':', ex
+                    #try every 5 seconds
+                    time.sleep(5)
+                    continue
+                break
 
         cmd = XTANDEM + ' ' + self.input_xml
         self.state = 'xtandem searching'
