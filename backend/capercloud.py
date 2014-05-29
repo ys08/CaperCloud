@@ -1,20 +1,17 @@
 #!/usr/local/bin/python
 import os
+import time
 
 from flask import Flask
 from flask import request
 from boto.s3.connection import S3Connection
+
 from werkzeug.utils import secure_filename
+import multiprocessing
 
-# from greplin import scales
-# import greplin.scales.flaskhandler as statserver
+import tasks
 
-# STATS = scales.collection('/web',
-# 	scales.IntStat('errors'),
-# 	scales.IntStat('success'))
-# statserver.serveInBackground(8765, serverName='capercloud-status-server')
 UPLOAD_FOLDER = './'
-XTANDEM = './tandem'
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -100,21 +97,12 @@ def job4():
 		key_names = request.form['key_names'].split(',')
 
 		s3conn = S3Connection(access_key, secret_key)
-		print "+++++"
-		bucket = s3conn.get_bucket(bucket_name)
-		print "-----"
+		job = tasks.Job4('job4-id', s3conn, bucket_name, key_names, input_xml)
+		job.start()
 
-		for key_name in key_names:
-			key = bucket.get_key(key_name)
-			print "downloading " + key_name
-			key.get_contents_to_filename(key_name)
+		return 'submit success'
 
-		print "run xtandem"
-		cmd = XTANDEM + ' ' + input_xml
-		os.system(cmd)
-		return 'success'
-
-@app.route('/', methods=['POST'])
+@app.route('/file', methods=['POST'])
 def upload_file():
 	if request.method == 'POST':
 		# parameter file		
@@ -126,7 +114,20 @@ def upload_file():
 				print os.path.join(app.config['UPLOAD_FOLDER'], filename)
 		return 'success'
 
-if __name__ == '__main__':
-	app.run(debug=True)
+@app.route('/status')
+def get_status():
+	if jobs[0].result:
+		return 'done'
+	return 'running'
 
+#testing purpose
+@app.route('/test')
+def test():
+	tasks.Job4('capercloud').start()
+	return 'done'
+
+if __name__ == '__main__':
+	import greplin.scales.flaskhandler as statserver
+	statserver.serveInBackground(8765, serverName='capercloud-server')
+	app.run(debug=True)
 
