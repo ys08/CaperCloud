@@ -1,7 +1,9 @@
 /nbproject/private/
 /dist/
 /build/
+/backend/MzidLib-1.6/
 *.pyc
 *.swp
 .DS_Store
-
+.fasta
+.mgf

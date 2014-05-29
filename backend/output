@@ -2278,7 +2278,7 @@
 	<note label="modelling, total spectra assigned">19</note>
 	<note label="modelling, total spectra used">11332</note>
 	<note label="modelling, total unique assigned">19</note>
-	<note label="process, start time">2014:05:27:23:23:05</note>
+	<note label="process, start time">2014:05:29:17:59:38</note>
 	<note label="process, version">X! Tandem Sledgehammer (2013.09.01.1)</note>
 	<note label="quality values">29 16 10 8 4 0 2 2 0 0 0 0 0 0 0 0 0 0 0 0</note>
 	<note label="refining, # input models">0</note>
@@ -2288,9 +2288,9 @@
 	<note label="refining, # potential C-terminii">0</note>
 	<note label="refining, # potential N-terminii">0</note>
 	<note label="refining, # unanticipated cleavage">0</note>
-	<note label="timing, initial modelling total (sec)">95.09</note>
-	<note label="timing, initial modelling/spectrum (sec)">0.0084</note>
-	<note label="timing, load sequence models (sec)">0.13</note>
+	<note label="timing, initial modelling total (sec)">85.44</note>
+	<note label="timing, initial modelling/spectrum (sec)">0.0075</note>
+	<note label="timing, load sequence models (sec)">0.12</note>
 	<note label="timing, refinement/spectrum (sec)">0.0000</note>
 </group>
 </bioml>
