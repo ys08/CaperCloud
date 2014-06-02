@@ -123,11 +123,11 @@ def get_status():
 #testing purpose
 @app.route('/test')
 def test():
-	tasks.Job4('capercloud').start()
+#	tasks.Job4('capercloud').start()
 	return 'done'
 
 if __name__ == '__main__':
-	import greplin.scales.flaskhandler as statserver
-	statserver.serveInBackground(8765, serverName='capercloud-server')
+	#import greplin.scales.flaskhandler as statserver
+	#statserver.serveInBackground(8765, serverName='capercloud-server')
 	app.run(debug=True)
 
