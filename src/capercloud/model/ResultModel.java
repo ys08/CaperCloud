@@ -13,8 +13,10 @@ import java.io.File;
  * @author shuai
  */
 public class ResultModel {
+    private File resultFile;
     
-    public ResultModel() {
+    public ResultModel(File resultFile) {
+        this.resultFile = resultFile;
     }
     
     
