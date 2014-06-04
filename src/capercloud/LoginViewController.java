@@ -223,7 +223,7 @@ public class LoginViewController implements Initializable {
             
             if (State.SUCCEEDED == s.getState()) {
                 log.info("login success!");
-                this.mainApp.getMainController().getRemoteBucketCache().addAll(s.getValue());
+                this.mainApp.getMainController().getFm().setRemoteCachedBucketList(s.getValue());
                 this.mainApp.getMainController().enableButton();
                 this.mainApp.getLoginStage().close();
 
