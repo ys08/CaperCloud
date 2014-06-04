@@ -167,7 +167,6 @@ public class JobOverviewController implements Initializable {
         this.jm = new JobModel();
         this.fm = new FileModel();
         this.sm = new StatusModel();
-        this.rm = new ResultModel();
     }
 
     public void setUsername(String username) {
