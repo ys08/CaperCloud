@@ -65,7 +65,7 @@ public class TextFieldViewController implements Initializable {
         
         if (State.SUCCEEDED == s.getState()) {
             S3Bucket res = s.getValue();
-            this.mainApp.getMainController().getRemoteBucketCache().add(res);
+            this.mainApp.getMainController().getFm().addBucket(res);
         } else {
             if (State.CANCELLED != s.getState()) {
                 log.debug(s.getState());

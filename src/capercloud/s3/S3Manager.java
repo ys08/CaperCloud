@@ -87,8 +87,8 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
         return this.s3Service.listAllBuckets();
     }
 
-    public S3Object[] listObjects(String bucketName) throws S3ServiceException {
-        return this.s3Service.listObjects(bucketName);
+    public S3Object[] getObjects(String inBucket) throws S3ServiceException {
+        return this.s3Service.listObjects(inBucket);
     }
     
     public S3Bucket createBucket(String bucketName) throws S3ServiceException {

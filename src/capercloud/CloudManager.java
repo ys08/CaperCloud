@@ -85,7 +85,7 @@ public class CloudManager {
     }
     
     public S3Object[] listObjects(S3Bucket bucket) throws S3ServiceException {
-        return this.s3m.listObjects(bucket.getName());
+        return this.s3m.getObjects(bucket.getName());
     }
     
     public S3Bucket createBucket(String bucketName) throws S3ServiceException {
