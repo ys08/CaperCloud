@@ -46,6 +46,13 @@ public class ResultModel {
         this.spectrumIdentificationResult = FXCollections.observableArrayList();
     }
     
+    //getters and setters
+    
+    public ObservableList<SpectrumIdentificationResult> getSpectrumIdentificationResult() {
+        return spectrumIdentificationResult;
+    
+    }
+
     public void load(File resultFile, File spectraFile) throws JMzReaderException {
         this.resultFile = resultFile;
         this.spectraFile = spectraFile;
@@ -71,9 +78,8 @@ public class ResultModel {
 //            // using the index the spectrum can now be retrieved from the
 //            // MGF file.
 //            Spectrum spectrum = mgfParser.getSpectrumByIndex(index);
-        } 
-    }
-    
+            }
+        }
     }
     
     public void init(AnchorPane pane) {

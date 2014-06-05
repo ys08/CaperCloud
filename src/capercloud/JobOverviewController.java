@@ -90,6 +90,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
@@ -101,6 +103,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
+import uk.ac.ebi.jmzidml.model.mzidml.SpectrumIdentificationResult;
 import uk.ac.ebi.pride.tools.jmzreader.JMzReaderException;
 
 /**
@@ -165,6 +168,7 @@ public class JobOverviewController implements Initializable {
 //Result Tab
     @FXML private TableView tvResults;
     @FXML private AnchorPane apSpectrum;
+    @FXML private WebView wvBrowser;
     
     public JobOverviewController() {
         this.jm = new JobModel();
@@ -500,8 +504,49 @@ public class JobOverviewController implements Initializable {
         
 //
         this.rm.init(this.apSpectrum);
+//init result table
+        ((TableColumn) this.tvResults.getColumns().get(0))
+                .setCellValueFactory(new Callback<CellDataFeatures<SpectrumIdentificationResult, String>, ObservableValue>() {
+            @Override
+            public ObservableValue call(CellDataFeatures<SpectrumIdentificationResult, String> param) {
+                return new SimpleStringProperty(param.getValue().getSpectrumID());
+            }
+                });
+        
+        ((TableColumn) this.tvResults.getColumns().get(1))
+                .setCellValueFactory(new Callback<CellDataFeatures<SpectrumIdentificationResult, String>, ObservableValue>() {
+            @Override
+            public ObservableValue call(CellDataFeatures<SpectrumIdentificationResult, String> param) {
+                return new SimpleStringProperty(param.getValue().getSpectraDataRef());
+            }
+                });
+        this.tvResults.setRowFactory(new Callback<TableView<SpectrumIdentificationResult>, TableRow<SpectrumIdentificationResult>>() {
+            @Override
+            public TableRow<SpectrumIdentificationResult> call(TableView<SpectrumIdentificationResult> param) {
+                final TableRow<SpectrumIdentificationResult> row = new TableRow<>();
+                row.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent event) {
+                            TableRow tr = (TableRow) event.getSource();
+                            SpectrumIdentificationResult item = (SpectrumIdentificationResult) tr.getItem();
+                            log.debug(item.getSpectrumID());
+                            try {
+                                String index = item.getSpectrumID().substring(6);
+                                int i = Integer.parseInt(index);
+                                JobOverviewController.this.rm.drawSpectrum(i);
+                                WebEngine webEngine = JobOverviewController.this.wvBrowser.getEngine();
+                                webEngine.load("http://www.baidu.com#wd=" + i);
+                            } catch (JMzReaderException ex) {
+                                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                        }      
+                    });
+                return row;
+            } 
+        });
+        this.tvResults.setItems(this.rm.getSpectrumIdentificationResult());
     }
-    
+//----------------------------split line-------------------------
     public void enableButton() {
         this.btnRemoteUp.setDisable(false);
         this.btnRemoteNew.setDisable(false);
@@ -1153,14 +1198,6 @@ public class JobOverviewController implements Initializable {
     }
     @FXML
     private void handleDownloadResultAction() {
-        try {
-            Random random = new Random();
-            int rand = random.nextInt(100);
-            log.debug(rand);
-            this.rm.drawSpectrum(rand);
-            log.debug("done");
-        } catch (JMzReaderException ex) {
-            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        //TO DO
     }
 }

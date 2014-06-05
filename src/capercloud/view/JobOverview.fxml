@@ -666,7 +666,7 @@
                       <items>
                         <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
                                        <children>
-                                          <WebView layoutX="159.0" layoutY="99.0" prefHeight="458.0" prefWidth="635.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                                          <WebView fx:id="wvBrowser" layoutX="159.0" layoutY="99.0" prefHeight="458.0" prefWidth="635.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
                                        </children></AnchorPane>
                         <AnchorPane fx:id="apSpectrum" minHeight="0.0" minWidth="0.0" prefHeight="458.0" prefWidth="539.0" />
                       </items>
@@ -675,11 +675,6 @@
                   <center>
                     <TableView fx:id="tvResults" prefHeight="251.0" prefWidth="1280.0">
                       <columns>
-                        <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="27.0" text="">
-                          <graphic>
-                            <CheckBox mnemonicParsing="false" text="" />
-                          </graphic>
-                        </TableColumn>
                         <TableColumn prefWidth="75.0" text="Job Name" />
                         <TableColumn prefWidth="75.0" text="Job Type" />
                         <TableColumn prefWidth="75.0" text="Start Time" />
