@@ -6,13 +6,17 @@
 
 package capercloud.model;
 
-import java.awt.BorderLayout;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import javafx.embed.swing.JFXPanel;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
+import java.util.Map;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.embed.swing.SwingNode;
+import javafx.scene.layout.AnchorPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import uk.ac.ebi.jmzidml.model.mzidml.AnalysisData;
 import uk.ac.ebi.jmzidml.model.mzidml.DataCollection;
 import uk.ac.ebi.jmzidml.model.mzidml.SpectrumIdentificationList;
@@ -32,53 +36,83 @@ public class ResultModel {
     private File resultFile;
     private File spectraFile;
     
-    public ResultModel(File resultFile, File spectraFile) {
-        this.resultFile = resultFile;
-        this.spectraFile = spectraFile;
+    private JMzReader jmzReader;
+    private MzIdentMLUnmarshaller unmarshaller;
+    private ObservableList<SpectrumIdentificationResult> spectrumIdentificationResult;
+    
+    SpectrumPanel spectrumPanel;
+    
+    public ResultModel() {
+        this.spectrumIdentificationResult = FXCollections.observableArrayList();
     }
     
-    public void test() throws JMzReaderException {
-        JMzReader jmzreader = new MgfFile(this.spectraFile);
-        MzIdentMLUnmarshaller unmarshaller = new MzIdentMLUnmarshaller(this.resultFile);
+    public void load(File resultFile, File spectraFile) throws JMzReaderException {
+        this.resultFile = resultFile;
+        this.spectraFile = spectraFile;
+        
+        this.jmzReader = new MgfFile(this.spectraFile);
+        this.unmarshaller = new MzIdentMLUnmarshaller(this.resultFile);
         
         DataCollection dc =  unmarshaller.unmarshal(DataCollection.class);
         AnalysisData ad = dc.getAnalysisData();
-
         List<SpectrumIdentificationList> sil = ad.getSpectrumIdentificationList();
-
+        
         for (SpectrumIdentificationList sIdentList : sil) {
             for (SpectrumIdentificationResult spectrumIdentResult 
                     : sIdentList.getSpectrumIdentificationResult()) {
-            String spectrumID =  spectrumIdentResult.getSpectrumID(); // this returns a value like "index=246"
-            System.out.println(spectrumID);
-            String spectrumFileRef = spectrumIdentResult.getSpectraDataRef();
-            System.out.println(spectrumFileRef);
-
-            // as MGF files are index based the "index=" portion of the spectrumId needs to be removed
-            String spectrumIndex = spectrumID.substring(6);
-
-            //  and since the index in mzid files is 0 based and the index in jmzReader is 1 based, this has to be addressed as well
-            int index = Integer.parseInt(spectrumIndex);
-            index = index + 1;
-            System.out.println(index);
-            // using the index the spectrum can now be retrieved from the
-            // MGF file.
-            Spectrum spectrum = jmzreader.getSpectrumByIndex(index);
-        } // end spectrum identification results
-        }
+                this.spectrumIdentificationResult.add(spectrumIdentResult);
+//            // as MGF files are index based the "index=" portion of the spectrumId needs to be removed
+//            String spectrumIndex = spectrumID.substring(6);
+//
+//            //  and since the index in mzid files is 0 based and the index in jmzReader is 1 based, this has to be addressed as well
+//            int index = Integer.parseInt(spectrumIndex);
+//            index = index + 1;
+//            System.out.println(index);
+//            // using the index the spectrum can now be retrieved from the
+//            // MGF file.
+//            Spectrum spectrum = mgfParser.getSpectrumByIndex(index);
+        } 
     }
     
-    public void drawSpectrum() {
-        // Create a m/z data array
-        double[] mzArr = new double[]{1.0, 2.012312313, 3.0, 4.234, 6.0, 7.34342};
-        // Create an intensity data array
-        double[] intentArr = new double[]{2.0, 4.345345345, 6.0, 1.4545, 5.0, 8.23423};
-        // Create a spectrum panel
-        SpectrumPanel spectrum = new SpectrumPanel(mzArr, intentArr);
-        // Paint the spectrum peaks
-        spectrum.paintGraph();
-        // Added the spectrum panel to your own JPanel
-        JPanel container = new JPanel();
-        container.add(spectrum, BorderLayout.CENTER);
+    }
+    
+    public void init(AnchorPane pane) {
+        this.spectrumPanel = new SpectrumPanel();
+        SwingNode swingNode = new SwingNode();
+        this.createSwingContent(swingNode, spectrumPanel);
+        pane.getChildren().add(swingNode);
+    }
+    public void drawSpectrum(int index) throws JMzReaderException {     
+        Spectrum spectrum = this.jmzReader.getSpectrumByIndex(index);
+        List<Double> mzArrList = new ArrayList<>();
+        List<Double> intentArrList = new ArrayList<>();
+        
+        Iterator it = spectrum.getPeakList().entrySet().iterator();
+        while(it.hasNext()){
+            Map.Entry e = (Map.Entry)it.next();
+            mzArrList.add((Double) e.getKey());
+            intentArrList.add((Double) e.getValue());
+        }
+        
+        double[] mzArr = new double[mzArrList.size()];
+        for (int i = 0; i < mzArr.length; i++) {
+           mzArr[i] = mzArrList.get(i);
+        }
+        
+        double[] intentArr = new double[intentArrList.size()];
+        for (int i = 0; i < intentArr.length; i++) {
+           intentArr[i] = intentArrList.get(i);
+        }
+        spectrumPanel.setPeaks(mzArr, intentArr);
+        spectrumPanel.paintGraph();
+    }
+    
+    private void createSwingContent(final SwingNode swingNode, final JPanel container) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                swingNode.setContent(container);
+            }
+        });
     }
 }

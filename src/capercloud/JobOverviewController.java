@@ -46,6 +46,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -163,14 +164,19 @@ public class JobOverviewController implements Initializable {
         
 //Result Tab
     @FXML private TableView tvResults;
+    @FXML private AnchorPane apSpectrum;
     
     public JobOverviewController() {
         this.jm = new JobModel();
         this.fm = new FileModel();
         this.sm = new StatusModel();
 // testingggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg
-        ResultModel rm = new ResultModel(new File("example_files/55merge_omssa.mzid"),new File("example_files/55merge.mgf"));
-        rm.drawSpectrum();
+        this.rm = new ResultModel();
+        try {
+            this.rm.load(new File("example_files/55merge_omssa.mzid"), new File("example_files/55merge.mgf"));
+        } catch (JMzReaderException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public void setUsername(String username) {
@@ -202,7 +208,7 @@ public class JobOverviewController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         this.cbJobType.setItems(jm.getJobTypes());
-          
+
 //init local table data
         this.tcLocalFilename.setCellValueFactory(new Callback<CellDataFeatures<File, String>, ObservableValue<String>>() {
             @Override
@@ -491,6 +497,9 @@ public class JobOverviewController implements Initializable {
 //
         this.cbRefinementExpect.setItems(this.jm.getRefinementExpects());
         this.cbRefinementExpect.getSelectionModel().select(2);
+        
+//
+        this.rm.init(this.apSpectrum);
     }
     
     public void enableButton() {
@@ -1141,5 +1150,17 @@ public class JobOverviewController implements Initializable {
 //                log.error(ex.getMessage());
 //            }
 //        }
+    }
+    @FXML
+    private void handleDownloadResultAction() {
+        try {
+            Random random = new Random();
+            int rand = random.nextInt(100);
+            log.debug(rand);
+            this.rm.drawSpectrum(rand);
+            log.debug("done");
+        } catch (JMzReaderException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }
