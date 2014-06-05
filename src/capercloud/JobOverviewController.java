@@ -100,6 +100,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
+import uk.ac.ebi.pride.tools.jmzreader.JMzReaderException;
 
 /**
  * FXML Controller class
@@ -167,6 +168,9 @@ public class JobOverviewController implements Initializable {
         this.jm = new JobModel();
         this.fm = new FileModel();
         this.sm = new StatusModel();
+// testingggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg
+        ResultModel rm = new ResultModel(new File("example_files/55merge_omssa.mzid"),new File("example_files/55merge.mgf"));
+        rm.drawSpectrum();
     }
 
     public void setUsername(String username) {
