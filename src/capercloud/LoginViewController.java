@@ -15,7 +15,8 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
-import javafx.concurrent.Worker.State;
+import javafx.concurrent.WorkerStateEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
@@ -25,10 +26,10 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.stage.DirectoryChooser;
-import javafx.stage.Stage;
 import org.apache.commons.io.filefilter.SuffixFileFilter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.controlsfx.dialog.Dialogs;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.security.AWSCredentials;
@@ -214,33 +215,65 @@ public class LoginViewController implements Initializable {
 //login to cloud
         try {
             this.mainApp.getCloudManager().loginCloud(this.currentCredentials);
-            log.info("checking your account information");
-            Stage checkingDialog = this.mainApp.createStripedProgressDialog("Checking Your Account", this.mainApp.getLoginStage());
-            Service<S3Bucket[]> s = this.mainApp.getCloudManager().createListBucketsService(checkingDialog);
-            s.start();
-//wait for cancel or success event
-            checkingDialog.showAndWait();
+//            log.info("checking your account information");
+//            Stage checkingDialog = this.mainApp.createStripedProgressDialog("Checking Your Account", this.mainApp.getLoginStage());
+//            Service<S3Bucket[]> s = this.mainApp.getCloudManager().createListBucketsService(checkingDialog);
+//            s.start();
+////wait for cancel or success event
+//            checkingDialog.showAndWait();
+            final Service<S3Bucket[]> s = this.mainApp.getCloudManager().createCheckingAccountService("checking your account");
             
-            if (State.SUCCEEDED == s.getState()) {
-                log.info("login success!");
-                this.mainApp.getMainController().getFm().setRemoteCachedBucketList(s.getValue());
-                this.mainApp.getMainController().enableButton();
-                this.mainApp.getLoginStage().close();
-
-                this.mainApp.getMainController().setUsername(this.currentCredentials.getFriendlyName());
-                clearUserInput();
-                this.mainApp.getLoginStage().close();
-//logout button enabled  
-                this.mainApp.getMainController().getBtnLogout().setDisable(false); 
-            } else {
-//something went wrong when listing bucket
-                log.debug(s.getState());
-                if (State.CANCELLED != s.getState()) {
-                    s.cancel();
-                    log.debug(s.getState());
+            s.setOnFailed(new EventHandler<WorkerStateEvent>() {
+                @Override
+                public void handle(WorkerStateEvent event) {
+                    Dialogs.create()
+                            .title("Error")
+                            .message("Error occured, please retry.")
+                            .showError();
                 }
-                this.mainApp.getCloudManager().logoutCloud();
-            }        
+            });
+            
+            s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {    
+                @Override
+                public void handle(WorkerStateEvent event) {
+                    mainApp.getMainController().getFm().setRemoteCachedBucketList(s.getValue());
+                    mainApp.getMainController().enableButton();
+                    mainApp.getLoginStage().close();
+
+                    mainApp.getMainController().setUsername(currentCredentials.getFriendlyName());
+                    mainApp.getLoginController().clearUserInput();
+                    mainApp.getLoginStage().close();
+    //logout button enabled  
+                    mainApp.getMainController().getBtnLogout().setDisable(false);     
+                }
+            });
+            
+            Dialogs.create()
+                    .owner(this.mainApp.getLoginStage())
+                    .title("Checking")
+                    .showWorkerProgress(s);
+            s.start();
+            
+//            if (State.SUCCEEDED == s.getState()) {
+//                log.info("login success!");
+//                this.mainApp.getMainController().getFm().setRemoteCachedBucketList(s.getValue());
+//                this.mainApp.getMainController().enableButton();
+//                this.mainApp.getLoginStage().close();
+//
+//                this.mainApp.getMainController().setUsername(this.currentCredentials.getFriendlyName());
+//                clearUserInput();
+//                this.mainApp.getLoginStage().close();
+////logout button enabled  
+//                this.mainApp.getMainController().getBtnLogout().setDisable(false); 
+//            } else {
+////something went wrong when listing bucket
+//                log.debug(s.getState());
+//                if (State.CANCELLED != s.getState()) {
+//                    s.cancel();
+//                    log.debug(s.getState());
+//                }
+//                this.mainApp.getCloudManager().logoutCloud();
+//            }        
         } catch (ServiceException ex) {
             log.error(ex.getErrorMessage());
             clearUserInput();
