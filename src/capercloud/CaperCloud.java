@@ -81,6 +81,7 @@ public class CaperCloud extends Application {
      */
     public CaperCloud() {
         this.cloudManager = CloudManager.getInstance();
+        this.cloudManager.setMainApp(this);
     }
     
     //geters and setters

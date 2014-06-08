@@ -14,6 +14,7 @@ import javafx.concurrent.Task;
 import javafx.stage.Stage;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.controlsfx.dialog.Dialogs;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.model.S3Bucket;
@@ -26,6 +27,7 @@ import org.jets3t.service.security.AWSCredentials;
  */
 public class CloudManager {
     private Log log = LogFactory.getLog(getClass());
+    private CaperCloud mainApp;
     private static CloudManager singleton = null;
     private AWSCredentials currentCredentials; 
     private S3Manager s3m;
@@ -43,7 +45,10 @@ public class CloudManager {
         }
         return singleton;
     }
-    
+
+    public void setMainApp(CaperCloud mainApp) {
+        this.mainApp = mainApp;
+    }
     /**
      * get credentials that are currently used by s3 and ec2
      * @return 
@@ -100,6 +105,55 @@ public class CloudManager {
         this.s3m.deleteBucket(bucket);
     }
     
+    public Service<S3Bucket[]> createCheckingAccountService(final String msg) {
+        return new Service<S3Bucket[]>() {
+            @Override
+            protected Task<S3Bucket[]> createTask() {
+                return new Task<S3Bucket[]>() {
+                    @Override
+                    protected S3Bucket[] call() throws Exception {
+                        return CloudManager.this.listBuckets();
+                    }
+
+                    @Override
+                    protected void running() {
+                        super.running(); //To change body of generated methods, choose Tools | Templates.
+                        updateMessage(msg);
+                        updateProgress(-1, 1);
+                    }
+                    
+                    @Override
+                    protected void succeeded() {
+                        super.succeeded();
+                        updateMessage("Success");
+                        updateProgress(1, 1);            
+                    }
+                };
+            }
+        };
+    }
+    
+    public Service<S3Bucket[]> createListBucketsService() {
+        return new Service<S3Bucket[]>() {
+            @Override
+            protected Task<S3Bucket[]> createTask() {
+                return new Task<S3Bucket[]>() {
+                    @Override
+                    protected S3Bucket[] call() throws Exception {
+                        return CloudManager.this.listBuckets();
+                    }
+
+                    @Override
+                    protected void running() {
+                        super.running(); //To change body of generated methods, choose Tools | Templates.
+                        updateProgress(-1, 1);
+                    }
+                    
+                };
+            }
+        };
+    }
+    
     public Service<S3Bucket[]> createListBucketsService(final Stage progressDialog) {
         return new Service<S3Bucket[]>() {
             @Override
@@ -136,6 +190,27 @@ public class CloudManager {
         };
     }
     
+    public Service<S3Object[]> createListObjectsService(final S3Bucket bucket) {
+        return new Service<S3Object[]>() {
+            @Override
+            protected Task<S3Object[]> createTask() {
+                return new Task<S3Object[]>() {
+                    @Override
+                    protected S3Object[] call() throws Exception {
+                        return CloudManager.this.listObjects(bucket);
+                    }
+
+                    @Override
+                    protected void running() {
+                        super.running(); //To change body of generated methods, choose Tools | Templates.
+                        updateProgress(-1, 1);
+                    }
+                };
+            }
+
+        };
+    }
+    
     public Service<S3Object[]> createListObjectsService(final S3Bucket bucket, final Stage progressDialog) {
         return new Service<S3Object[]>() {
             @Override
@@ -165,6 +240,27 @@ public class CloudManager {
                 log.debug("Lising Objects Failed!");
                 progressDialog.close();
             }
+        };
+    }
+    
+    public Service<S3Bucket> createCreateBucketService(final String bucketName) {
+        return new Service<S3Bucket>() {
+            @Override
+            protected Task<S3Bucket> createTask() {
+                return new Task<S3Bucket>() {
+                    @Override
+                    protected S3Bucket call() throws Exception {
+                        return CloudManager.this.createBucket(bucketName);
+                    }
+
+                    @Override
+                    protected void running() {
+                        super.running(); //To change body of generated methods, choose Tools | Templates.
+                        updateProgress(-1, 1);
+                    }
+                };
+            }
+
         };
     }
     
@@ -235,6 +331,30 @@ public class CloudManager {
         };
     }
     
+    public Service<Void> createDeleteObjectService(final S3Object obj) {
+        return new Service<Void>() {
+            
+            @Override
+            protected Task<Void> createTask() {
+                return new Task<Void>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        log.debug(obj.getName());
+                        CloudManager.this.deleteObject(obj);
+                        return null;
+                    }
+
+                    @Override
+                    protected void running() {
+                        super.running(); //To change body of generated methods, choose Tools | Templates.
+                        updateProgress(-1, 1);
+                    }
+                };
+            }
+
+        };
+    }
+    
     public Service<Void> createDeleteBucketService(final S3Bucket bucket, final Stage progressDialog) {
         return new Service<Void>() {
             @Override
@@ -265,6 +385,28 @@ public class CloudManager {
                 super.failed(); 
                 log.debug(this.getState());
                 progressDialog.close();
+            }
+        };
+    }
+    
+    public Service<Void> createDeleteBucketService(final S3Bucket bucket) {
+        return new Service<Void>() {
+            @Override
+            protected Task<Void> createTask() {
+                return new Task<Void>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        log.debug(bucket.getName());
+                        CloudManager.this.deleteBucket(bucket);
+                        return null;
+                    }
+                    
+                    @Override
+                    protected void running() {
+                        super.running(); //To change body of generated methods, choose Tools | Templates.
+                        updateProgress(-1, 1);
+                    }
+                };
             }
         };
     }
