@@ -15,6 +15,7 @@ import capercloud.model.FileModel;
 import capercloud.model.InputObjectModel;
 import capercloud.model.InstanceModel;
 import capercloud.model.JobModel;
+import capercloud.model.ModificationTableModel;
 import capercloud.model.ResultModel;
 import capercloud.model.StatusModel;
 import capercloud.model.UploadTask;
@@ -35,6 +36,7 @@ import com.ning.http.client.AsyncHttpClientConfig;
 import com.ning.http.client.FilePart;
 import com.ning.http.client.RequestBuilder;
 import com.ning.http.client.Response;
+import impl.org.controlsfx.i18n.Localization;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -46,7 +48,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -60,7 +63,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
-import javafx.concurrent.Worker.State;
+import javafx.concurrent.WorkerStateEvent;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -101,6 +104,9 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.comparator.DirectoryFileComparator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.controlsfx.control.action.Action;
+import org.controlsfx.dialog.Dialog;
+import org.controlsfx.dialog.Dialogs;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 import uk.ac.ebi.jmzidml.model.mzidml.SpectrumIdentificationResult;
@@ -160,6 +166,7 @@ public class JobOverviewController implements Initializable {
     @FXML private ComboBox cbRefinementExpect;
     @FXML private TextField tfNumOfInstances;
     @FXML public static TextField tfSelectedNumOfInputSpectra;
+    @FXML private TableView tvModification;
     
 //Status Tab
     @FXML private TableView tvJobMonitor;
@@ -171,6 +178,8 @@ public class JobOverviewController implements Initializable {
     @FXML private WebView wvBrowser;
     
     public JobOverviewController() {
+        //set dialog locale
+        Localization.setLocale(new Locale("en", "US"));
         this.jm = new JobModel();
         this.fm = new FileModel();
         this.sm = new StatusModel();
@@ -240,8 +249,10 @@ public class JobOverviewController implements Initializable {
                             } else {
                                 imageview.setImage(new Image(CaperCloud.class.getResource("res/images/file.png").toString()));
                             }
-                            box.getChildren().addAll(imageview,fileName); 
+                            box.getChildren().addAll(imageview, fileName); 
                             setGraphic(box);
+                        } else {
+                            setGraphic(null);
                         }
                     }
                 };
@@ -274,6 +285,9 @@ public class JobOverviewController implements Initializable {
                     if (event.getClickCount() > 1) {
                         TableRow tr = (TableRow) event.getSource();
                         File f = (File) tr.getItem();
+                        if (f == null) {
+                            return;
+                        }
                         if (f.isDirectory()) {
                             JobOverviewController.this.updateLocalFileCache(f);
                         }
@@ -462,6 +476,19 @@ public class JobOverviewController implements Initializable {
                 });
         this.tvInput.setItems(this.jm.getCachedInputModels());  
         
+//init modification tableview
+        ((TableColumn) this.tvModification.getColumns().get(0))
+                .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, String>("name"));
+        ((TableColumn) this.tvModification.getColumns().get(1))
+                .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, Double>("mass"));
+        TableColumn<ModificationTableModel, Boolean> checkVariant = (TableColumn) this.tvModification.getColumns().get(2);
+        checkVariant.setCellFactory(CheckBoxTableCell.forTableColumn(checkVariant));
+        checkVariant.setCellValueFactory(new PropertyValueFactory<ModificationTableModel, Boolean>("isVariant"));
+        TableColumn<ModificationTableModel, Boolean> checkFixed = (TableColumn) this.tvModification.getColumns().get(3);
+        checkFixed.setCellFactory(CheckBoxTableCell.forTableColumn(checkFixed));
+        checkFixed.setCellValueFactory(new PropertyValueFactory<ModificationTableModel, Boolean>("isFixed"));   
+        
+        this.tvModification.setItems(this.jm.getDefaultModifications());
 //init instance monitor TableView
         ((TableColumn) this.tvInstanceMonitor.getColumns().get(0))
                 .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("instanceId"));
@@ -532,7 +559,7 @@ public class JobOverviewController implements Initializable {
                             log.debug(item.getSpectrumID());
                             try {
                                 String index = item.getSpectrumID().substring(6);
-                                int i = Integer.parseInt(index);
+                                int i = Integer.parseInt(index) + 1;
                                 JobOverviewController.this.rm.drawSpectrum(i);
                                 WebEngine webEngine = JobOverviewController.this.wvBrowser.getEngine();
                                 webEngine.load("http://www.baidu.com#wd=" + i);
@@ -568,67 +595,106 @@ public class JobOverviewController implements Initializable {
     }
     
 //update remote objects cache
-    private void runListingObjectsService(S3Bucket bucket) {
-        String message = "Listing " + bucket.getName();
-        Stage dialog = this.mainApp.createStripedProgressDialog(message, this.mainApp.getPrimaryStage());
-        Service<S3Object[]> s = this.mainApp.getCloudManager().createListObjectsService(bucket, dialog);
+    private void runListingObjectsService(final S3Bucket bucket) {
+//        String message = "Listing " + bucket.getName();
+//        Stage dialog = this.mainApp.createStripedProgressDialog(message, this.mainApp.getPrimaryStage());
+        final Service<S3Object[]> s = this.mainApp.getCloudManager().createListObjectsService(bucket);
+        s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent event) {
+                S3Object[] res = s.getValue();
+                JobOverviewController.this.fm.setRemoteCachedObjectList(res);
+                JobOverviewController.this.fm.setBucketPath(bucket);
+                tfRemotePath.setText("/" + bucket.getName());
+                tvRemote.setItems(JobOverviewController.this.fm.getRemoteCachedObjectList());
+            }
+        });
+        Dialogs.create()
+                .owner(this.mainApp.getPrimaryStage())
+                .title("Listing Objects")
+                .message("Listing objects in bucket " + bucket.getName())
+                .showWorkerProgress(s);
         s.start();
         
-        dialog.showAndWait();
+//        dialog.showAndWait();
 //stuck until user click cancel button
-        if (State.SUCCEEDED == s.getState()) {
-            S3Object[] res = s.getValue();
-            this.fm.setRemoteCachedObjectList(res);
-            this.fm.setBucketPath(bucket);
-            tfRemotePath.setText("/" + bucket.getName());
-            tvRemote.setItems(this.fm.getRemoteCachedObjectList());
-        } else {
-            if (State.CANCELLED != s.getState()) {
-                log.debug(s.getState());
-                s.cancel();
-                log.debug(s.getState());
-            }
-        }
+//        if (State.SUCCEEDED == s.getState()) {
+//            S3Object[] res = s.getValue();
+//            this.fm.setRemoteCachedObjectList(res);
+//            this.fm.setBucketPath(bucket);
+//            tfRemotePath.setText("/" + bucket.getName());
+//            tvRemote.setItems(this.fm.getRemoteCachedObjectList());
+//        } else {
+//            if (State.CANCELLED != s.getState()) {
+//                log.debug(s.getState());
+//                s.cancel();
+//                log.debug(s.getState());
+//            }
+//        }
     }
     
     private void runListingInputObjectModelsService(S3Bucket bucket) {
-        String message = "Listing Bucket " + bucket.getName();
-        Stage dialog = this.mainApp.createStripedProgressDialog(message, this.mainApp.getPrimaryStage());
-        Service<S3Object[]> s = this.mainApp.getCloudManager().createListObjectsService(bucket, dialog);
+//        String message = "Listing Bucket " + bucket.getName();
+//        Stage dialog = this.mainApp.createStripedProgressDialog(message, this.mainApp.getPrimaryStage());
+        final Service<S3Object[]> s = this.mainApp.getCloudManager().createListObjectsService(bucket);
+        s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent event) {
+                S3Object[] res = s.getValue();
+                JobOverviewController.this.jm.setCachedInputModels(res);
+            }
+        });
+        Dialogs.create()
+                .owner(this.mainApp.getPrimaryStage())
+                .title("Listing Objects")
+                .message("Listing objects in bucket " + bucket.getName())
+                .showWorkerProgress(s);
         s.start();
         
-        dialog.showAndWait();
+//        dialog.showAndWait();
 //stuck until user click cancel button
-        if (State.SUCCEEDED == s.getState()) {
-            S3Object[] res = s.getValue();
-            this.jm.setCachedInputModels(res);
-        } else {
-            if (State.CANCELLED != s.getState()) {
-                log.debug(s.getState());
-                s.cancel();
-                log.debug(s.getState());
-            }
-        }
+//        if (State.SUCCEEDED == s.getState()) {
+//            S3Object[] res = s.getValue();
+//            this.jm.setCachedInputModels(res);
+//        } else {
+//            if (State.CANCELLED != s.getState()) {
+//                log.debug(s.getState());
+//                s.cancel();
+//                log.debug(s.getState());
+//            }
+//        }
     }
     
     private void runListingBucketsService() {
         String message = "Listing Buckets";
         Stage dialog = this.mainApp.createStripedProgressDialog(message, this.mainApp.getPrimaryStage());
-        Service<S3Bucket[]> s = this.mainApp.getCloudManager().createListBucketsService(dialog);  
+        final Service<S3Bucket[]> s = this.mainApp.getCloudManager().createListBucketsService(dialog);  
+        s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent event) {
+                JobOverviewController.this.fm.setRemoteCachedBucketList(s.getValue());
+                JobOverviewController.this.tvRemote.setItems(JobOverviewController.this.fm.getRemoteCachedBucketList());
+            }
+        });
+        Dialogs.create()
+                .owner(this.mainApp.getPrimaryStage())
+                .title("Listing Buckets")
+                .message("Listing all of your buckets")
+                .showWorkerProgress(s);
         s.start();
         
-        dialog.showAndWait();
-        
-        if (State.SUCCEEDED == s.getState()) {
-            this.fm.setRemoteCachedBucketList(s.getValue());
-            this.tvRemote.setItems(this.fm.getRemoteCachedBucketList());
-        } else {
-            if (State.CANCELLED != s.getState()) {
-                log.debug(s.getState());
-                s.cancel();
-                log.debug(s.getState());
-            }
-        }
+//        dialog.showAndWait();
+//        
+//        if (State.SUCCEEDED == s.getState()) {
+//            this.fm.setRemoteCachedBucketList(s.getValue());
+//            this.tvRemote.setItems(this.fm.getRemoteCachedBucketList());
+//        } else {
+//            if (State.CANCELLED != s.getState()) {
+//                log.debug(s.getState());
+//                s.cancel();
+//                log.debug(s.getState());
+//            }
+//        }
     }
 
 ////instance
@@ -822,7 +888,7 @@ public class JobOverviewController implements Initializable {
     }
     
     @FXML
-    private void handelLocalRefreshActon() {
+    private void handleLocalRefreshActon() {
         this.updateLocalFileCache(this.fm.getFolderPath());
     }
     
@@ -838,17 +904,29 @@ public class JobOverviewController implements Initializable {
     }
     
     @FXML
-    private void handelLocalDeleteAction() {
+    private void handleLocalDeleteAction() {
         Iterator fileIterator = getSelectedFiles();
         if (!fileIterator.hasNext()) {
             log.error("no files are selected");
         }
-        while(fileIterator.hasNext()) {
-            File f = (File) fileIterator.next();
-            FileUtils.deleteQuietly(f);
-            log.info(f.getName() + " has been deleted");
+        
+        Action response = Dialogs.create()
+                .owner(this.mainApp.getPrimaryStage())
+                .title("Do you want to delete?")
+                .message("Selected files will be deleted.")
+                .actions(Dialog.Actions.OK, Dialog.Actions.CANCEL)
+                .showConfirm();
+        
+        if (response == Dialog.Actions.OK) {
+            while(fileIterator.hasNext()) {
+                File f = (File) fileIterator.next();
+                FileUtils.deleteQuietly(f);
+                log.info(f.getName() + " has been deleted");
+            }
+            this.updateLocalFileCache(this.fm.getFolderPath());
+        } else {
+            return;
         }
-        this.updateLocalFileCache(this.fm.getFolderPath());
     }
     
     @FXML 
@@ -875,66 +953,115 @@ public class JobOverviewController implements Initializable {
 //only support create bucket    
     @FXML
     private void handleRemoteCreateAction() {
-        this.mainApp.showTextFieldDialog();
+        Optional<String> response = Dialogs.create()
+                .owner(this.mainApp.getPrimaryStage())
+                .title("Create a Bucket")
+                .masthead("Amazon S3 bucket names are globally unique, "
+                        + "so once a bucket name has been taken by any user, "
+                        + "you can't create another bucket with that same name.")
+                .message("Please enter an unique bucket name:")
+                .showTextInput("");
+        if (response.isPresent()) {
+            String bucketName = response.get();
+            final Service<S3Bucket> s = this.mainApp.getCloudManager().createCreateBucketService(bucketName);
+            s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+                @Override
+                public void handle(WorkerStateEvent event) {
+                    JobOverviewController.this.fm.addBucket(s.getValue());
+                }
+            });
+            Dialogs.create()
+                        .owner(this.mainApp.getPrimaryStage())
+                        .title("Creating")
+                        .message("Creating bucket " + bucketName)
+                        .showWorkerProgress(s);
+            s.start();
+        }
+        //this.mainApp.showTextFieldDialog();
     }
     
     @FXML
     private void handleRemoteDeleteAction() {
         Object obj = this.tvRemote.getSelectionModel().getSelectedItem();
-        if (obj instanceof S3Bucket) {
-            S3Bucket tmp = (S3Bucket) obj;
-            String msg = "Delete Bucket " + tmp.getName();
-
-            Stage confirmDialog = this.mainApp.createModalConfirmDialog(msg + "?", this.mainApp.getPrimaryStage());
-            confirmDialog.showAndWait();
-            if (this.mainApp.isCanceled()) {
-                return;
-            }
-            this.mainApp.resetCanceled();            
-            Stage progressDialog = this.mainApp.createStripedProgressDialog(msg, this.mainApp.getPrimaryStage());
-            Service<Void> s = this.mainApp.getCloudManager().createDeleteBucketService((S3Bucket) obj, progressDialog);
-
-            s.start();
-            progressDialog.showAndWait();
-            
-            if (State.SUCCEEDED == s.getState()) {
-                log.debug(this.fm.getRemoteCachedBucketList().size());
-                this.fm.deleteBucket(tmp);
-                log.debug(this.fm.getRemoteCachedBucketList().size());
-            } else {
-                log.debug(s.getState());
-                if (State.CANCELLED != s.getState()) {
-                    s.cancel();
-                }
-            }
+        if (obj == null) {
             return;
         }
         
-        if (obj instanceof S3Object) {
-            S3Object tmp = (S3Object) obj;
-            String msg = "Delete Object " + tmp.getName();
-            Stage confirmDialog = this.mainApp.createModalConfirmDialog(msg + "?", this.mainApp.getPrimaryStage());
-            confirmDialog.showAndWait();
-            if (this.mainApp.isCanceled()) {
+        if (obj instanceof S3Bucket) {
+            final S3Bucket tmp = (S3Bucket) obj;
+            String msg = "Bucket " + tmp.getName() + " will be deleted";
+            Action response = Dialogs.create()
+                .owner(this.mainApp.getPrimaryStage())
+                .title("Delete")
+                .message(msg)
+                .actions(Dialog.Actions.OK, Dialog.Actions.CANCEL)
+                .showConfirm();
+            if (response == Dialog.Actions.OK) {
+                Service<Void> s = this.mainApp.getCloudManager().createDeleteBucketService((S3Bucket) obj);
+                s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+                    @Override
+                    public void handle(WorkerStateEvent event) {
+                        JobOverviewController.this.fm.deleteBucket(tmp);                }
+                });
+                Dialogs.create()
+                        .owner(this.mainApp.getPrimaryStage())
+                        .title("Deleting")
+                        .message("Deleting bucket " + tmp.getName())
+                        .showWorkerProgress(s);
+                s.start();
+            }
+            if (response == Dialog.Actions.CANCEL) {
                 return;
             }
-            this.mainApp.resetCanceled();
+//            Stage confirmDialog = this.mainApp.createModalConfirmDialog(msg + "?", this.mainApp.getPrimaryStage());
+//            confirmDialog.showAndWait();
+//            if (this.mainApp.isCanceled()) {
+//                return;
+//            }
+//            this.mainApp.resetCanceled();            
+//            Stage progressDialog = this.mainApp.createStripedProgressDialog(msg, this.mainApp.getPrimaryStage());
+
+        }
+        
+        if (obj instanceof S3Object) {
+            final S3Object tmp = (S3Object) obj;
+            String msg = "Object " + tmp.getName() + " will be deleted";
+            Action response = Dialogs.create()
+                .owner(this.mainApp.getPrimaryStage())
+                .title("Delete")
+                .message(msg)
+                .actions(Dialog.Actions.OK, Dialog.Actions.CANCEL)
+                .showConfirm();
             
-            Stage progressDialog = this.mainApp.createStripedProgressDialog(msg, this.mainApp.getPrimaryStage());
-            Service<Void> s = this.mainApp.getCloudManager().createDeleteObjectService((S3Object) obj, progressDialog);
-            s.start();
-            progressDialog.showAndWait();
-            
-            if (State.SUCCEEDED == s.getState()) {
-                log.debug(this.fm.getRemoteCachedObjectList().size());
-                this.fm.deleteObject(tmp);
-                log.debug(this.fm.getRemoteCachedObjectList().size());
-            } else {
-                log.debug(s.getState());
-                if (State.CANCELLED != s.getState()) {
-                    s.cancel();
-                }
+            if (response == Dialog.Actions.OK) {
+                Service<Void> s = this.mainApp.getCloudManager().createDeleteObjectService((S3Object) obj);
+                s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+                    @Override
+                    public void handle(WorkerStateEvent event) {
+                        JobOverviewController.this.fm.deleteObject(tmp);
+                    }
+                });
+                
+                Dialogs.create()
+                        .owner(this.mainApp.getPrimaryStage())
+                        .title("Deleting")
+                        .message("Deleting object " + tmp.getName())
+                        .showWorkerProgress(s);
+                s.start();
             }
+            if (response == Dialog.Actions.CANCEL) {
+                return;
+            }
+//            Stage confirmDialog = this.mainApp.createModalConfirmDialog(msg + "?", this.mainApp.getPrimaryStage());
+//            confirmDialog.showAndWait();
+//            if (this.mainApp.isCanceled()) {
+//                return;
+//            }
+//            this.mainApp.resetCanceled();
+//            
+//            Stage progressDialog = this.mainApp.createStripedProgressDialog(msg, this.mainApp.getPrimaryStage());
+
+//            progressDialog.showAndWait();
         }
     }
     
@@ -1077,7 +1204,7 @@ public class JobOverviewController implements Initializable {
         sp.setFragmentAccuracyType((MassAccuracyType) this.cbFragmentMassType.getValue());
         String refinementExpect = (String) this.cbRefinementExpect.getValue();
         xp.setMaximumExpectationValueRefinement(Double.parseDouble(refinementExpect));
-        
+         
         int num = Integer.parseInt(this.tfNumOfInstances.getText());
         InstanceType it = (InstanceType) this.cbInstanceType.getSelectionModel().getSelectedItem();
         ClusterConfigs cc = new ClusterConfigs("ami-b08b6cd8", num, num, it);
@@ -1198,6 +1325,10 @@ public class JobOverviewController implements Initializable {
     }
     @FXML
     private void handleDownloadResultAction() {
+        //TO DO
+    }
+    @FXML
+    private void handleAdvancedSearchAction() {
         //TO DO
     }
 }
