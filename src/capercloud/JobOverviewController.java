@@ -15,6 +15,7 @@ import capercloud.model.FileModel;
 import capercloud.model.InputObjectModel;
 import capercloud.model.InstanceModel;
 import capercloud.model.JobModel;
+import capercloud.model.ModificationTableModel;
 import capercloud.model.ResultModel;
 import capercloud.model.StatusModel;
 import capercloud.model.UploadTask;
@@ -62,7 +63,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
-import javafx.concurrent.Worker.State;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -166,6 +166,7 @@ public class JobOverviewController implements Initializable {
     @FXML private ComboBox cbRefinementExpect;
     @FXML private TextField tfNumOfInstances;
     @FXML public static TextField tfSelectedNumOfInputSpectra;
+    @FXML private TableView tvModification;
     
 //Status Tab
     @FXML private TableView tvJobMonitor;
@@ -475,6 +476,19 @@ public class JobOverviewController implements Initializable {
                 });
         this.tvInput.setItems(this.jm.getCachedInputModels());  
         
+//init modification tableview
+        ((TableColumn) this.tvModification.getColumns().get(0))
+                .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, String>("name"));
+        ((TableColumn) this.tvModification.getColumns().get(1))
+                .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, Double>("mass"));
+        TableColumn<ModificationTableModel, Boolean> checkVariant = (TableColumn) this.tvModification.getColumns().get(2);
+        checkVariant.setCellFactory(CheckBoxTableCell.forTableColumn(checkVariant));
+        checkVariant.setCellValueFactory(new PropertyValueFactory<ModificationTableModel, Boolean>("isVariant"));
+        TableColumn<ModificationTableModel, Boolean> checkFixed = (TableColumn) this.tvModification.getColumns().get(3);
+        checkFixed.setCellFactory(CheckBoxTableCell.forTableColumn(checkFixed));
+        checkFixed.setCellValueFactory(new PropertyValueFactory<ModificationTableModel, Boolean>("isFixed"));   
+        
+        this.tvModification.setItems(this.jm.getDefaultModifications());
 //init instance monitor TableView
         ((TableColumn) this.tvInstanceMonitor.getColumns().get(0))
                 .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("instanceId"));
@@ -1190,7 +1204,7 @@ public class JobOverviewController implements Initializable {
         sp.setFragmentAccuracyType((MassAccuracyType) this.cbFragmentMassType.getValue());
         String refinementExpect = (String) this.cbRefinementExpect.getValue();
         xp.setMaximumExpectationValueRefinement(Double.parseDouble(refinementExpect));
-        
+         
         int num = Integer.parseInt(this.tfNumOfInstances.getText());
         InstanceType it = (InstanceType) this.cbInstanceType.getSelectionModel().getSelectedItem();
         ClusterConfigs cc = new ClusterConfigs("ami-b08b6cd8", num, num, it);
@@ -1311,6 +1325,10 @@ public class JobOverviewController implements Initializable {
     }
     @FXML
     private void handleDownloadResultAction() {
+        //TO DO
+    }
+    @FXML
+    private void handleAdvancedSearchAction() {
         //TO DO
     }
 }

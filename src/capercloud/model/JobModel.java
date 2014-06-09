@@ -10,6 +10,7 @@ import capercloud.JobOverviewController;
 import com.amazonaws.services.ec2.model.InstanceType;
 import com.compomics.util.experiment.biology.Enzyme;
 import com.compomics.util.experiment.biology.EnzymeFactory;
+import com.compomics.util.experiment.biology.PTMFactory;
 import com.compomics.util.experiment.identification.SearchParameters.MassAccuracyType;
 import java.io.File;
 import java.io.IOException;
@@ -36,9 +37,12 @@ public class JobModel {
     private S3Bucket currentBucket;
     
     private EnzymeFactory enzymeFactory;
+    private PTMFactory ptmFactory;
+    
     private ObservableList<String> cleavageSites;
     private ObservableList<MassAccuracyType> massAccuracyTypes;
     private ObservableList<InstanceType> instanceTypes;
+    private ObservableList<ModificationTableModel> defaultModifications;
     
     private final ObservableList jobTypes = FXCollections.observableArrayList(
         "Novel Protein", 
@@ -64,6 +68,7 @@ public class JobModel {
         this.instanceTypes.addAll(Arrays.asList(InstanceType.values()));
         this.cleavageSites = FXCollections.observableArrayList();
         this.massAccuracyTypes = FXCollections.observableArrayList(MassAccuracyType.values());
+        this.defaultModifications = FXCollections.observableArrayList();
         try {
             this.enzymeFactory = EnzymeFactory.getInstance();
             File enzymesFile = new File("enzymes.xml");
@@ -74,6 +79,17 @@ public class JobModel {
             }
         } catch (XmlPullParserException | IOException ex) {
             Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        this.ptmFactory = PTMFactory.getInstance();
+        try {
+            this.ptmFactory.importModifications(new File("mods.xml"), false);
+            for (String modName: this.ptmFactory.getDefaultModificationsOrdered()) {
+                this.defaultModifications.add(new ModificationTableModel(this.ptmFactory.getPTM(modName)));
+            }
+        } catch (XmlPullParserException ex) {
+            Logger.getLogger(JobModel.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(JobModel.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -86,6 +102,10 @@ public class JobModel {
         return currentBucket;
     }
 
+    public ObservableList<ModificationTableModel> getDefaultModifications() {
+        return defaultModifications;
+    }
+    
     public void setCurrentBucket(S3Bucket currentBucket) {
         this.currentBucket = currentBucket;
     }
