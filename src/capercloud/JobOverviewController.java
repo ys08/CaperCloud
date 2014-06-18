@@ -22,8 +22,11 @@ import capercloud.model.UploadTask;
 import com.amazonaws.handlers.AsyncHandler;
 import com.amazonaws.services.ec2.model.CreateKeyPairRequest;
 import com.amazonaws.services.ec2.model.CreateKeyPairResult;
+import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
+import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceType;
+import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.compomics.util.experiment.biology.Enzyme;
@@ -46,6 +49,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -1119,7 +1123,33 @@ public class JobOverviewController implements Initializable {
     
     @FXML
     private void handleInstanceMonitorRefreshAction() {
-        //TO DO
+        this.mainApp.getCloudManager().getEc2Manager().describeInstancesAsync(new DescribeInstancesRequest(), new AsyncHandler<DescribeInstancesRequest,DescribeInstancesResult>() {
+            @Override
+            public void onError(Exception excptn) {
+                Dialogs.create()
+                        .owner(JobOverviewController.this.mainApp.getPrimaryStage())
+                        .title("Error")
+                        .masthead(null)
+                        .message("Ooops, there was an error!")
+                        .showError();
+            }
+
+            @Override
+            public void onSuccess(DescribeInstancesRequest rqst, DescribeInstancesResult result) {
+                log.debug("*********************************");
+                List<Instance> res = new ArrayList<>();
+                for (Reservation r : result.getReservations()) {
+                    for (Instance i : r.getInstances()) {
+                        res.add(i);
+                        log.debug(i.getInstanceId());
+                    }
+                }
+                log.debug("*********************************");
+                JobOverviewController.this.sm.refreshInstanceList(res);
+                log.debug("*********************************");
+            }
+        
+    });
     }
 //    
     @FXML
@@ -1283,18 +1313,29 @@ public class JobOverviewController implements Initializable {
     private void handleRunCloudJobAction() throws UnsupportedEncodingException, IOException, InterruptedException {
 //        cj.launchMasterNode();
         if (this.sm.getJobs().isEmpty()) {
-            log.info("Please save parameters before submit job");
+            Dialogs.create()
+                    .owner(this.mainApp.getPrimaryStage())
+                    .title("Error")
+                    .masthead(null)
+                    .message("please save job configuration first!")
+                    .showError();
             return;
         }
         
         CloudJob job = this.sm.getJobs().get(this.sm.getJobs().size() - 1);
-        try {
-            sendFiles(job).get();
-        } catch (ExecutionException ex) {
-            log.error("sth went wrong");
-            return;
-        }
-        postJob(job);
+        job.setStatus("pending");
+        Date d = Calendar.getInstance().getTime();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
+        job.setStartTime(sdf.format(d));
+        job.setInstanceId("retrieving information");
+        job.launchMasterNode();
+//        try {
+//            sendFiles(job).get();
+//        } catch (ExecutionException ex) {
+//            log.error("sth went wrong");
+//            return;
+//        }
+//        postJob(job);
     }
     
     private Future sendFiles(CloudJob job) throws IOException {

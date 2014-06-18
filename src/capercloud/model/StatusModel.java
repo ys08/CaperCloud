@@ -6,6 +6,8 @@
 
 package capercloud.model;
 
+import com.amazonaws.services.ec2.model.Instance;
+import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
@@ -19,6 +21,7 @@ public class StatusModel {
     
     public StatusModel() {
         this.jobs = FXCollections.observableArrayList();
+        this.instancesCache = FXCollections.observableArrayList();
     }
 
     public ObservableList<InstanceModel> getInstancesCache() {
@@ -37,5 +40,12 @@ public class StatusModel {
         return jobs;
     }
     
+    public void refreshInstanceList(List<Instance> res) {
+        this.instancesCache.clear();
+        for (Instance i : res) {
+            System.out.println(i.getInstanceId());
+            this.instancesCache.add(new InstanceModel(i));
+        }
+    }
     
 }

@@ -12,6 +12,7 @@ import capercloud.TypeOneController;
 import capercloud.TypeThreeController;
 import capercloud.TypeTwoController;
 import com.amazonaws.handlers.AsyncHandler;
+import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.util.Base64;
@@ -74,6 +75,8 @@ public class CloudJob {
     private StringProperty instanceId;
     private StringProperty status;
     
+    private List<InstanceModel> instanceModelList;
+    
     public CloudJob(CaperCloud mainApp, List<S3Object> spectrumObjs, SearchParameters sp, ClusterConfigs cc, int jobType) {
         this.mainApp = mainApp;
         this.spectrumObjs = spectrumObjs;
@@ -93,6 +96,7 @@ public class CloudJob {
         this.inputFiles = new ArrayList<>();
 
         this.timestamp = Long.toString(System.currentTimeMillis());
+        this.instanceModelList = new ArrayList<>();
     }
 
     public void setT1c(TypeOneController t1c) {
@@ -170,7 +174,7 @@ public class CloudJob {
 
 //master node will launch slave node    
     public void launchMasterNode() {
-        this.rir.setUserData(this.userdata());
+        //this.rir.setUserData(this.userdata());
         this.mainApp.getCloudManager().getEc2Manager().runInstancesAsync(rir, new AsyncHandler<RunInstancesRequest,RunInstancesResult>() {
             @Override
             public void onError(Exception excptn) {
@@ -179,7 +183,10 @@ public class CloudJob {
 
             @Override
             public void onSuccess(RunInstancesRequest rqst, RunInstancesResult result) {
-                log.info("launch success");
+                Instance i = result.getReservation().getInstances().get(0);
+                InstanceModel im = new InstanceModel(i);
+                CloudJob.this.instanceId = new SimpleStringProperty(i.getInstanceId());
+                CloudJob.this.mainApp.getMainController().getSm().addInstance(im);
             }
         });
     }
