@@ -15,12 +15,17 @@ import com.amazonaws.handlers.AsyncHandler;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.util.Base64;
+import com.compomics.util.experiment.biology.AminoAcid;
+import com.compomics.util.experiment.biology.PTM;
 import com.compomics.util.experiment.identification.SearchParameters;
 import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
+import com.compomics.util.preferences.ModificationProfile;
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -66,6 +71,7 @@ public class CloudJob {
     
     private StringProperty startTime;
     private StringProperty passedTime;
+    private StringProperty instanceId;
     private StringProperty status;
     
     public CloudJob(CaperCloud mainApp, List<S3Object> spectrumObjs, SearchParameters sp, ClusterConfigs cc, int jobType) {
@@ -122,7 +128,11 @@ public class CloudJob {
     }
     
     public StringProperty instanceIdProperty() {
-        return new SimpleStringProperty("to do");
+        return instanceId;
+    }
+    
+    public void setInstanceId(String instanceId) {
+        this.instanceId = new SimpleStringProperty(instanceId);
     }
 
     public StringProperty statusProperty() {
@@ -205,6 +215,9 @@ public class CloudJob {
         String enzymeIsSemiSpecific = "no";
         String sep = IOUtils.LINE_SEPARATOR;
         XtandemParameters xp = (XtandemParameters) sp.getIdentificationAlgorithmParameter(1);
+        ModificationProfile mp = sp.getModificationProfile();
+        String modDescription = getSearchedModList(mp);
+        
         if (sp.getFragmentAccuracyType() == SearchParameters.MassAccuracyType.PPM) {
             fragmentUnit = "ppm";
         } else if (sp.getFragmentAccuracyType() == SearchParameters.MassAccuracyType.DA) {
@@ -226,6 +239,7 @@ public class CloudJob {
                 + "\t<note type=\"input\" label=\"output, path\">output</note>" + sep
                 + "\t<note type=\"input\" label=\"protein, cleavage site\">" + sp.getEnzyme().getXTandemFormat() + "</note>" + sep
                 + "\t<note type=\"input\" label=\"protein, cleavage semi\">" + enzymeIsSemiSpecific + "</note>" + sep
+                + modDescription
                 + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error\">" + sp.getFragmentIonAccuracy() + "</note>" + sep
                 + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error units\">" + fragmentUnit + "</note>" + sep
                 + "\t<note type=\"input\" label=\"refine, maximum valid expectation value\">" + xp.getMaximumExpectationValueRefinement() + "</note>" + sep
@@ -284,5 +298,203 @@ public class CloudJob {
         log.info("saving...");
     }
     
+    private String getSearchedModList(ModificationProfile mp) throws IllegalArgumentException {
 
+        String completeModificationString = "";
+
+        String variableModsString = "\t<note type=\"input\" label=\"residue, potential modification mass\">";
+        String variableModsDescriptionString = "\t\t<note>";
+
+        // get the sorted list of ptms, the keys in the maps are the target, and the values the ptms with that target
+        HashMap<String, ArrayList<PTM>> allVariableMods = sortModifications(mp.getVariableModifications(), mp);
+        HashMap<String, ArrayList<PTM>> allFixedMods = sortModifications(mp.getFixedModifications(), mp);
+
+        // list of ptms that were set as variable, but have to be set as "variable fixed"
+        HashMap<String, ArrayList<PTM>> variableFixedPtms = new HashMap<String, ArrayList<PTM>>();
+
+        // iterate the variable ptms, and find the ones with unique targets
+        Iterator<String> targets = allVariableMods.keySet().iterator();
+
+        while (targets.hasNext()) {
+
+            String target = targets.next();
+
+            if (allVariableMods.get(target).size() == 1) {
+                // unique target across all the variable ptms
+                variableModsString += allVariableMods.get(target).get(0).getMass() + "@" + target + ",";
+                variableModsDescriptionString += allVariableMods.get(target).get(0).getName() + ",";
+            } else {
+                // none-unique target, add to "variable fixed" ptms
+                variableFixedPtms.put(target, allVariableMods.get(target));
+            }
+        }
+
+        // remove the ending commas
+        if (variableModsString.endsWith(",")) {
+            variableModsString = variableModsString.substring(0, variableModsString.length() - 1);
+            variableModsDescriptionString = variableModsDescriptionString.substring(0, variableModsDescriptionString.length() - 1);
+        }
+
+        // set the variable ptms
+        variableModsString += "</note>" + System.getProperty("line.separator");
+        variableModsDescriptionString += "</note>" + System.getProperty("line.separator");
+
+        // fixed mods strings
+        String fixedModsStringTemplate = "\t<note type=\"input\" label=\"residue, modification mass";
+        String fixedModsStringDescriptionTemplate = "\t\t<note>";
+
+        String fixedModsString = fixedModsStringTemplate + "\">";
+        String fixedModsDescriptionString = fixedModsStringDescriptionTemplate;
+        String defaultFixedModsString = "";
+        String defaultFixedModsDescription = "";
+
+        // iterate the fixed ptms, and find the ones with unique targets
+        targets = allFixedMods.keySet().iterator();
+
+        while (targets.hasNext()) {
+
+            String target = targets.next();
+
+            if (allFixedMods.get(target).size() == 1) {
+                // unique target across all the fixed ptms
+                fixedModsString += allFixedMods.get(target).get(0).getMass() + "@" + target + ",";
+                fixedModsDescriptionString += allFixedMods.get(target).get(0).getName() + ",";
+
+                defaultFixedModsString += allFixedMods.get(target).get(0).getMass() + "@" + target + ",";
+                defaultFixedModsDescription += allFixedMods.get(target).get(0).getName() + ",";
+            } else {
+                // non-unique targets for fixed ptms detected, this is not supported!!
+                throw new IllegalArgumentException("More than one fixed modification with the same target was detected! Target: " + target + ". "
+                        + "X!Tandem does not support this. Please replace by a single modification and try again.");
+            }
+        }
+
+        // remove the ending commas
+        if (fixedModsString.endsWith(",")) {
+            fixedModsString = fixedModsString.substring(0, fixedModsString.length() - 1);
+            fixedModsDescriptionString = fixedModsDescriptionString.substring(0, fixedModsDescriptionString.length() - 1);
+        }
+
+        // close the default fixed mods tag
+        fixedModsString += "</note>" + System.getProperty("line.separator");
+        fixedModsDescriptionString += "</note>" + System.getProperty("line.separator");
+
+        // add the default fixed mods
+        completeModificationString += fixedModsString + fixedModsDescriptionString;
+
+        // iterate the "variable fixed" mods
+        targets = variableFixedPtms.keySet().iterator();
+
+        ArrayList<String> fixedSecondaryLines = new ArrayList<String>();
+        ArrayList<String> fixedSecondaryLinesDescription = new ArrayList<String>();
+
+        while (targets.hasNext()) {
+
+            ArrayList<String> newLines = new ArrayList<String>();
+            ArrayList<String> newDescriptions = new ArrayList<String>();
+
+            String target = targets.next();
+
+            for (PTM tempPtm : variableFixedPtms.get(target)) {
+
+                PTM currentPtm = tempPtm;
+                String tempModsString = currentPtm.getMass() + "@" + target;
+                String tempModsStringModsDescriptionString = currentPtm.getName();
+
+                newLines.add(defaultFixedModsString + tempModsString);
+                newDescriptions.add(defaultFixedModsDescription + tempModsStringModsDescriptionString);
+
+                for (String previousLines : fixedSecondaryLines) {
+                    newLines.add(previousLines + "," + tempModsString);
+                }
+
+                for (String previousLines : fixedSecondaryLinesDescription) {
+                    newDescriptions.add(previousLines + "," + tempModsStringModsDescriptionString);
+                }
+            }
+
+            fixedSecondaryLines.addAll(newLines);
+            fixedSecondaryLinesDescription.addAll(newDescriptions);
+        }
+
+        // add the fixed variable mods
+        for (int i = 0; i < fixedSecondaryLines.size(); i++) {
+
+            // add the mods
+            fixedModsString = fixedModsStringTemplate + " " + (i + 1) + "\">" + fixedSecondaryLines.get(i);
+            fixedModsDescriptionString = fixedModsStringDescriptionTemplate + fixedSecondaryLinesDescription.get(i);
+
+            // close the tags
+            fixedModsString += "</note>" + System.getProperty("line.separator");
+            fixedModsDescriptionString += "</note>" + System.getProperty("line.separator");
+
+            // add to mods string
+            completeModificationString += fixedModsString + fixedModsDescriptionString;
+        }
+
+        // add the variable mods to the mods string
+        completeModificationString += variableModsString + variableModsDescriptionString;
+
+        return completeModificationString;
+    }
+
+    private HashMap<String, ArrayList<PTM>> sortModifications(ArrayList<String> modifications, ModificationProfile mp) {
+
+        HashMap<String, ArrayList<PTM>> sortedMods = new HashMap<String, ArrayList<PTM>>();
+
+        for (String name : modifications) {
+
+            PTM ptm = mp.getPtm(name);
+
+            if (ptm.getType() == PTM.MODN
+                    || ptm.getType() == PTM.MODNAA
+                    || ptm.getType() == PTM.MODNP
+                    || ptm.getType() == PTM.MODNPAA) {
+
+                ArrayList<PTM> ptms;
+
+                if (sortedMods.containsKey("[")) {
+                    ptms = sortedMods.get("[");
+                } else {
+                    ptms = new ArrayList<PTM>();
+                }
+
+                ptms.add(ptm);
+                sortedMods.put("[", ptms);
+            }
+
+            for (AminoAcid aa : ptm.getPattern().getAminoAcidsAtTarget()) {
+
+                ArrayList<PTM> ptms;
+
+                if (sortedMods.containsKey(aa.singleLetterCode)) {
+                    ptms = sortedMods.get(aa.singleLetterCode);
+                } else {
+                    ptms = new ArrayList<PTM>();
+                }
+
+                ptms.add(ptm);
+                sortedMods.put(aa.singleLetterCode, ptms);
+            }
+
+            if (ptm.getType() == PTM.MODC
+                    || ptm.getType() == PTM.MODCAA
+                    || ptm.getType() == PTM.MODCP
+                    || ptm.getType() == PTM.MODCPAA) {
+
+                ArrayList<PTM> ptms;
+
+                if (sortedMods.containsKey("]")) {
+                    ptms = sortedMods.get("]");
+                } else {
+                    ptms = new ArrayList<PTM>();
+                }
+
+                ptms.add(ptm);
+                sortedMods.put("]", ptms);
+            }
+        }
+
+        return sortedMods;
+    }
 }

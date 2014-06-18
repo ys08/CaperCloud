@@ -1267,6 +1267,7 @@ public class JobOverviewController implements Initializable {
         }
         cj.setStartTime("0");
         cj.setPassedTime("0");
+        cj.setInstanceId("not available");
         cj.setStatus("saved");
         
         this.sm.addJob(cj);
