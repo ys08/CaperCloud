@@ -20,15 +20,21 @@ import capercloud.model.ResultModel;
 import capercloud.model.StatusModel;
 import capercloud.model.UploadTask;
 import com.amazonaws.handlers.AsyncHandler;
+import com.amazonaws.services.ec2.AmazonEC2AsyncClient;
 import com.amazonaws.services.ec2.model.CreateKeyPairRequest;
 import com.amazonaws.services.ec2.model.CreateKeyPairResult;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.Instance;
+import com.amazonaws.services.ec2.model.InstanceStateChange;
 import com.amazonaws.services.ec2.model.InstanceType;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
+import com.amazonaws.services.ec2.model.StopInstancesRequest;
+import com.amazonaws.services.ec2.model.StopInstancesResult;
+import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import com.compomics.util.experiment.biology.Enzyme;
 import com.compomics.util.experiment.identification.SearchParameters;
 import com.compomics.util.experiment.identification.SearchParameters.MassAccuracyType;
@@ -66,6 +72,7 @@ import java.util.logging.Logger;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.WorkerStateEvent;
@@ -1125,89 +1132,91 @@ public class JobOverviewController implements Initializable {
     private void handleInstanceMonitorRefreshAction() {
         this.mainApp.getCloudManager().getEc2Manager().describeInstancesAsync(new DescribeInstancesRequest(), new AsyncHandler<DescribeInstancesRequest,DescribeInstancesResult>() {
             @Override
-            public void onError(Exception excptn) {
-                Dialogs.create()
-                        .owner(JobOverviewController.this.mainApp.getPrimaryStage())
-                        .title("Error")
-                        .masthead(null)
-                        .message("Ooops, there was an error!")
-                        .showError();
+            public void onError(Exception ex) {
+                log.debug(ex.getMessage());
             }
 
             @Override
             public void onSuccess(DescribeInstancesRequest rqst, DescribeInstancesResult result) {
-                log.debug("*********************************");
-                List<Instance> res = new ArrayList<>();
+                ObservableList<InstanceModel> res = FXCollections.observableArrayList();
                 for (Reservation r : result.getReservations()) {
                     for (Instance i : r.getInstances()) {
-                        res.add(i);
-                        log.debug(i.getInstanceId());
+                        res.add(new InstanceModel(i));
                     }
                 }
-                log.debug("*********************************");
-                JobOverviewController.this.sm.refreshInstanceList(res);
-                log.debug("*********************************");
+                JobOverviewController.this.tvInstanceMonitor.setItems(res);
+                JobOverviewController.this.sm.setInstancesCache(res);
             }
-        
     });
     }
 //    
     @FXML
     private void handleInstanceMonitorStopAction() {
-//        List<String> instanceIds = new ArrayList<>();
-//        InstanceModel selectedInstance = (InstanceModel) this.tvInstanceMonitor.getSelectionModel().getSelectedItem();
-//        if (selectedInstance == null) {
-//            return;
-//        }
-//        instanceIds.add(selectedInstance.instanceIdProperty().getValue());
-//        
-//        final AmazonEC2AsyncClient ec2m = this.mainApp.getCloudManager().getEc2Manager();
-//        ec2m.stopInstancesAsync(new StopInstancesRequest(instanceIds), new  AsyncHandler<StopInstancesRequest,StopInstancesResult>() {
-//            @Override
-//            public void onError(Exception excptn) {
-//                log.debug(excptn.getMessage());
-//            }
-//
-//            @Override
-//            public void onSuccess(StopInstancesRequest rqst, StopInstancesResult result) {
-//                List<InstanceStateChange> res = result.getStoppingInstances();
-//                for (InstanceStateChange isc : res) {
-//                    InstanceModel im = JobOverviewController.this.getInstancesMap().get(isc.getInstanceId());
-//                    im.setState(isc.getCurrentState().getName());
-//                }
-//            }
-//        });
+        List<String> instanceIds = new ArrayList<>();
+        InstanceModel selectedInstance = (InstanceModel) this.tvInstanceMonitor.getSelectionModel().getSelectedItem();
+        if (selectedInstance == null) {
+            Dialogs.create()
+                    .owner(this.mainApp.getPrimaryStage())
+                    .title("Error")
+                    .masthead(null)
+                    .message("No instance is selected!")
+                    .showError();
+            return;
+        }
+        instanceIds.add(selectedInstance.instanceIdProperty().getValue());       
+        final AmazonEC2AsyncClient ec2m = this.mainApp.getCloudManager().getEc2Manager();
+        ec2m.stopInstancesAsync(new StopInstancesRequest(instanceIds), new AsyncHandler<StopInstancesRequest,StopInstancesResult>() {
+            @Override
+            public void onError(Exception excptn) {
+                log.debug(excptn.getMessage());
+            }
+
+            @Override
+            public void onSuccess(StopInstancesRequest rqst, StopInstancesResult result) {
+                log.debug("stop success!");
+                for (InstanceStateChange isc : result.getStoppingInstances()) {
+                    InstanceModel im = JobOverviewController.this.sm.getInstance(isc.getInstanceId());
+                    im.setState(isc.getCurrentState().getName());
+                }
+            }
+        });
     }
     
     @FXML
     private void handleInstanceMonitorTerminateAction() {
-//        List<String> instanceIds = new ArrayList<>();
-//        InstanceModel selectedInstance = (InstanceModel) this.tvInstanceMonitor.getSelectionModel().getSelectedItem();
-//        if (selectedInstance == null) {
-//            return;
-//        }
-//        instanceIds.add(selectedInstance.instanceIdProperty().getValue());
-//        final AmazonEC2AsyncClient ec2m = this.mainApp.getCloudManager().getEc2Manager();
-//        ec2m.terminateInstancesAsync(new TerminateInstancesRequest(instanceIds), new AsyncHandler<TerminateInstancesRequest,TerminateInstancesResult>() {
-//            @Override
-//            public void onError(Exception excptn) {
-//                log.error(excptn.getMessage());
-//            }
-//
-//            @Override
-//            public void onSuccess(TerminateInstancesRequest rqst, TerminateInstancesResult result) {
-//                List<InstanceStateChange> res = result.getTerminatingInstances();
-//                for (InstanceStateChange isc : res) {
-//                    InstanceModel im = JobOverviewController.this.getInstancesMap().get(isc.getInstanceId());
-//                    im.setState(isc.getCurrentState().getName());
-//                }
-//            }
-//        });
+        List<String> instanceIds = new ArrayList<>();
+        InstanceModel selectedInstance = (InstanceModel) this.tvInstanceMonitor.getSelectionModel().getSelectedItem();
+        if (selectedInstance == null) {
+            Dialogs.create()
+                    .owner(this.mainApp.getPrimaryStage())
+                    .title("Error")
+                    .masthead(null)
+                    .message("No instance is selected!")
+                    .showError();
+            return;
+        }
+        instanceIds.add(selectedInstance.instanceIdProperty().getValue());
+        final AmazonEC2AsyncClient ec2m = this.mainApp.getCloudManager().getEc2Manager();
+        ec2m.terminateInstancesAsync(new TerminateInstancesRequest(instanceIds), new AsyncHandler<TerminateInstancesRequest,TerminateInstancesResult>() {
+            @Override
+            public void onError(Exception excptn) {
+                log.error(excptn.getMessage());
+            }
+
+            @Override
+            public void onSuccess(TerminateInstancesRequest rqst, TerminateInstancesResult result) {
+                List<InstanceStateChange> res = result.getTerminatingInstances();
+                for (InstanceStateChange isc : res) {
+                    InstanceModel im = JobOverviewController.this.sm.getInstance(isc.getInstanceId());
+                    im.setState(isc.getCurrentState().getName());
+                }
+            }
+        });
     }
     
     @FXML
     private void handleInstanceMonitorRebootAction() {
-        
+        //TO DO
     }
     
     @FXML
@@ -1322,12 +1331,18 @@ public class JobOverviewController implements Initializable {
             return;
         }
         
+        Action response = Dialogs.create()
+                    .owner(this.mainApp.getPrimaryStage())
+                    .title("Confirm")
+                    .masthead("You will be charged for AWS fees!")
+                    .message("Do you want to continue?")
+                    .showConfirm();
+        if (response == Dialog.Actions.CANCEL || response == Dialog.Actions.NO) {
+            return;
+        }
+        
         CloudJob job = this.sm.getJobs().get(this.sm.getJobs().size() - 1);
-        job.setStatus("pending");
-        Date d = Calendar.getInstance().getTime();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
-        job.setStartTime(sdf.format(d));
-        job.setInstanceId("retrieving information");
+
         job.launchMasterNode();
 //        try {
 //            sendFiles(job).get();
@@ -1336,6 +1351,11 @@ public class JobOverviewController implements Initializable {
 //            return;
 //        }
 //        postJob(job);
+    }
+    
+    public void refreshJobTable() {
+        ((TableColumn) this.tvJobMonitor.getColumns().get(0)).setVisible(false);
+        ((TableColumn) this.tvJobMonitor.getColumns().get(0)).setVisible(true);
     }
     
     private Future sendFiles(CloudJob job) throws IOException {
