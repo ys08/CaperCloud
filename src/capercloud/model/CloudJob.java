@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import org.apache.commons.io.FileUtils;
@@ -43,6 +45,7 @@ public class CloudJob {
     private CaperCloud mainApp;
     private RunInstancesRequest rir;
     private SearchParameters sp;
+    private ClusterConfigs cc;
     private int jobType;
     private S3Bucket bucket;
     
@@ -59,13 +62,18 @@ public class CloudJob {
     private TypeThreeController t3c;
     private TypeFourController t4c;
     
-    String timestamp;
+    private String timestamp;
+    
+    private StringProperty startTime;
+    private StringProperty passedTime;
+    private StringProperty status;
     
     public CloudJob(CaperCloud mainApp, List<S3Object> spectrumObjs, SearchParameters sp, ClusterConfigs cc, int jobType) {
         this.mainApp = mainApp;
         this.spectrumObjs = spectrumObjs;
         this.sp = sp;
         this.jobType = jobType;
+        this.cc = cc;
         
         this.rir = new RunInstancesRequest();
         this.rir.setImageId(cc.getImageId());
@@ -95,6 +103,43 @@ public class CloudJob {
     
     public void setT4c(TypeFourController t4c) {
             this.t4c = t4c;
+    }
+
+    public StringProperty startTimeProperty() {
+        return startTime;
+    }
+
+    public void setStartTime(String startTime) {
+        this.startTime = new SimpleStringProperty(startTime);
+    }
+
+    public StringProperty passedTimeProperty() {
+        return passedTime;
+    }
+    
+    public StringProperty clusterSizeProperty() {
+        return new SimpleStringProperty(this.cc.getMinCount().toString());
+    }
+    
+    public StringProperty instanceIdProperty() {
+        return new SimpleStringProperty("to do");
+    }
+
+    public StringProperty statusProperty() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = new SimpleStringProperty(status);
+    }
+
+    public void setPassedTime(String passedTime) {
+        this.passedTime = new SimpleStringProperty(passedTime);
+    }
+    
+    public StringProperty spectraProperty() {
+        S3Object obj = this.spectrumObjs.get(0);
+        return new SimpleStringProperty(obj.getName());
     }
 
     public File getTaxonomyFile() {
@@ -129,8 +174,8 @@ public class CloudJob {
         });
     }
     
-    public String getCloudJobId() {
-        return this.timestamp;
+    public StringProperty jobIdProperty() {
+        return new SimpleStringProperty(timestamp);
     }
     
     public String userdata() {
