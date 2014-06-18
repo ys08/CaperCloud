@@ -30,6 +30,7 @@ import com.compomics.util.experiment.biology.Enzyme;
 import com.compomics.util.experiment.identification.SearchParameters;
 import com.compomics.util.experiment.identification.SearchParameters.MassAccuracyType;
 import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
+import com.compomics.util.preferences.ModificationProfile;
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
@@ -572,8 +573,25 @@ public class JobOverviewController implements Initializable {
             } 
         });
         this.tvResults.setItems(this.rm.getSpectrumIdentificationResult());
+        
+        ((TableColumn) this.tvJobMonitor.getColumns().get(0))
+                .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, String>("jobId"));
+        ((TableColumn) this.tvJobMonitor.getColumns().get(1))
+                .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, String>("spectra"));
+        ((TableColumn) this.tvJobMonitor.getColumns().get(2))
+                .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, String>("startTime"));
+        ((TableColumn) this.tvJobMonitor.getColumns().get(3))
+                .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, String>("passedTime"));
+        ((TableColumn) this.tvJobMonitor.getColumns().get(4))
+                .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, String>("clusterSize"));
+        ((TableColumn) this.tvJobMonitor.getColumns().get(5))
+                .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, String>("instanceId"));
+        ((TableColumn) this.tvJobMonitor.getColumns().get(6))
+                .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, String>("status"));
+        this.tvJobMonitor.setItems(this.sm.getJobs());
+        //----------------------------init end-------------------------
     }
-//----------------------------split line-------------------------
+
     public void enableButton() {
         this.btnRemoteUp.setDisable(false);
         this.btnRemoteNew.setDisable(false);
@@ -1182,28 +1200,44 @@ public class JobOverviewController implements Initializable {
         int jobType = this.cbJobType.getSelectionModel().getSelectedIndex() + 1;
         //S3Bucket saveToBucket = (S3Bucket) this.cbBucketSelection.getValue();
         String sep = IOUtils.LINE_SEPARATOR;
-        if (jobType == 0) {
-            return;
-        }
-
         List<S3Object> selectedSpectra = this.getSelectedSpectra();
-        if (selectedSpectra.isEmpty()) {
-            log.warn("Please select one or more spectra");
+        
+        if (jobType == 0 || selectedSpectra.isEmpty()) {
+            Dialogs.create()
+                    .owner(this.mainApp.getPrimaryStage())
+                    .title("Error")
+                    .masthead(null)
+                    .message("Your parameters are invalid, please check!")
+                    .showError();
             return;
         }
 
         SearchParameters sp = new SearchParameters();
         XtandemParameters xp = new XtandemParameters();
         sp.setIdentificationAlgorithmParameter(1, xp);
+        //set enzyme
         String enzymeName = (String) this.cbCleavageSites.getValue();
         Enzyme e = this.jm.getEnzymeFactory().getEnzyme(enzymeName);
         e.setSemiSpecific(this.cbSemiCleavage.isSelected());
         sp.setEnzyme(e);
+        //set fragment error
         String fragmentError = this.tfFragmentMassError.getText();
         sp.setFragmentIonAccuracy(Double.parseDouble(fragmentError));
         sp.setFragmentAccuracyType((MassAccuracyType) this.cbFragmentMassType.getValue());
+        //set refinement expect
         String refinementExpect = (String) this.cbRefinementExpect.getValue();
         xp.setMaximumExpectationValueRefinement(Double.parseDouble(refinementExpect));
+        //set modification
+        ModificationProfile mp = new ModificationProfile();
+        for (ModificationTableModel mtm : this.jm.getDefaultModifications()) {
+            if (mtm.isFixedProperty().get()) {
+                mp.addFixedModification(mtm.getPtm());
+            }
+            if (mtm.isVariantProperty().get()) {
+                mp.addVariableModification(mtm.getPtm());
+            }
+        }
+        sp.setModificationProfile(mp);
          
         int num = Integer.parseInt(this.tfNumOfInstances.getText());
         InstanceType it = (InstanceType) this.cbInstanceType.getSelectionModel().getSelectedItem();
@@ -1215,13 +1249,33 @@ public class JobOverviewController implements Initializable {
         try {
             cj.saveToLocal();
         } catch (NoSuchAlgorithmException ex) {
-            log.error(ex.getMessage());
+            Dialogs.create()
+                    .owner(this.mainApp.getPrimaryStage())
+                    .title("Exception")
+                    .masthead("Unable to save job configurations")
+                    .message(null)
+                    .showException(ex);
             return;
         } catch (IOException ex) {
-            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+            Dialogs.create()
+                    .owner(this.mainApp.getPrimaryStage())
+                    .title("Exception")
+                    .masthead("Unable to save job configurations")
+                    .message(null)
+                    .showException(ex);
+            return;
         }
+        cj.setStartTime("0");
+        cj.setPassedTime("0");
+        cj.setStatus("saved");
+        
         this.sm.addJob(cj);
-        log.info("add job to job list: " + cj.getCloudJobId());
+        Dialogs.create()
+                .owner(this.mainApp.getPrimaryStage())
+                .title("Information")
+                .masthead(null)
+                .message("Job configurations have been saved, you can check it in job monitor panel!")
+                .showInformation();
     }
     
     @FXML

@@ -30,6 +30,7 @@ public class ModificationTableModel {
         this.mass = new SimpleDoubleProperty(ptm.getMass());
         this.isFixed = new SimpleBooleanProperty(false);
         this.isVariant = new SimpleBooleanProperty(false);
+        this.ptm = ptm;
     }
 
     public PTM getPtm() {
