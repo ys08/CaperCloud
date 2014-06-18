@@ -40,12 +40,22 @@ public class StatusModel {
         return jobs;
     }
     
-    public void refreshInstanceList(List<Instance> res) {
+    public void updateInstanceCache(List<InstanceModel> res) {
         this.instancesCache.clear();
-        for (Instance i : res) {
-            System.out.println(i.getInstanceId());
-            this.instancesCache.add(new InstanceModel(i));
+        this.instancesCache.addAll(res);
+    }
+
+    public void setInstancesCache(ObservableList<InstanceModel> instancesCache) {
+        this.instancesCache = instancesCache;
+    }
+    
+    public InstanceModel getInstance(String instanceId) {
+        for (InstanceModel im : this.instancesCache) {
+            if (im.instanceIdProperty().get().equals(instanceId)) {
+                return im;
+            }
         }
+        return null;
     }
     
 }

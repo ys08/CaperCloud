@@ -24,7 +24,10 @@ import com.compomics.util.preferences.ModificationProfile;
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -183,10 +186,21 @@ public class CloudJob {
 
             @Override
             public void onSuccess(RunInstancesRequest rqst, RunInstancesResult result) {
+                //update job tableview
+                CloudJob.this.setStatus("launching compute nodes");
+                Date d = Calendar.getInstance().getTime();
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
+                CloudJob.this.setStartTime(sdf.format(d));
+                
                 Instance i = result.getReservation().getInstances().get(0);
                 InstanceModel im = new InstanceModel(i);
-                CloudJob.this.instanceId = new SimpleStringProperty(i.getInstanceId());
+                CloudJob.this.setInstanceId(i.getInstanceId());
+                
+                //update instance tableview
+                log.debug(im);
                 CloudJob.this.mainApp.getMainController().getSm().addInstance(im);
+                log.debug(CloudJob.this.mainApp.getMainController().getSm().getInstancesCache().get(0));
+                CloudJob.this.mainApp.getMainController().refreshJobTable();
             }
         });
     }
