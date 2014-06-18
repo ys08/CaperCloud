@@ -1343,7 +1343,27 @@ public class JobOverviewController implements Initializable {
         
         CloudJob job = this.sm.getJobs().get(this.sm.getJobs().size() - 1);
 
-        job.launchMasterNode();
+        Service s = job.createLaunchMasterNodeService();
+        s.setOnSucceeded(new EventHandler() {
+            @Override
+            public void handle(Event t) {
+                RunInstancesResult res = (RunInstancesResult) s.getValue();
+//update job tableview
+                job.setStatus("launching compute nodes");
+                Date d = Calendar.getInstance().getTime();
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
+                job.setStartTime(sdf.format(d));
+                
+                Instance launchedInstance = res.getReservation().getInstances().get(0);
+                InstanceModel im = new InstanceModel(launchedInstance);
+                job.setInstanceId(launchedInstance.getInstanceId());
+                
+                JobOverviewController.this.sm.addInstance(im);
+                ((TableColumn) JobOverviewController.this.tvJobMonitor.getColumns().get(0)).setVisible(false);
+                ((TableColumn) JobOverviewController.this.tvJobMonitor.getColumns().get(0)).setVisible(true);
+            }
+        });
+        s.start();
 //        try {
 //            sendFiles(job).get();
 //        } catch (ExecutionException ex) {
@@ -1351,11 +1371,6 @@ public class JobOverviewController implements Initializable {
 //            return;
 //        }
 //        postJob(job);
-    }
-    
-    public void refreshJobTable() {
-        ((TableColumn) this.tvJobMonitor.getColumns().get(0)).setVisible(false);
-        ((TableColumn) this.tvJobMonitor.getColumns().get(0)).setVisible(true);
     }
     
     private Future sendFiles(CloudJob job) throws IOException {
