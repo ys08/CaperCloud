@@ -683,35 +683,64 @@
             <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
               <children>
                 <BorderPane prefHeight="737.0" prefWidth="1280.0" AnchorPane.bottomAnchor="1.0" AnchorPane.leftAnchor="1.0" AnchorPane.rightAnchor="1.0" AnchorPane.topAnchor="1.0">
-                  <bottom>
-                    <SplitPane dividerPositions="0.5" focusTraversable="true" prefHeight="460.0" prefWidth="1278.0">
-                      <items>
-                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
-                                       <children>
-                                          <WebView fx:id="wvBrowser" layoutX="159.0" layoutY="99.0" prefHeight="458.0" prefWidth="635.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
-                                       </children></AnchorPane>
-                        <AnchorPane fx:id="apSpectrum" minHeight="0.0" minWidth="0.0" prefHeight="458.0" prefWidth="539.0" />
-                      </items>
-                    </SplitPane>
-                  </bottom>
-                  <center>
-                    <TableView fx:id="tvResults" prefHeight="251.0" prefWidth="1280.0">
-                      <columns>
-                        <TableColumn prefWidth="75.0" text="Job Name" />
-                        <TableColumn prefWidth="75.0" text="Job Type" />
-                        <TableColumn prefWidth="75.0" text="Start Time" />
-                        <TableColumn prefWidth="75.0" text="End Time" />
-                      </columns>
-                    </TableView>
-                  </center>
                   <top>
                     <HBox alignment="CENTER_RIGHT" prefHeight="22.0" prefWidth="1280.0" BorderPane.alignment="CENTER_RIGHT">
                       <children>
-                        <Button mnemonicParsing="false" onAction="#handleDownloadResultAction" text="Download Selected Results" />
-                        <Button mnemonicParsing="false" text="Send to Caper" />
+                        <Button mnemonicParsing="false" onAction="#handleVisualizeAction" text="Visualize" />
                       </children>
                     </HBox>
                   </top>
+                           <center>
+                              <SplitPane dividerPositions="0.5" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0" BorderPane.alignment="CENTER">
+                                <items>
+                                  <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
+                                       <children>
+                                          <SplitPane dividerPositions="0.6279434850863422" prefHeight="351.0" prefWidth="1276.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                            <items>
+                                              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+                                                   <children>
+                                            <TableView fx:id="tvResults" prefHeight="351.0" prefWidth="1276.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                              <columns>
+                                                <TableColumn prefWidth="75.0" text="Id" />
+                                                <TableColumn prefWidth="132.0" text="Peptide Sequence" />
+                                                <TableColumn prefWidth="171.0" text="Genomic coordinates" />
+                                                <TableColumn minWidth="0.0" prefWidth="131.0" text="X!Tandem score" />
+                                                            <TableColumn prefWidth="139.0" text="Percolator score" />
+                                                            <TableColumn prefWidth="129.0" text="Modification(s)" />
+                                              </columns>
+                                            </TableView>
+                                                   </children>
+                                                </AnchorPane>
+                                              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+                                                   <children>
+                                                      <TableView prefHeight="349.0" prefWidth="470.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                                        <columns>
+                                                          <TableColumn prefWidth="75.0" text="ID" />
+                                                        </columns>
+                                                      </TableView>
+                                                   </children>
+                                                </AnchorPane>
+                                            </items>
+                                          </SplitPane>
+                                       </children>
+                                    </AnchorPane>
+                                  <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
+                                       <children>
+                                <SplitPane dividerPositions="0.5" focusTraversable="true" prefHeight="350.0" prefWidth="1276.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                  <items>
+                                    <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+                                                   <children>
+                                                      <WebView fx:id="wvBrowser" layoutX="159.0" layoutY="99.0" prefHeight="458.0" prefWidth="635.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                                                   </children>
+                                                </AnchorPane>
+                                    <AnchorPane fx:id="apSpectrum" minHeight="0.0" minWidth="0.0" prefHeight="458.0" prefWidth="539.0" />
+                                  </items>
+                                </SplitPane>
+                                       </children>
+                                    </AnchorPane>
+                                </items>
+                              </SplitPane>
+                           </center>
                 </BorderPane>
               </children>
             </AnchorPane>
