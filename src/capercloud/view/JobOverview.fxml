@@ -695,27 +695,27 @@
                                 <items>
                                   <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
                                        <children>
-                                          <SplitPane dividerPositions="0.6279434850863422" prefHeight="351.0" prefWidth="1276.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                          <SplitPane dividerPositions="0.49921507064364207" prefHeight="351.0" prefWidth="1276.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                             <items>
-                                              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+                                              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="349.0" prefWidth="694.0">
                                                    <children>
                                             <TableView fx:id="tvResults" prefHeight="351.0" prefWidth="1276.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                               <columns>
-                                                <TableColumn prefWidth="75.0" text="Id" />
-                                                <TableColumn prefWidth="132.0" text="Peptide Sequence" />
+                                                <TableColumn prefWidth="75.0" text="ID" />
+                                                <TableColumn prefWidth="178.0" text="Peptide Sequence" />
                                                 <TableColumn prefWidth="171.0" text="Genomic coordinates" />
-                                                <TableColumn minWidth="0.0" prefWidth="131.0" text="X!Tandem score" />
-                                                            <TableColumn prefWidth="139.0" text="Percolator score" />
-                                                            <TableColumn prefWidth="129.0" text="Modification(s)" />
+                                                            <TableColumn prefWidth="160.0" text="Modification(s)" />
                                               </columns>
                                             </TableView>
                                                    </children>
                                                 </AnchorPane>
                                               <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
                                                    <children>
-                                                      <TableView prefHeight="349.0" prefWidth="470.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                                      <TableView fx:id="tvPSMs" prefHeight="349.0" prefWidth="470.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                                         <columns>
-                                                          <TableColumn prefWidth="75.0" text="ID" />
+                                                          <TableColumn prefWidth="141.0" text="ID" />
+                                                <TableColumn minWidth="0.0" prefWidth="121.0" text="X!Tandem score" />
+                                                            <TableColumn prefWidth="154.0" text="Percolator score" />
                                                         </columns>
                                                       </TableView>
                                                    </children>
