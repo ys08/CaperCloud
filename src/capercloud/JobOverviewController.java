@@ -195,13 +195,7 @@ public class JobOverviewController implements Initializable {
         this.jm = new JobModel();
         this.fm = new FileModel();
         this.sm = new StatusModel();
-// testingggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg
         this.rm = new ResultModel();
-        try {
-            this.rm.load(new File("example_files/55merge_omssa.mzid"), new File("example_files/55merge.mgf"));
-        } catch (JMzReaderException ex) {
-            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
-        }
     }
 
     public void setUsername(String username) {
@@ -1461,5 +1455,14 @@ public class JobOverviewController implements Initializable {
     @FXML
     private void handleAdvancedSearchAction() {
         //TO DO
+    }
+    
+    @FXML
+    private void handleVisualizeAction() {
+        try {
+            this.rm.load(new File("example_files/55merge_omssa.mzid"), new File("example_files/55merge.mgf"));
+        } catch (JMzReaderException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }
