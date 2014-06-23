@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.embed.swing.SwingNode;
@@ -23,11 +25,11 @@ import javax.swing.SwingUtilities;
 import org.basex.core.BaseXException;
 import org.basex.core.Context;
 import org.basex.core.cmd.XQuery;
-import uk.ac.ebi.jmzidml.xml.io.MzIdentMLUnmarshaller;
 import uk.ac.ebi.pride.mzgraph.chart.graph.SpectrumPanel;
 import uk.ac.ebi.pride.tools.jmzreader.JMzReader;
 import uk.ac.ebi.pride.tools.jmzreader.JMzReaderException;
 import uk.ac.ebi.pride.tools.jmzreader.model.Spectrum;
+import uk.ac.ebi.pride.tools.mgf_parser.MgfFile;
 
 /**
  *
@@ -56,12 +58,20 @@ public class ResultModel {
     public ObservableList<PeptideModel> getPeptideList() {
         return peptideList;
     }
+    
+    public ObservableList<SpectrumModel> getSpectrumList(String peptideId) {
+        return this.peptideToSpectrumMap.get(peptideId);
+    }
 
     public void load(File resultFile, File spectraFile) throws JMzReaderException {
         this.resultFile = resultFile;
         this.spectraFile = spectraFile;
         
-        String query =
+        this.jmzReader = new MgfFile(this.spectraFile);
+        this.peptideList.clear();
+        this.peptideToSpectrumMap.clear();
+        
+        String querySpectrumIdentificationResult =
                 "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
                 + "for $sir in doc('" + this.resultFile.getAbsolutePath() + "')//SpectrumIdentificationResult "
                 + "let $id:=data($sir/@spectrumID) "
@@ -73,14 +83,71 @@ public class ResultModel {
                 + "let $score:=string-join(data($sii//cvParam/@value), \",\") "
                 + "return string-join(($id,$pr,$cal,$exp,$score), \",\")";
         try {
-            query(query);
+            String[] sirs = query(querySpectrumIdentificationResult).split(" ");
+            for (String sir : sirs) {
+                String[] attributes = sir.split(",");
+                if (this.peptideToSpectrumMap.containsKey(attributes[1])) {
+                    ObservableList ol = this.peptideToSpectrumMap.get(attributes[1]);
+                    ol.add(new SpectrumModel(attributes[0].substring(6), attributes[2], attributes[3], attributes[4], attributes[5], attributes[6], attributes[7], attributes[8]));
+                } else {
+                    ObservableList ol = FXCollections.observableArrayList();
+                    ol.add(new SpectrumModel(attributes[0].substring(6), attributes[2], attributes[3], attributes[4], attributes[5], attributes[6], attributes[7], attributes[8]));
+                    this.peptideToSpectrumMap.put(attributes[1], ol);
+                    
+                    String queryPeptideEvidence = 
+                            "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                            + "for $pe in doc('" + this.resultFile.getAbsolutePath() + "')//PeptideEvidence "
+                            + "where $pe/@peptide_ref=\"" + attributes[1] + "\" "
+                            + "let $id:=data($pe/@id) "
+                            + "let $end:=data($pe/@end) "
+                            + "let $start:=data($pe/@start) "
+                            + "let $dBSequence_ref:=data($pe/@dBSequence_ref) "
+                            + "return string-join(($id,$start,$end,$dBSequence_ref), \",\")";
+                    String pe = query(queryPeptideEvidence);
+                    //filter peptides that have multiple peptide evidence(that is, the peptide may map to multiple genomic location
+                    if (pe.split("PE").length == 2) {
+                        String[] pe_attrs = pe.split(",");
+                        String description = pe_attrs[3];
+                        Pattern p = Pattern.compile("(\\d):(\\d+)-(\\d+)");
+                        Matcher m = p.matcher(description);
+                        if (m.find()) {
+                            String chrom = m.group(1);
+                            String proteinStart = m.group(2);
+                            String proteinStop = m.group(3);
+                            String[] peptide = attributes[1].split("_");
+                            StringBuilder mod = new StringBuilder();
+                            String seq = peptide[0];
+                            if (peptide.length == 2) {
+                                mod.append(peptide[1]);
+                            }
+                            if (peptide.length == 3) {
+                                mod.append(peptide[1]).append(peptide[2]);
+                            }
+                            this.peptideList.add(new PeptideModel(attributes[1], chrom, seq, proteinStart, proteinStop, pe_attrs[1], pe_attrs[2], mod.toString()));
+                        }
+                        
+                    }
+//                    String queryModification = 
+//                            "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+//                            + "for $pep in doc('" + this.resultFile.getAbsolutePath() + "')//Peptide "
+//                            + "where $pep/@id=\"" + attributes[1] + "\" "
+//                            + "let $seq:=data($pep/@PeptideSequence) "
+//                            + "let $mods:=string-join((data($pep//Modification//cvParam/@name),data($pep//Modification/@monoisotopicMassDelta),data($pep//Modification/@location)), \"|\") "
+//                            + "return string-join(($seq,$mods), \",\")";
+//                    String peps = query(queryModification);
+//                    System.out.println(peps);
+                    
+
+                }
+            }
         } catch (BaseXException ex) {
             Logger.getLogger(ResultModel.class.getName()).log(Level.SEVERE, null, ex);
         }
+        
     }
     
-    private void query(String query) throws BaseXException {
-        System.out.println(new XQuery(query).execute(context));
+    private String query(String query) throws BaseXException {
+        return new XQuery(query).execute(context);
     }
     
     public void init(AnchorPane pane) {

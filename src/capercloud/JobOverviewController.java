@@ -18,6 +18,7 @@ import capercloud.model.JobModel;
 import capercloud.model.ModificationTableModel;
 import capercloud.model.PeptideModel;
 import capercloud.model.ResultModel;
+import capercloud.model.SpectrumModel;
 import capercloud.model.StatusModel;
 import capercloud.model.UploadTask;
 import com.amazonaws.handlers.AsyncHandler;
@@ -106,6 +107,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
@@ -540,40 +542,88 @@ public class JobOverviewController implements Initializable {
         this.rm.init(this.apSpectrum);
 //init result table
         ((TableColumn) this.tvResults.getColumns().get(0))
-                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("peptideId"));
-        
+                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("chrom"));
         ((TableColumn) this.tvResults.getColumns().get(1))
                 .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("peptideSeq"));
         ((TableColumn) this.tvResults.getColumns().get(2))
-                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("genomicLocation"));
+                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("proteinStart"));
         ((TableColumn) this.tvResults.getColumns().get(3))
-                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("modification"));
+                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("proteinEnd"));
+        ((TableColumn) this.tvResults.getColumns().get(4))
+                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("peptideStart"));
+        ((TableColumn) this.tvResults.getColumns().get(5))
+                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("peptideEnd"));
+        ((TableColumn) this.tvResults.getColumns().get(6))
+                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("modifications"));
         
-//        this.tvResults.setRowFactory(new Callback<TableView<Peptide>, TableRow<Peptide>>() {
-//            @Override
-//            public TableRow<Peptide> call(TableView<Peptide> param) {
-//                final TableRow<Peptide> row = new TableRow<>();
-//                row.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-//                    @Override
-//                    public void handle(MouseEvent event) {
-//                            TableRow tr = (TableRow) event.getSource();
-//                            Peptide item = (Peptide) tr.getItem();
-//                            //display PSMs
-//                            JobOverviewController.this.tvPSMs.setItems(JobOverviewController.this.rm.getPsmList(item.getPeptideSequence()));
-////                            try {
-////                                String index = item.getSpectrumID().substring(6);
-////                                int i = Integer.parseInt(index) + 1;
-////                                JobOverviewController.this.rm.drawSpectrum(i);
-////                                WebEngine webEngine = JobOverviewController.this.wvBrowser.getEngine();
-////                                webEngine.load("http://www.baidu.com#wd=" + i);
-////                            } catch (JMzReaderException ex) {
-////                                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
-////                            }
-//                        }      
-//                    });
-//                return row;
-//            } 
-//        });
+        this.tvResults.setRowFactory(new Callback<TableView<PeptideModel>, TableRow<PeptideModel>>() {
+            @Override
+            public TableRow<PeptideModel> call(TableView<PeptideModel> param) {
+                final TableRow<PeptideModel> row = new TableRow<>();
+                row.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent event) {
+                            TableRow tr = (TableRow) event.getSource();
+                            PeptideModel item = (PeptideModel) tr.getItem();
+                            //display PSMs
+                            String peptideId = item.getId();
+                            JobOverviewController.this.tvPSMs.setItems(JobOverviewController.this.rm.getSpectrumList(peptideId));
+//                            try {
+//                                String index = item.getSpectrumID().substring(6);
+//                                int i = Integer.parseInt(index) + 1;
+//                                JobOverviewController.this.rm.drawSpectrum(i);
+//                                WebEngine webEngine = JobOverviewController.this.wvBrowser.getEngine();
+//                                webEngine.load("http://www.baidu.com#wd=" + i);
+//                            } catch (JMzReaderException ex) {
+//                                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+//                            }
+                        }      
+                    });
+                return row;
+            } 
+        });
+//init tvPSMs        
+        ((TableColumn) this.tvPSMs.getColumns().get(0))
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("spectrumId"));
+        ((TableColumn) this.tvPSMs.getColumns().get(1))
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("calculatedMassToCharge"));
+        ((TableColumn) this.tvPSMs.getColumns().get(2))
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("experimentalMassToCharge"));
+        ((TableColumn) this.tvPSMs.getColumns().get(3))
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("xtandemExpect"));
+        ((TableColumn) this.tvPSMs.getColumns().get(4))
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("xtandemHyperscore"));
+        ((TableColumn) this.tvPSMs.getColumns().get(5))
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("percolatorScore"));
+        ((TableColumn) this.tvPSMs.getColumns().get(6))
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("percolatorQvalue"));
+        ((TableColumn) this.tvPSMs.getColumns().get(7))
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("percolatorPEP"));
+        
+        this.tvPSMs.setRowFactory(new Callback<TableView<SpectrumModel>, TableRow<SpectrumModel>>() {
+            @Override
+            public TableRow<SpectrumModel> call(TableView<SpectrumModel> param) {
+                final TableRow<SpectrumModel> row = new TableRow<>();
+                row.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent event) {
+                            TableRow tr = (TableRow) event.getSource();
+                            SpectrumModel item = (SpectrumModel) tr.getItem();
+                            //display PSMs
+                            try {
+                                String index = item.spectrumIdProperty().get();
+                                int i = Integer.parseInt(index) + 1;
+                                JobOverviewController.this.rm.drawSpectrum(i);
+                                WebEngine webEngine = JobOverviewController.this.wvBrowser.getEngine();
+                                webEngine.load("http://www.baidu.com#wd=" + i);
+                            } catch (JMzReaderException ex) {
+                                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                        }      
+                    });
+                return row;
+            } 
+        });
         
         ((TableColumn) this.tvJobMonitor.getColumns().get(0))
                 .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, String>("jobId"));
@@ -1464,7 +1514,8 @@ public class JobOverviewController implements Initializable {
                         updateProgress(-1, 0);
                         updateMessage("Loading peptides...please wait");
                         try {
-                            JobOverviewController.this.rm.load(new File("/Users/shuai/Developer/CaperCloud/backend/IPeak_release/out_tmp/outputAddP.mzid"), new File("example_files/55merge.mgf"));
+                            JobOverviewController.this.rm.load(new File("/Users/shuai/Developer/CaperCloud/backend/IPeak_release/out_tmp/outputAddP.mzid"), 
+                                    new File("/Users/shuai/Bio/tools/tandem-osx-13-09-01-1/bin/120426_Jurkat_highLC_Frac2.mgf"));
                             //this.rm.load(new File("/Users/shuai/Developer/CaperCloud/example_files/55merge_omssa.mzid"), new File("example_files/55merge.mgf"));
                         } catch (JMzReaderException ex) {
                             Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
