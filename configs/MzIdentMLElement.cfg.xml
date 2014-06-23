@@ -462,7 +462,7 @@ Configurations for various properties of model classes.
         <cached>false</cached>
         <clazz>uk.ac.ebi.jmzidml.model.mzidml.PeptideEvidenceRef</clazz>
         <idMapped>false</idMapped>
-        <indexed>false</indexed>
+        <indexed>true</indexed>
         <refResolverClass>uk.ac.ebi.jmzidml.xml.jaxb.resolver.PeptideEvidenceRefResolver</refResolverClass>
         <tagName>PeptideEvidenceRef</tagName>
         <xpath>/MzIdentML/DataCollection/AnalysisData/SpectrumIdentificationList/SpectrumIdentificationResult/SpectrumIdentificationItem/PeptideEvidenceRef</xpath>
@@ -658,7 +658,7 @@ Configurations for various properties of model classes.
         <xpath>/MzIdentML/AnalysisCollection/SpectrumIdentification</xpath>
     </configurations>
     <configurations>
-        <autoRefResolving>false</autoRefResolving>
+        <autoRefResolving>true</autoRefResolving>
         <cached>false</cached>
         <clazz>uk.ac.ebi.jmzidml.model.mzidml.SpectrumIdentificationItem</clazz>
         <cvParamClass>uk.ac.ebi.jmzidml.model.mzidml.params.SpectrumIdentificationItemCvParam</cvParamClass>
@@ -706,7 +706,7 @@ Configurations for various properties of model classes.
         <clazz>uk.ac.ebi.jmzidml.model.mzidml.SpectrumIdentificationResult</clazz>
         <cvParamClass>uk.ac.ebi.jmzidml.model.mzidml.params.SpectrumIdentificationResultCvParam</cvParamClass>
         <idMapped>false</idMapped>
-        <indexed>true</indexed>
+        <indexed>false</indexed>
         <refResolverClass>uk.ac.ebi.jmzidml.xml.jaxb.resolver.SpectrumIdentificationResultRefResolver</refResolverClass>
         <tagName>SpectrumIdentificationResult</tagName>
         <userParamClass>uk.ac.ebi.jmzidml.model.mzidml.params.SpectrumIdentificationResultUserParam</userParamClass>
