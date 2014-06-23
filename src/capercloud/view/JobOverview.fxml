@@ -713,9 +713,14 @@
                                                    <children>
                                                       <TableView fx:id="tvPSMs" prefHeight="349.0" prefWidth="470.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                                         <columns>
-                                                          <TableColumn prefWidth="141.0" text="ID" />
-                                                <TableColumn minWidth="0.0" prefWidth="121.0" text="X!Tandem score" />
-                                                            <TableColumn prefWidth="154.0" text="Percolator score" />
+                                                          <TableColumn prefWidth="54.0" text="ID" />
+                                                            <TableColumn prefWidth="60.0" text="Calculated m/z" />
+                                                            <TableColumn prefWidth="77.0" text="Experiment m/z" />
+                                                            <TableColumn text="X!Tandem expect" />
+                                                <TableColumn minWidth="0.0" prefWidth="87.0" text="X!Tandem score" />
+                                                            <TableColumn minWidth="0.0" prefWidth="79.0" text="Percolator score" />
+                                                            <TableColumn prefWidth="81.0" text="Percolator Q value" />
+                                                            <TableColumn prefWidth="71.0" text="Percolator PEP" />
                                                         </columns>
                                                       </TableView>
                                                    </children>
