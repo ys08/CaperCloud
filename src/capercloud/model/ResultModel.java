@@ -7,6 +7,7 @@
 package capercloud.model;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -22,6 +23,8 @@ import javafx.embed.swing.SwingNode;
 import javafx.scene.layout.AnchorPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.basex.core.BaseXException;
 import org.basex.core.Context;
 import org.basex.core.cmd.XQuery;
@@ -63,7 +66,7 @@ public class ResultModel {
         return this.peptideToSpectrumMap.get(peptideId);
     }
 
-    public void load(File resultFile, File spectraFile) throws JMzReaderException {
+    public void load(File resultFile, File spectraFile) throws JMzReaderException, BaseXException {
         this.resultFile = resultFile;
         this.spectraFile = spectraFile;
         
@@ -82,51 +85,52 @@ public class ResultModel {
                 + "let $exp:=data($sii/@experimentalMassToCharge) "
                 + "let $score:=string-join(data($sii//cvParam/@value), \",\") "
                 + "return string-join(($id,$pr,$cal,$exp,$score), \",\")";
-        try {
-            String[] sirs = query(querySpectrumIdentificationResult).split(" ");
-            for (String sir : sirs) {
-                String[] attributes = sir.split(",");
-                if (this.peptideToSpectrumMap.containsKey(attributes[1])) {
-                    ObservableList ol = this.peptideToSpectrumMap.get(attributes[1]);
-                    ol.add(new SpectrumModel(attributes[0].substring(6), attributes[2], attributes[3], attributes[4], attributes[5], attributes[6], attributes[7], attributes[8]));
-                } else {
-                    ObservableList ol = FXCollections.observableArrayList();
-                    ol.add(new SpectrumModel(attributes[0].substring(6), attributes[2], attributes[3], attributes[4], attributes[5], attributes[6], attributes[7], attributes[8]));
-                    this.peptideToSpectrumMap.put(attributes[1], ol);
-                    
-                    String queryPeptideEvidence = 
-                            "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
-                            + "for $pe in doc('" + this.resultFile.getAbsolutePath() + "')//PeptideEvidence "
-                            + "where $pe/@peptide_ref=\"" + attributes[1] + "\" "
-                            + "let $id:=data($pe/@id) "
-                            + "let $end:=data($pe/@end) "
-                            + "let $start:=data($pe/@start) "
-                            + "let $dBSequence_ref:=data($pe/@dBSequence_ref) "
-                            + "return string-join(($id,$start,$end,$dBSequence_ref), \",\")";
-                    String pe = query(queryPeptideEvidence);
-                    //filter peptides that have multiple peptide evidence(that is, the peptide may map to multiple genomic location
-                    if (pe.split("PE").length == 2) {
-                        String[] pe_attrs = pe.split(",");
-                        String description = pe_attrs[3];
-                        Pattern p = Pattern.compile("(\\d):(\\d+)-(\\d+)");
-                        Matcher m = p.matcher(description);
-                        if (m.find()) {
-                            String chrom = m.group(1);
-                            String proteinStart = m.group(2);
-                            String proteinStop = m.group(3);
-                            String[] peptide = attributes[1].split("_");
-                            StringBuilder mod = new StringBuilder();
-                            String seq = peptide[0];
-                            if (peptide.length == 2) {
-                                mod.append(peptide[1]);
-                            }
-                            if (peptide.length == 3) {
-                                mod.append(peptide[1]).append(peptide[2]);
-                            }
-                            this.peptideList.add(new PeptideModel(attributes[1], chrom, seq, proteinStart, proteinStop, pe_attrs[1], pe_attrs[2], mod.toString()));
+        String[] sirs = query(querySpectrumIdentificationResult).split(" ");
+        for (String sir : sirs) {
+            String[] attributes = sir.split(",");
+            if (this.peptideToSpectrumMap.containsKey(attributes[1])) {
+                ObservableList ol = this.peptideToSpectrumMap.get(attributes[1]);
+                ol.add(new SpectrumModel(attributes[0].substring(6), attributes[2], attributes[3], attributes[4], attributes[5], attributes[6], attributes[7], attributes[8]));
+            } else {
+                ObservableList ol = FXCollections.observableArrayList();
+                ol.add(new SpectrumModel(attributes[0].substring(6), attributes[2], attributes[3], attributes[4], attributes[5], attributes[6], attributes[7], attributes[8]));
+                this.peptideToSpectrumMap.put(attributes[1], ol);
+
+                String queryPeptideEvidence = 
+                        "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                        + "for $pe in doc('" + this.resultFile.getAbsolutePath() + "')//PeptideEvidence "
+                        + "where $pe/@peptide_ref=\"" + attributes[1] + "\" "
+                        + "let $id:=data($pe/@id) "
+                        + "let $end:=data($pe/@end) "
+                        + "let $start:=data($pe/@start) "
+                        + "let $dBSequence_ref:=data($pe/@dBSequence_ref) "
+                        + "return string-join(($id,$start,$end,$dBSequence_ref), \",\")";
+                String pe = query(queryPeptideEvidence);
+                //filter peptides that have multiple peptide evidence(that is, the peptide may map to multiple genomic location
+                if (pe.split("PE").length == 2) {
+                    String[] pe_attrs = pe.split(",");
+                    String description = pe_attrs[3];
+                    Pattern p = Pattern.compile("dbseq_(\\d+)\\s(\\d):(\\d+)-(\\d+)");
+                    Matcher m = p.matcher(description);
+                    if (m.find()) {
+                        //test on chrom 1
+                        String chrom = m.group(1);
+                        String frame = m.group(2);
+                        String proteinStart = m.group(3);
+                        String proteinStop = m.group(4);
+                        String[] peptide = attributes[1].split("_");
+                        StringBuilder mod = new StringBuilder();
+                        String seq = peptide[0];
+                        if (peptide.length == 2) {
+                            mod.append(peptide[1]);
                         }
-                        
+                        if (peptide.length == 3) {
+                            mod.append(peptide[1]).append(peptide[2]);
+                        }
+                        this.peptideList.add(new PeptideModel(attributes[1], chrom, seq, proteinStart, proteinStop, pe_attrs[1], pe_attrs[2], mod.toString()));
                     }
+
+                }
 //                    String queryModification = 
 //                            "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
 //                            + "for $pep in doc('" + this.resultFile.getAbsolutePath() + "')//Peptide "
@@ -136,14 +140,10 @@ public class ResultModel {
 //                            + "return string-join(($seq,$mods), \",\")";
 //                    String peps = query(queryModification);
 //                    System.out.println(peps);
-                    
 
-                }
             }
-        } catch (BaseXException ex) {
-            Logger.getLogger(ResultModel.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+    generateBed();
     }
     
     private String query(String query) throws BaseXException {
@@ -157,6 +157,49 @@ public class ResultModel {
         pane.getChildren().add(swingNode);
     }
     
+    public void generateBed() {
+        File bedFile = new File("/Users/shuai/Desktop/result.bed");
+        if (bedFile.exists()) {
+            FileUtils.deleteQuietly(bedFile);
+        }
+        
+        StringBuilder line = new StringBuilder();
+        line.append("track name= \"capercloud-test\" description=\"capercloud test\" visibility=1 itemRgb=\"On\"")
+                .append(IOUtils.LINE_SEPARATOR);
+        
+        try {
+            FileUtils.writeStringToFile(bedFile , line.toString(), true);
+            } catch (IOException ex) {
+                Logger.getLogger(ResultModel.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        for (PeptideModel pm : this.peptideList) {
+            line = new StringBuilder();
+            line.append("chr")
+                    .append(pm.chromProperty().get())
+                    .append("\t")
+                    .append(pm.proteinStartProperty().get())
+                    .append("\t")
+                    .append(pm.proteinEndProperty().get())
+                    .append("\t")
+                    .append(pm.getId())
+                    .append("\t")
+                    .append("0")
+                    .append("\t")
+                    .append("+")
+                    .append("\t")
+                    .append(pm.proteinStartProperty().get())
+                    .append("\t")
+                    .append(pm.proteinEndProperty().get())
+                    .append("\t")
+                    .append("255,128,128")
+                    .append(IOUtils.LINE_SEPARATOR);
+            try {
+                FileUtils.writeStringToFile(bedFile , line.toString(), true);
+            } catch (IOException ex) {
+                Logger.getLogger(ResultModel.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
     public void drawSpectrum(int index) throws JMzReaderException {     
         Spectrum spectrum = this.jmzReader.getSpectrumByIndex(index);
         List<Double> mzArrList = new ArrayList<>();

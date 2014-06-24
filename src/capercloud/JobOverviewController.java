@@ -77,6 +77,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
+import javafx.concurrent.Worker.State;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -555,6 +556,15 @@ public class JobOverviewController implements Initializable {
                 .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("peptideEnd"));
         ((TableColumn) this.tvResults.getColumns().get(6))
                 .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("modifications"));
+
+        //init web engine
+        WebEngine webEngine = JobOverviewController.this.wvBrowser.getEngine();
+        webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<State>() {
+            @Override
+            public void changed(ObservableValue<? extends State> ov, State t, State t1) {
+                log.debug(webEngine.getLocation());
+            }
+                    });
         
         this.tvResults.setRowFactory(new Callback<TableView<PeptideModel>, TableRow<PeptideModel>>() {
             @Override
@@ -568,15 +578,20 @@ public class JobOverviewController implements Initializable {
                             //display PSMs
                             String peptideId = item.getId();
                             JobOverviewController.this.tvPSMs.setItems(JobOverviewController.this.rm.getSpectrumList(peptideId));
-//                            try {
-//                                String index = item.getSpectrumID().substring(6);
-//                                int i = Integer.parseInt(index) + 1;
-//                                JobOverviewController.this.rm.drawSpectrum(i);
-//                                WebEngine webEngine = JobOverviewController.this.wvBrowser.getEngine();
-//                                webEngine.load("http://www.baidu.com#wd=" + i);
-//                            } catch (JMzReaderException ex) {
-//                                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
-//                            }
+                            
+                            String chrom = item.chromProperty().get();
+                            
+//                            String peptideStart = item.peptideStartProperty().get();
+//                            String peptideEnd = item.peptideEndProperty().get();
+                            String proteinStart = item.proteinStartProperty().get();
+                            String proteinEnd = item.proteinEndProperty().get();
+
+
+                            String url = "http://61.50.130.100/ucsc/cgi-bin/hgTracks?org=human&position=chr" 
+                                    + chrom + ":" + proteinStart + "-" + proteinEnd 
+                                    + "&hgt.customText=http://s3.amazonaws.com/bprc-ucsc/result.bed";
+                            log.debug(url);
+                            webEngine.load(url);
                         }      
                     });
                 return row;
@@ -614,8 +629,6 @@ public class JobOverviewController implements Initializable {
                                 String index = item.spectrumIdProperty().get();
                                 int i = Integer.parseInt(index) + 1;
                                 JobOverviewController.this.rm.drawSpectrum(i);
-                                WebEngine webEngine = JobOverviewController.this.wvBrowser.getEngine();
-                                webEngine.load("http://www.baidu.com#wd=" + i);
                             } catch (JMzReaderException ex) {
                                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
                             }
@@ -1517,7 +1530,7 @@ public class JobOverviewController implements Initializable {
                             JobOverviewController.this.rm.load(new File("/Users/shuai/Developer/CaperCloud/backend/IPeak_release/out_tmp/outputAddP.mzid"), 
                                     new File("/Users/shuai/Bio/tools/tandem-osx-13-09-01-1/bin/120426_Jurkat_highLC_Frac2.mgf"));
                             //this.rm.load(new File("/Users/shuai/Developer/CaperCloud/example_files/55merge_omssa.mzid"), new File("example_files/55merge.mgf"));
-                        } catch (JMzReaderException ex) {
+                        } catch (Exception ex) {
                             Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
                         }                 
                         return null;
@@ -1533,7 +1546,6 @@ public class JobOverviewController implements Initializable {
                 JobOverviewController.this.tvResults.setItems(JobOverviewController.this.rm.getPeptideList()); 
             }
         });
-        
         Dialogs.create()
                 .owner(this.mainApp.getPrimaryStage())
                 .title("Loading")
