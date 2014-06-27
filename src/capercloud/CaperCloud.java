@@ -73,7 +73,7 @@ public class CaperCloud extends Application {
      */
     public CaperCloud() {
         this.cloudManager = CloudManager.getInstance();
-        this.cloudManager.setMainApp(this);
+        this.cloudManager.setMainApp(this);     
     }
     
     //geters and setters
@@ -202,6 +202,7 @@ public class CaperCloud extends Application {
         stage.setTitle("CaperCloud");
         stage.show();
 
+        log.debug("mainApp: " + this);
         this.getRootController().setMainApp(this);
         
         //show the tabpane
@@ -224,6 +225,7 @@ public class CaperCloud extends Application {
         
         this.getRootLayout().setCenter(this.getMainView());
         //let JobOverviewController know us
+        log.debug(this);
         this.getMainController().setMainApp(this);
     }
     

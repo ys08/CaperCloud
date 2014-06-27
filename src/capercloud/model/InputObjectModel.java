@@ -11,6 +11,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.control.TextField;
 import org.jets3t.service.model.S3Object;
 
 /**
@@ -24,20 +25,24 @@ public class InputObjectModel {
     public InputObjectModel(S3Object obj) {
         this.obj = obj;
         this.selected = new SimpleBooleanProperty(false);
+
+    }
+    
+    public void addListener(TextField tfNum) {
         this.selected.addListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
                 if (t1) {
-                    String str = JobOverviewController.tfSelectedNumOfInputSpectra.getText();
+                    String str = tfNum.getText();
                     int num = Integer.parseInt(str);
                     num = num + 1;
-                    JobOverviewController.tfSelectedNumOfInputSpectra.setText(Integer.toString(num));
+                    tfNum.setText(Integer.toString(num));
                 }
                 if (t) {
-                    String str = JobOverviewController.tfSelectedNumOfInputSpectra.getText();
+                    String str = tfNum.getText();
                     int num = Integer.parseInt(str);
                     num = num - 1;
-                    JobOverviewController.tfSelectedNumOfInputSpectra.setText(Integer.toString(num));
+                    tfNum.setText(Integer.toString(num));
                 }
             }
         });

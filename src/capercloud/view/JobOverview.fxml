@@ -544,7 +544,7 @@
                                     </items>
                                   </ComboBox>
                                   <Label text="Number of Instances" />
-                                  <TextField fx:id="tfNumOfInstances" prefWidth="200.0" text="1" />
+                                  <TextField fx:id="tfNumOfInstances" prefHeight="26.0" prefWidth="61.0" text="1" />
                                   <Button mnemonicParsing="false" onAction="#handleJobSaveAction" text="Save" />
                                   <Button mnemonicParsing="false" onAction="#handleRunCloudJobAction" text="Run Job" />
                                 </children>
