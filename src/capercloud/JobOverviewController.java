@@ -347,7 +347,9 @@ public class JobOverviewController implements Initializable {
                 if (p.getValue() instanceof S3Bucket) {
                     S3Bucket bucket = (S3Bucket) p.getValue();
                     Date d = bucket.getCreationDate();
-                    return new SimpleStringProperty(sdf.format(d));
+                    if (d != null) {
+                        return new SimpleStringProperty(sdf.format(d));
+                    }
                 }
                 if (p.getValue() instanceof S3Object) {
                     S3Object obj = (S3Object) p.getValue();

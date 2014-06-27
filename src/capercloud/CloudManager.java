@@ -9,12 +9,12 @@ package capercloud;
 import capercloud.s3.S3Manager;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.ec2.AmazonEC2AsyncClient;
+import com.amazonaws.services.ec2.AmazonEC2Client;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.stage.Stage;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.controlsfx.dialog.Dialogs;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.model.S3Bucket;
@@ -31,7 +31,7 @@ public class CloudManager {
     private static CloudManager singleton = null;
     private AWSCredentials currentCredentials; 
     private S3Manager s3m;
-    private AmazonEC2AsyncClient ec2m;
+    private AmazonEC2Client ec2m;
     
     private CloudManager() {
     }
@@ -57,7 +57,7 @@ public class CloudManager {
         return currentCredentials;
     }
     
-    public AmazonEC2AsyncClient getEc2Manager() {
+    public AmazonEC2Client getEc2Manager() {
         return this.ec2m;
     }
     
@@ -71,7 +71,9 @@ public class CloudManager {
     public void loginCloud(AWSCredentials credentials) throws ServiceException {
         this.currentCredentials = credentials;
         this.s3m = new S3Manager(currentCredentials);
-        this.ec2m = new AmazonEC2AsyncClient(new BasicAWSCredentials(currentCredentials.getAccessKey(), currentCredentials.getSecretKey()));  
+        this.ec2m = new AmazonEC2Client(new BasicAWSCredentials(currentCredentials.getAccessKey(), currentCredentials.getSecretKey()));  
+        //test in eucalyptus
+        this.ec2m.setEndpoint("http://192.168.99.111:8773/services/Eucalyptus");
     }
     
     public void logoutCloud() {

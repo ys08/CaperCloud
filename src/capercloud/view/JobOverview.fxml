@@ -527,6 +527,8 @@
                             <top>
                               <HBox id="HBox" alignment="CENTER" prefHeight="23.0" prefWidth="1294.0" spacing="5.0" BorderPane.margin="$x2">
                                 <children>
+                                                <Label text="Key Name" />
+                                                <TextField prefHeight="26.0" prefWidth="126.0" text="capercloud-test" />
                                   <Label text="Instance Type" />
                                   <ComboBox fx:id="cbInstanceType">
                                     <items>
