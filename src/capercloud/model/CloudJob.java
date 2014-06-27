@@ -121,6 +121,10 @@ public class CloudJob {
         return clusterSize;
     }
 
+    public int getJobType() {
+        return jobType;
+    }
+
     public StringProperty startTimeProperty() {
         return startTime;
     }
@@ -187,7 +191,7 @@ public class CloudJob {
 //        return null;
 //    }
     
-    private void createTaxonomyFile(String databasePath) throws IOException {
+    public void createTaxonomyFile(String databasePath) throws IOException {
         String sep = IOUtils.LINE_SEPARATOR;
         String content = 
                 "<?xml version=\"1.0\"?>" + sep
