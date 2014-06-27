@@ -1264,6 +1264,11 @@ public class JobOverviewController implements Initializable {
                     .showError();
             return;
         }
+        
+        if (jobType == 1) {
+            String chromNum = this.t1c.getSelectedChromosomeNumber();
+            String fdr = this.t1c.getFdr();
+        }
 
         //x!tandem parameters
         SearchParameters sp = new SearchParameters();

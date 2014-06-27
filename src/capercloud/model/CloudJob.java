@@ -15,7 +15,6 @@ import com.compomics.util.experiment.identification.identification_parameters.Xt
 import com.compomics.util.preferences.ModificationProfile;
 import java.io.File;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -201,6 +200,12 @@ public class CloudJob {
         String taxonomyFilename = timestamp + "taxonomy.xml";
         this.taxonomyFile = new File(this.tmpPath, taxonomyFilename);
         FileUtils.writeStringToFile(this.taxonomyFile, content);
+    }
+    
+    public void createInputFiles() throws IOException {
+        for (S3Object obj : this.spectrumObjs) {
+            createInputFile(obj);
+        }
     }
     
     private void createInputFile(S3Object spectrumObj) throws IOException {
