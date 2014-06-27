@@ -1264,11 +1264,6 @@ public class JobOverviewController implements Initializable {
                     .showError();
             return;
         }
-        
-        if (jobType == 1) {
-            String chromNum = this.t1c.getSelectedChromosomeNumber();
-            String fdr = this.t1c.getFdr();
-        }
 
         //x!tandem parameters
         SearchParameters sp = new SearchParameters();
@@ -1312,6 +1307,16 @@ public class JobOverviewController implements Initializable {
         cj.setInstanceId("not available");
         cj.setStatus("saved");
         
+        if (cj.getJobType() == 1) {
+            try {
+                String chromNum = this.t1c.getSelectedChromosomeNumber();
+                cj.createTaxonomyFile("chr" + chromNum + "1.fasta");
+                cj.createInputFiles();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+        
         this.sm.addJob(cj);
         Dialogs.create()
                 .owner(this.mainApp.getPrimaryStage())
@@ -1342,7 +1347,7 @@ public class JobOverviewController implements Initializable {
                     .showConfirm();
         if (response == Dialog.Actions.CANCEL || response == Dialog.Actions.NO) {
             return;
-        }
+        }  
         
         CloudJob cj = this.sm.getJobs().get(this.sm.getJobs().size()-1);
         String imageId = cj.getImageId();
@@ -1372,6 +1377,11 @@ public class JobOverviewController implements Initializable {
                 System.out.println(instances);
             }
         });
+        //submit job-specific parameters here
+        int jobType = cj.getJobType();
+        if (jobType == 1) {
+            String fdr = this.t1c.getFdr();
+        }
         
         
         //CloudJob job = this.sm.getJobs().get(this.sm.getJobs().size() - 1);
