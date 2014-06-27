@@ -8,11 +8,43 @@ package capercloud;
 
 import capercloud.s3.S3Manager;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.ec2.AmazonEC2AsyncClient;
 import com.amazonaws.services.ec2.AmazonEC2Client;
+import com.amazonaws.services.ec2.model.AuthorizeSecurityGroupIngressRequest;
+import com.amazonaws.services.ec2.model.CreateKeyPairRequest;
+import com.amazonaws.services.ec2.model.CreateKeyPairResult;
+import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest;
+import com.amazonaws.services.ec2.model.CreateSecurityGroupResult;
+import com.amazonaws.services.ec2.model.DeleteKeyPairRequest;
+import com.amazonaws.services.ec2.model.DeleteSecurityGroupRequest;
+import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
+import com.amazonaws.services.ec2.model.DescribeInstancesResult;
+import com.amazonaws.services.ec2.model.DescribeKeyPairsRequest;
+import com.amazonaws.services.ec2.model.DescribeKeyPairsResult;
+import com.amazonaws.services.ec2.model.DescribeSecurityGroupsRequest;
+import com.amazonaws.services.ec2.model.DescribeSecurityGroupsResult;
+import com.amazonaws.services.ec2.model.Instance;
+import com.amazonaws.services.ec2.model.InstanceType;
+import com.amazonaws.services.ec2.model.IpPermission;
+import com.amazonaws.services.ec2.model.Reservation;
+import com.amazonaws.services.ec2.model.RunInstancesRequest;
+import com.amazonaws.services.ec2.model.RunInstancesResult;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.stage.Stage;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jets3t.service.S3ServiceException;
@@ -31,7 +63,7 @@ public class CloudManager {
     private static CloudManager singleton = null;
     private AWSCredentials currentCredentials; 
     private S3Manager s3m;
-    private AmazonEC2Client ec2m;
+    private AmazonEC2Client ec2Client;
     
     private CloudManager() {
     }
@@ -57,10 +89,6 @@ public class CloudManager {
         return currentCredentials;
     }
     
-    public AmazonEC2Client getEc2Manager() {
-        return this.ec2m;
-    }
-    
     /**
      * create S3Manager and EC2Manager instance
      * add credentials to hashmap
@@ -71,9 +99,9 @@ public class CloudManager {
     public void loginCloud(AWSCredentials credentials) throws ServiceException {
         this.currentCredentials = credentials;
         this.s3m = new S3Manager(currentCredentials);
-        this.ec2m = new AmazonEC2Client(new BasicAWSCredentials(currentCredentials.getAccessKey(), currentCredentials.getSecretKey()));  
+        this.ec2Client = new AmazonEC2Client(new BasicAWSCredentials(currentCredentials.getAccessKey(), currentCredentials.getSecretKey()));  
         //test in eucalyptus
-        this.ec2m.setEndpoint("http://192.168.99.111:8773/services/Eucalyptus");
+        this.ec2Client.setEndpoint("http://192.168.99.111:8773/services/Eucalyptus");
     }
     
     public void logoutCloud() {
@@ -82,7 +110,7 @@ public class CloudManager {
             return;
         }
         this.s3m = null;
-        this.ec2m = null;
+        this.ec2Client = null;
         this.currentCredentials = null;
     }
 
@@ -412,4 +440,179 @@ public class CloudManager {
             }
         };
     }
+        public List<String> createOnDemandInstances(String imageId, InstanceType instanceType, Integer size, String keyName, String securityGroup) {   
+        List<String> instanceIds = new ArrayList<>();
+        
+        RunInstancesRequest rir = new RunInstancesRequest();
+        rir.withImageId(imageId);
+        rir.withInstanceType(instanceType);
+        rir.withMinCount(1);
+        rir.withMaxCount(1);
+        rir.withKeyName(keyName);
+        rir.withSecurityGroups(securityGroup);
+        
+        for (int i=0; i<size.intValue(); i++) {
+            RunInstancesResult r = this.ec2Client.runInstances(rir);
+            Reservation rr = r.getReservation();
+            for (Instance ii : rr.getInstances()) {
+                instanceIds.add(ii.getInstanceId());
+            }
+        }
+        
+        boolean isWaiting = true;
+        Set<String> states = new HashSet<>();
+        while (isWaiting) {
+            try {
+                System.out.println("waiting for instances start up...");
+                //10 secs
+                Thread.sleep(10000);
+                DescribeInstancesResult r = this.ec2Client.describeInstances(new DescribeInstancesRequest().withInstanceIds(instanceIds));
+                Iterator<Reservation> ir= r.getReservations().iterator();
+                while(ir.hasNext()){
+                    Reservation rr = ir.next();
+                    List<Instance> instances = rr.getInstances();
+                    for(Instance ii : instances){
+                        System.out.println(ii.getImageId() + "\t" + ii.getInstanceId()+ "\t" + ii.getState().getName() + "\t"+ ii.getPrivateDnsName() + "\t" + ii.getPublicIpAddress());
+                        states.add(ii.getState().getName());
+                    }
+                }
+                
+                if (states.contains("pending")) {
+                    states.clear();
+                } else {
+                    isWaiting = false;
+                }
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+                System.exit(1);
+            }
+        }
+        return instanceIds;
+    }
+
+    
+    public void remoteCallByShh(String userName, String ipAddress, String command, File privateKey) throws JSchException, IOException, InterruptedException {
+        JSch jsch = new JSch();
+        jsch.addIdentity(privateKey.getAbsolutePath());
+        JSch.setConfig("StrictHostKeyChecking", "no");
+        Session session=jsch.getSession(userName, ipAddress, 22);
+        System.out.println("wait 40 seconds");
+        Thread.sleep(40000);
+        for(int i = 0; i < 10; i++) {
+            try {
+                session.connect();
+                break;
+            } catch(JSchException ex) {
+                if(i == 10 - 1) {
+                    throw ex;
+                }
+                System.out.println("retry " + (i+1) + " times");
+                Thread.sleep(10000);
+            }
+        }
+        //session.connect();
+        
+        //run stuff
+        ChannelExec channel = (ChannelExec) session.openChannel("exec");
+        channel.setCommand(command);
+        channel.setErrStream(System.err);
+        channel.setPty(true);
+        channel.connect();
+                
+        InputStream input = channel.getInputStream();
+//start reading the input from the executed commands on the shell
+        byte[] tmp = new byte[1024];
+        while (true) {
+            while (input.available() > 0) {
+                int i = input.read(tmp, 0, 1024);
+                if (i < 0) break;
+                System.out.println(new String(tmp, 0, i));
+            }
+            if (channel.isClosed()){
+                System.out.println("exit-status: " + channel.getExitStatus());
+                break;
+            }
+            Thread.sleep(1000);
+        }
+        channel.disconnect();
+        session.disconnect();
+    }
+    
+    public List<String> getInstanceList() {
+        List<String> instanceIds = new ArrayList<>();
+        DescribeInstancesResult result = this.ec2Client.describeInstances();
+        Iterator<Reservation> i = result.getReservations().iterator();
+        while (i.hasNext()) {
+            Reservation r = i.next();
+            List<Instance> instances = r.getInstances();
+            for (Instance ii : instances) {
+                instanceIds.add(ii.getInstanceId());
+            }
+        }
+        return instanceIds;
+    }
+    
+    private File createKeyPair(String keyName, File directory) {
+        DescribeKeyPairsResult r = this.ec2Client.describeKeyPairs(new DescribeKeyPairsRequest().withKeyNames(keyName));
+        if (!r.getKeyPairs().isEmpty()) {
+            System.out.println("delete existing key: " + keyName);
+            this.ec2Client.deleteKeyPair(new DeleteKeyPairRequest().withKeyName(keyName));
+        }
+        System.out.println("create new key: " + keyName);
+        CreateKeyPairResult rr = this.ec2Client.createKeyPair(new CreateKeyPairRequest().withKeyName(keyName));
+        String fileName = keyName + ".pem";
+        File outFile = new File(FileUtils.getUserDirectory(), fileName);
+        String privateKey = rr.getKeyPair().getKeyMaterial();
+        try {
+            FileUtils.writeStringToFile(outFile, privateKey, false);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return outFile;
+    }
+    
+    public String createSecurityGroup(String groupName, String groupDescription) {
+        DescribeSecurityGroupsResult r = this.ec2Client.describeSecurityGroups(new DescribeSecurityGroupsRequest().withGroupNames(groupName));
+        if (!r.getSecurityGroups().isEmpty()) {
+            System.out.println("delete existing security group: " + groupName);
+            this.ec2Client.deleteSecurityGroup(new DeleteSecurityGroupRequest().withGroupName(groupName));
+        }
+        System.out.println("create new security group: " + groupName);
+        CreateSecurityGroupRequest createSecurityGroupRequest =  new CreateSecurityGroupRequest();
+        createSecurityGroupRequest.withGroupName(groupName)
+                .withDescription(groupDescription);
+        createSecurityGroupRequest.setRequestCredentials(new BasicAWSCredentials(currentCredentials.getAccessKey(), currentCredentials.getSecretKey()));
+        CreateSecurityGroupResult csgr = this.ec2Client.createSecurityGroup(createSecurityGroupRequest);
+
+        String groupid = csgr.getGroupId();
+        System.out.println("Security Group Id : " + groupid);
+        System.out.println("Create Security Group Permission");
+
+        Collection<IpPermission> ips = new ArrayList<IpPermission>();
+// Permission for SSH only to your ip
+        IpPermission ipssh = new IpPermission();
+        ipssh.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
+                .withFromPort(22).withToPort(22);
+        ips.add(ipssh);
+
+// Permission for HTTP, any one can access
+        IpPermission iphttp = new IpPermission();
+        iphttp.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
+                .withFromPort(80).withToPort(80);
+        ips.add(iphttp);
+//Permission for HTTPS, any one can accesss
+        IpPermission iphttps = new IpPermission();
+        iphttps.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
+                .withFromPort(443).withToPort(443);
+        ips.add(iphttps);
+           
+        System.out.println("Attach Owner to security group");
+// Register this security group with owner
+        AuthorizeSecurityGroupIngressRequest authorizeSecurityGroupIngressRequest = new AuthorizeSecurityGroupIngressRequest();
+        authorizeSecurityGroupIngressRequest
+                .withGroupName(groupName).withIpPermissions(ips);
+        this.ec2Client.authorizeSecurityGroupIngress(authorizeSecurityGroupIngressRequest);
+        return groupName;
+    }
+    
 }
