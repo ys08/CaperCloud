@@ -1300,31 +1300,8 @@ public class JobOverviewController implements Initializable {
         cj.setSecurityGroup(securityGroup);
         cj.setInstanceType(instanceType);
         cj.setOutputBucketName(outputBucketName);
-        
-        if (jobType == CaperCloud.CUSTOM_DB) {
-            cj.setT4c(this.t4c);
-        }
-        
-        try {
-            cj.saveToLocal();
-        } catch (NoSuchAlgorithmException ex) {
-            Dialogs.create()
-                    .owner(this.mainApp.getPrimaryStage())
-                    .title("Exception")
-                    .masthead("Unable to save job configurations")
-                    .message(null)
-                    .showException(ex);
-            return;
-        } catch (IOException ex) {
-            Dialogs.create()
-                    .owner(this.mainApp.getPrimaryStage())
-                    .title("Exception")
-                    .masthead("Unable to save job configurations")
-                    .message(null)
-                    .showException(ex);
-            return;
-        }
-        
+
+        //monitor status
         cj.setStartTime("0");
         cj.setPassedTime("0");
         cj.setInstanceId("not available");
@@ -1382,6 +1359,7 @@ public class JobOverviewController implements Initializable {
                 };
             }
         };
+        
         s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
             @Override
             public void handle(WorkerStateEvent t) {
@@ -1417,65 +1395,65 @@ public class JobOverviewController implements Initializable {
 //        s.start();
     }
     
-    private Future sendFiles(CloudJob job) throws IOException {
-        String url = "http://127.0.0.1:5000/";
-        final AsyncHttpClient client = new AsyncHttpClient();
-        List<File> toBeUploaded = job.getInputFiles();
-        toBeUploaded.add(job.getTaxonomyFile());
-        RequestBuilder rb = new RequestBuilder("POST")
-                .setUrl(url)
-                .setHeader("Content-Type", "multipart/form-data");
-
-        for (File f : toBeUploaded) {
-            rb.addBodyPart(new FilePart(f.getName(), f, "text/plain", "UTF-8"));
-        }
-        
-        return client.prepareRequest(rb.build()).execute(new AsyncCompletionHandler<Response>() {
-
-            @Override
-            public Response onCompleted(Response r) throws Exception {
-                client.close();
-                return r;
-            }
-            
-        });
-    }
+//    private Future sendFiles(CloudJob job) throws IOException {
+//        String url = "http://127.0.0.1:5000/";
+//        final AsyncHttpClient client = new AsyncHttpClient();
+//        List<File> toBeUploaded = job.getInputFiles();
+//        toBeUploaded.add(job.getTaxonomyFile());
+//        RequestBuilder rb = new RequestBuilder("POST")
+//                .setUrl(url)
+//                .setHeader("Content-Type", "multipart/form-data");
+//
+//        for (File f : toBeUploaded) {
+//            rb.addBodyPart(new FilePart(f.getName(), f, "text/plain", "UTF-8"));
+//        }
+//        
+//        return client.prepareRequest(rb.build()).execute(new AsyncCompletionHandler<Response>() {
+//
+//            @Override
+//            public Response onCompleted(Response r) throws Exception {
+//                client.close();
+//                return r;
+//            }
+//            
+//        });
+//    }
     
-    private void postJob(CloudJob job) throws IOException {
-        List<File> input_xmls = job.getInputFiles();
-        String url = "http://127.0.0.1:5000/job4";
-        final AsyncHttpClient client = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setIdleConnectionTimeoutInMs(10000000).setConnectionTimeoutInMs(10000000).setRequestTimeoutInMs(10000000).build());
-        RequestBuilder rb = new RequestBuilder("POST")
-            .setUrl(url)
-            .addParameter("input_xml", input_xmls.get(0).getName())
-            .addParameter("access_key", this.mainApp.getCloudManager().getCurrentCredentials().getAccessKey())
-            .addParameter("secret_key", this.mainApp.getCloudManager().getCurrentCredentials().getSecretKey())
-            .addParameter("bucket_name", this.jm.getCurrentBucket().getName());
-        
-        StringBuilder sb = new StringBuilder();
-        List<S3Object> objs = job.getSpectrumObjs();
-        objs.add(job.getDatabaseObj());
-        Iterator it = objs.iterator();
-        sb.append(((S3Object) it.next()).getName());
-        while(it.hasNext()) {
-            sb.append("," + ((S3Object) it.next()).getName());
-        }
-        
-        rb.addParameter("key_names", sb.toString());
-        
-        AsyncCompletionHandler<Response> handler = new AsyncCompletionHandler<Response>() {
-            @Override
-            public Response onCompleted(Response r) throws Exception {
-                client.close();
-                return r;
-            }
-            @Override
-            public void onThrowable(Throwable t) {
-                log.debug("---------");
-            }
-        };
-        Future f = null;
-        f = client.prepareRequest(rb.build()).execute(handler);
+//    private void postJob(CloudJob job) throws IOException {
+//        List<File> input_xmls = job.getInputFiles();
+//        String url = "http://127.0.0.1:5000/job4";
+//        final AsyncHttpClient client = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setIdleConnectionTimeoutInMs(10000000).setConnectionTimeoutInMs(10000000).setRequestTimeoutInMs(10000000).build());
+//        RequestBuilder rb = new RequestBuilder("POST")
+//            .setUrl(url)
+//            .addParameter("input_xml", input_xmls.get(0).getName())
+//            .addParameter("access_key", this.mainApp.getCloudManager().getCurrentCredentials().getAccessKey())
+//            .addParameter("secret_key", this.mainApp.getCloudManager().getCurrentCredentials().getSecretKey())
+//            .addParameter("bucket_name", this.jm.getCurrentBucket().getName());
+//        
+//        StringBuilder sb = new StringBuilder();
+//        List<S3Object> objs = job.getSpectrumObjs();
+//        objs.add(job.getDatabaseObj());
+//        Iterator it = objs.iterator();
+//        sb.append(((S3Object) it.next()).getName());
+//        while(it.hasNext()) {
+//            sb.append("," + ((S3Object) it.next()).getName());
+//        }
+//        
+//        rb.addParameter("key_names", sb.toString());
+//        
+//        AsyncCompletionHandler<Response> handler = new AsyncCompletionHandler<Response>() {
+//            @Override
+//            public Response onCompleted(Response r) throws Exception {
+//                client.close();
+//                return r;
+//            }
+//            @Override
+//            public void onThrowable(Throwable t) {
+//                log.debug("---------");
+//            }
+//        };
+//        Future f = null;
+//        f = client.prepareRequest(rb.build()).execute(handler);
         
 //        try {
 //            f.get();
@@ -1497,7 +1475,7 @@ public class JobOverviewController implements Initializable {
 //                log.error(ex.getMessage());
 //            }
 //        }
-    }
+//    }
     @FXML
     private void handleDownloadResultAction() {
         //TO DO
