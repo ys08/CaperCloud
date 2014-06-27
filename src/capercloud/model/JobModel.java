@@ -6,6 +6,7 @@
 
 package capercloud.model;
 
+import capercloud.CaperCloud;
 import capercloud.JobOverviewController;
 import com.amazonaws.services.ec2.model.InstanceType;
 import com.compomics.util.experiment.biology.Enzyme;
@@ -30,6 +31,7 @@ import org.xmlpull.v1.XmlPullParserException;
  * @author shuai
  */
 public class JobModel {
+    private CaperCloud mainApp;
     private ObservableList<InputObjectModel> cachedInputModels;
     private Properties jobConfigs;
     private File searchOptions;
@@ -94,6 +96,11 @@ public class JobModel {
     }
 
     //getters and setters
+    
+    public void setMainApp(CaperCloud mainApp) {
+        this.mainApp = mainApp;
+    }
+    
     public ObservableList getJobTypes() {
         return jobTypes;
     }
@@ -136,7 +143,12 @@ public class JobModel {
     public void setCachedInputModels(S3Object[] objs) {
         this.cachedInputModels.clear();
         for (S3Object obj : objs) {
-            this.cachedInputModels.add(new InputObjectModel(obj));
+            InputObjectModel iom = new InputObjectModel(obj);
+            System.out.println(mainApp);
+            System.out.println(mainApp.getMainController());
+            System.out.println(mainApp.getMainController().getTfSelectedNumOfInputSpectra());
+            iom.addListener(this.mainApp.getMainController().getTfSelectedNumOfInputSpectra());
+            this.cachedInputModels.add(iom);
         }
     }
 

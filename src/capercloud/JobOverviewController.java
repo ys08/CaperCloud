@@ -36,18 +36,11 @@ import com.compomics.util.experiment.identification.SearchParameters;
 import com.compomics.util.experiment.identification.SearchParameters.MassAccuracyType;
 import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
 import com.compomics.util.preferences.ModificationProfile;
-import com.ning.http.client.AsyncCompletionHandler;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClientConfig;
-import com.ning.http.client.FilePart;
-import com.ning.http.client.RequestBuilder;
-import com.ning.http.client.Response;
 import impl.org.controlsfx.i18n.Localization;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
-import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,7 +52,6 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -172,7 +164,7 @@ public class JobOverviewController implements Initializable {
     @FXML private ComboBox cbFragmentMassType;
     @FXML private ComboBox cbRefinementExpect;
     @FXML private TextField tfNumOfInstances;
-    @FXML public static TextField tfSelectedNumOfInputSpectra;
+    @FXML private TextField tfSelectedNumOfInputSpectra;
     @FXML private TableView tvModification;
     @FXML private TextField tfKeyName;
     @FXML private TextField tfImageId;
@@ -193,9 +185,11 @@ public class JobOverviewController implements Initializable {
         //set dialog locale
         Localization.setLocale(new Locale("en", "US"));
         this.jm = new JobModel();
+
         this.fm = new FileModel();
         this.sm = new StatusModel();
         this.rm = new ResultModel();
+        log.debug("mainApp: " + this.mainApp);
     }
 
     public void setUsername(String username) {
@@ -220,6 +214,10 @@ public class JobOverviewController implements Initializable {
 
     public StatusModel getSm() {
         return sm;
+    }
+    
+    public TextField getTfSelectedNumOfInputSpectra() {
+        return this.tfSelectedNumOfInputSpectra;
     }
     /**
      * Initializes the controller class.
@@ -652,6 +650,8 @@ public class JobOverviewController implements Initializable {
                 .setCellValueFactory(new PropertyValueFactory<ModificationTableModel, String>("status"));
         this.tvJobMonitor.setItems(this.sm.getJobs());
         //----------------------------init end-------------------------
+        
+        log.debug("mainApp: " + this.mainApp);
     }
 
     public void enableButton() {
@@ -826,6 +826,7 @@ public class JobOverviewController implements Initializable {
     @FXML
     private void handleManageAccountsAction() {
         this.mainApp.showLoginView();
+        this.jm.setMainApp(mainApp);
     }
     @FXML
     private void handleLocalBrowse() {
@@ -846,6 +847,7 @@ public class JobOverviewController implements Initializable {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeOne.fxml"));
                 AnchorPane ap = (AnchorPane) loader.load();
+                this.t1c = loader.getController();
                 bpJobType.setCenter(ap);
             } catch (IOException ex) {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
@@ -855,6 +857,7 @@ public class JobOverviewController implements Initializable {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeTwo.fxml"));
                 AnchorPane ap = (AnchorPane) loader.load();
+                this.t2c = loader.getController();
                 bpJobType.setCenter(ap);
             } catch (IOException ex) {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
@@ -864,6 +867,7 @@ public class JobOverviewController implements Initializable {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeThree.fxml"));
                 AnchorPane ap = (AnchorPane) loader.load();
+                this.t3c = loader.getController();
                 bpJobType.setCenter(ap);
             } catch (IOException ex) {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
@@ -1310,7 +1314,7 @@ public class JobOverviewController implements Initializable {
         if (cj.getJobType() == 1) {
             try {
                 String chromNum = this.t1c.getSelectedChromosomeNumber();
-                cj.createTaxonomyFile("chr" + chromNum + "1.fasta");
+                cj.createTaxonomyFile("chr_" + chromNum + "_six_20.fasta");
                 cj.createInputFiles();
             } catch (IOException ex) {
                 ex.printStackTrace();
@@ -1377,13 +1381,15 @@ public class JobOverviewController implements Initializable {
                 System.out.println(instances);
             }
         });
+        s.start();
         //submit job-specific parameters here
         int jobType = cj.getJobType();
         if (jobType == 1) {
             String fdr = this.t1c.getFdr();
+            log.debug(cj.getTaxonomyFile());
+            log.debug(cj.getInputFiles());
         }
-        
-        
+
         //CloudJob job = this.sm.getJobs().get(this.sm.getJobs().size() - 1);
         
 
