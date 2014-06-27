@@ -8,7 +8,6 @@ package capercloud;
 
 import capercloud.log.TextAreaAppender;
 import capercloud.model.CloudJob;
-import capercloud.model.ClusterConfigs;
 import capercloud.model.DataTransferTask;
 import capercloud.model.DownloadTask;
 import capercloud.model.FileModel;
@@ -28,7 +27,6 @@ import com.amazonaws.services.ec2.model.InstanceStateChange;
 import com.amazonaws.services.ec2.model.InstanceType;
 import com.amazonaws.services.ec2.model.RebootInstancesRequest;
 import com.amazonaws.services.ec2.model.Reservation;
-import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.StopInstancesRequest;
 import com.amazonaws.services.ec2.model.StopInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
@@ -53,7 +51,6 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -178,6 +175,9 @@ public class JobOverviewController implements Initializable {
     @FXML public static TextField tfSelectedNumOfInputSpectra;
     @FXML private TableView tvModification;
     @FXML private TextField tfKeyName;
+    @FXML private TextField tfImageId;
+    @FXML private TextField tfSecurityGroup;
+    @FXML private TextField tfOutputBucketName;
     
 //Status Tab
     @FXML private TableView tvJobMonitor;
@@ -1247,16 +1247,25 @@ public class JobOverviewController implements Initializable {
         String sep = IOUtils.LINE_SEPARATOR;
         List<S3Object> selectedSpectra = this.getSelectedSpectra();
         
-        if (jobType == 0 || selectedSpectra.isEmpty()) {
+        //cluster parameters
+        String imageId = this.tfImageId.getText();
+        String keyName = this.tfKeyName.getText();
+        String securityGroup = this.tfSecurityGroup.getText();
+        Integer clusterSize = Integer.parseInt(this.tfNumOfInstances.getText());
+        InstanceType instanceType = (InstanceType) this.cbInstanceType.getSelectionModel().getSelectedItem();
+        String outputBucketName = this.tfOutputBucketName.getText();
+           
+        if (jobType == 0 || selectedSpectra.isEmpty() || imageId == null || keyName == null || securityGroup == null || clusterSize.intValue() <= 0 || instanceType == null) {
             Dialogs.create()
                     .owner(this.mainApp.getPrimaryStage())
                     .title("Error")
                     .masthead(null)
-                    .message("Your parameters are invalid, please check!")
+                    .message("Your parameters are incomplete or invalid, please check again!")
                     .showError();
             return;
         }
 
+        //x!tandem parameters
         SearchParameters sp = new SearchParameters();
         XtandemParameters xp = new XtandemParameters();
         sp.setIdentificationAlgorithmParameter(1, xp);
@@ -1283,14 +1292,19 @@ public class JobOverviewController implements Initializable {
             }
         }
         sp.setModificationProfile(mp);
-         
-        int num = Integer.parseInt(this.tfNumOfInstances.getText());
-        InstanceType it = (InstanceType) this.cbInstanceType.getSelectionModel().getSelectedItem();
-        ClusterConfigs cc = new ClusterConfigs("ami-b08b6cd8", num, num, it);
-        CloudJob cj = new CloudJob(this.mainApp, selectedSpectra, sp, cc, jobType);
+        
+        CloudJob cj = new CloudJob(this.mainApp, selectedSpectra, sp, jobType);
+        cj.setImageId(imageId);
+        cj.setKeyName(keyName);
+        cj.setClusterSize(clusterSize);
+        cj.setSecurityGroup(securityGroup);
+        cj.setInstanceType(instanceType);
+        cj.setOutputBucketName(outputBucketName);
+        
         if (jobType == CaperCloud.CUSTOM_DB) {
             cj.setT4c(this.t4c);
         }
+        
         try {
             cj.saveToLocal();
         } catch (NoSuchAlgorithmException ex) {
@@ -1310,6 +1324,7 @@ public class JobOverviewController implements Initializable {
                     .showException(ex);
             return;
         }
+        
         cj.setStartTime("0");
         cj.setPassedTime("0");
         cj.setInstanceId("not available");
@@ -1347,7 +1362,37 @@ public class JobOverviewController implements Initializable {
             return;
         }
         
-        CloudJob job = this.sm.getJobs().get(this.sm.getJobs().size() - 1);
+        CloudJob cj = this.sm.getJobs().get(this.sm.getJobs().size()-1);
+        String imageId = cj.getImageId();
+        String keyName = cj.getKeyName();
+        String securityGroup = cj.getSecurityGroup();
+        InstanceType instanceType = cj.getInstanceType();
+        Integer clusterSize = cj.getClusterSize();
+        
+        Service<List<String>> s = new Service<List<String>>() {
+            @Override
+            protected Task<List<String>> createTask() {
+                return new Task<List<String>>() {
+                    @Override
+                    protected List<String> call() throws Exception {
+                        File privateKey = JobOverviewController.this.mainApp.getCloudManager().createKeyPair(keyName, FileUtils.getUserDirectory());
+                        JobOverviewController.this.mainApp.getCloudManager().createSecurityGroup(securityGroup, "capercloud group");
+                        return JobOverviewController.this.mainApp.getCloudManager().createOnDemandInstances(imageId, instanceType, clusterSize, keyName, securityGroup);
+                    }
+                };
+            }
+        };
+        s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent t) {
+                List<String> instances = s.getValue();
+                System.out.println(instances);
+            }
+        });
+        
+        
+        //CloudJob job = this.sm.getJobs().get(this.sm.getJobs().size() - 1);
+        
 
 //        Service s = job.createLaunchMasterNodeService();
 //        s.setOnSucceeded(new EventHandler() {

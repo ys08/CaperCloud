@@ -11,10 +11,7 @@ import capercloud.TypeFourController;
 import capercloud.TypeOneController;
 import capercloud.TypeThreeController;
 import capercloud.TypeTwoController;
-import com.amazonaws.handlers.AsyncHandler;
-import com.amazonaws.services.ec2.model.Instance;
-import com.amazonaws.services.ec2.model.RunInstancesRequest;
-import com.amazonaws.services.ec2.model.RunInstancesResult;
+import com.amazonaws.services.ec2.model.InstanceType;
 import com.amazonaws.util.Base64;
 import com.compomics.util.experiment.biology.AminoAcid;
 import com.compomics.util.experiment.biology.PTM;
@@ -24,14 +21,10 @@ import com.compomics.util.preferences.ModificationProfile;
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Future;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.concurrent.Service;
@@ -52,16 +45,23 @@ import org.jets3t.service.model.S3Object;
  */
 public class CloudJob {
     private Log log = LogFactory.getLog(getClass());
-    private CaperCloud mainApp;
-    private RunInstancesRequest rir;
-    private SearchParameters sp;
-    private ClusterConfigs cc;
-    private int jobType;
-    private S3Bucket bucket;
     
+    private CaperCloud mainApp;
+    private SearchParameters sp;
+    private int jobType;
+    private List<S3Object> spectrumObjs;
+    
+    private String imageId;
+    private String keyName;
+    private String securityGroup;
+    private Integer clusterSize;
+    private InstanceType instanceType;
+    private String outputBucketName;
+    
+    private S3Bucket bucket;
     private File taxonomyFile;
     private List<File> inputFiles;
-    private List<S3Object> spectrumObjs;
+
     private S3Object databaseObj;
 // TO UPLOAD
     private S3Object taxonomyObj;
@@ -81,20 +81,11 @@ public class CloudJob {
     
     private List<InstanceModel> instanceModelList;
     
-    public CloudJob(CaperCloud mainApp, List<S3Object> spectrumObjs, SearchParameters sp, ClusterConfigs cc, int jobType) {
+    public CloudJob(CaperCloud mainApp, List<S3Object> spectrumObjs, SearchParameters sp, int jobType) {
         this.mainApp = mainApp;
         this.spectrumObjs = spectrumObjs;
         this.sp = sp;
         this.jobType = jobType;
-        this.cc = cc;
-        
-        this.rir = new RunInstancesRequest();
-        this.rir.setImageId(cc.getImageId());
-        this.rir.setMinCount(cc.getMinCount());
-        this.rir.setMaxCount(cc.getMaxCount());
-        this.rir.setInstanceType(cc.getInstanceType());
-        //TO DO
-        this.rir.setKeyName("caper");
         
         this.inputObjs = new ArrayList<>();
         this.inputFiles = new ArrayList<>();
@@ -119,6 +110,54 @@ public class CloudJob {
             this.t4c = t4c;
     }
 
+    public String getOutputBucketName() {
+        return outputBucketName;
+    }
+
+    public void setOutputBucketName(String outputBucketName) {
+        this.outputBucketName = outputBucketName;
+    }
+
+    public void setImageId(String imageId) {
+        this.imageId = imageId;
+    }
+
+    public void setKeyName(String keyName) {
+        this.keyName = keyName;
+    }
+
+    public void setClusterSize(Integer clusterSize) {
+        this.clusterSize = clusterSize;
+    }
+
+    public void setSecurityGroup(String securityGroup) {
+        this.securityGroup = securityGroup;
+    }
+
+    public void setInstanceType(InstanceType instanceType) {
+        this.instanceType = instanceType;
+    }
+
+    public String getSecurityGroup() {
+        return securityGroup;
+    }
+
+    public InstanceType getInstanceType() {
+        return instanceType;
+    }
+
+    public String getImageId() {
+        return imageId;
+    }
+
+    public String getKeyName() {
+        return keyName;
+    }
+
+    public Integer getClusterSize() {
+        return clusterSize;
+    }
+
     public StringProperty startTimeProperty() {
         return startTime;
     }
@@ -132,7 +171,7 @@ public class CloudJob {
     }
     
     public StringProperty clusterSizeProperty() {
-        return new SimpleStringProperty(this.cc.getMinCount().toString());
+        return new SimpleStringProperty(this.clusterSize.toString());
     }
     
     public StringProperty instanceIdProperty() {
@@ -433,60 +472,45 @@ public class CloudJob {
     private HashMap<String, ArrayList<PTM>> sortModifications(ArrayList<String> modifications, ModificationProfile mp) {
 
         HashMap<String, ArrayList<PTM>> sortedMods = new HashMap<String, ArrayList<PTM>>();
-
         for (String name : modifications) {
-
             PTM ptm = mp.getPtm(name);
-
             if (ptm.getType() == PTM.MODN
                     || ptm.getType() == PTM.MODNAA
                     || ptm.getType() == PTM.MODNP
                     || ptm.getType() == PTM.MODNPAA) {
-
                 ArrayList<PTM> ptms;
-
                 if (sortedMods.containsKey("[")) {
                     ptms = sortedMods.get("[");
                 } else {
                     ptms = new ArrayList<PTM>();
                 }
-
                 ptms.add(ptm);
                 sortedMods.put("[", ptms);
             }
-
             for (AminoAcid aa : ptm.getPattern().getAminoAcidsAtTarget()) {
-
                 ArrayList<PTM> ptms;
-
                 if (sortedMods.containsKey(aa.singleLetterCode)) {
                     ptms = sortedMods.get(aa.singleLetterCode);
                 } else {
                     ptms = new ArrayList<PTM>();
                 }
-
                 ptms.add(ptm);
                 sortedMods.put(aa.singleLetterCode, ptms);
             }
-
             if (ptm.getType() == PTM.MODC
                     || ptm.getType() == PTM.MODCAA
                     || ptm.getType() == PTM.MODCP
                     || ptm.getType() == PTM.MODCPAA) {
-
                 ArrayList<PTM> ptms;
-
                 if (sortedMods.containsKey("]")) {
                     ptms = sortedMods.get("]");
                 } else {
                     ptms = new ArrayList<PTM>();
                 }
-
                 ptms.add(ptm);
                 sortedMods.put("]", ptms);
             }
         }
-
         return sortedMods;
     }
 }
