@@ -198,9 +198,9 @@ public class CaperCloud extends Application {
         this.getPrimaryStage().setOnHidden(new EventHandler() {
             @Override
             public void handle(Event t) {
-                if (CaperCloud.this.getCloudManager().getEc2Manager() != null) {
-                    CaperCloud.this.getCloudManager().getEc2Manager().shutdown();
-                }
+//                if (CaperCloud.this.getCloudManager().getEc2Manager() != null) {
+//                    CaperCloud.this.getCloudManager().getEc2Manager().shutdown();
+//                }
             }
         });
         

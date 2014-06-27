@@ -25,9 +25,14 @@ import com.amazonaws.services.ec2.model.DescribeSecurityGroupsResult;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceType;
 import com.amazonaws.services.ec2.model.IpPermission;
+import com.amazonaws.services.ec2.model.RebootInstancesRequest;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
+import com.amazonaws.services.ec2.model.StopInstancesRequest;
+import com.amazonaws.services.ec2.model.StopInstancesResult;
+import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
@@ -67,10 +72,8 @@ public class CloudManager {
     
     private CloudManager() {
     }
-    /**
-     * dan li
-     * @return 
-     */
+    
+    
     public static CloudManager getInstance() {
         if (singleton == null) {
             singleton = new CloudManager();
@@ -440,7 +443,65 @@ public class CloudManager {
             }
         };
     }
-        public List<String> createOnDemandInstances(String imageId, InstanceType instanceType, Integer size, String keyName, String securityGroup) {   
+    
+    public Service<DescribeInstancesResult> createDescribeInstancesService(DescribeInstancesRequest request) {
+        return new Service<DescribeInstancesResult>() {
+            @Override
+            protected Task<DescribeInstancesResult> createTask() {
+                return new Task<DescribeInstancesResult>() {
+                    @Override
+                    protected DescribeInstancesResult call() throws Exception {
+                        return CloudManager.this.ec2Client.describeInstances(request);
+                    }
+                };
+            }
+        };
+    }
+    
+    public Service<StopInstancesResult> createStopInstancesService(StopInstancesRequest request) {
+        return new Service<StopInstancesResult>() {
+            @Override
+            protected Task<StopInstancesResult> createTask() {
+                return new Task<StopInstancesResult>() {
+                    @Override
+                    protected StopInstancesResult call() throws Exception {
+                        return CloudManager.this.ec2Client.stopInstances(request);
+                    }
+                };
+            }
+        };
+    }
+    
+    public Service<TerminateInstancesResult> createTerminateInstancesService(TerminateInstancesRequest request) {
+        return new Service<TerminateInstancesResult>() {
+            @Override
+            protected Task<TerminateInstancesResult> createTask() {
+                return new Task<TerminateInstancesResult>() {
+                    @Override
+                    protected TerminateInstancesResult call() throws Exception {
+                        return CloudManager.this.ec2Client.terminateInstances(request);
+                    }
+                };
+            }
+        };
+    }
+    
+    public Service<Void> createRebootInstancesService(RebootInstancesRequest request) {
+        return new Service<Void>() {
+            @Override
+            protected Task<Void> createTask() {
+                return new Task<Void>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        CloudManager.this.ec2Client.rebootInstances(request);
+                        return null;
+                    }
+                };
+            }
+        };
+    }
+    
+    public List<String> createOnDemandInstances(String imageId, InstanceType instanceType, Integer size, String keyName, String securityGroup) {   
         List<String> instanceIds = new ArrayList<>();
         
         RunInstancesRequest rir = new RunInstancesRequest();
@@ -552,7 +613,7 @@ public class CloudManager {
         return instanceIds;
     }
     
-    private File createKeyPair(String keyName, File directory) {
+    public File createKeyPair(String keyName, File directory) {
         DescribeKeyPairsResult r = this.ec2Client.describeKeyPairs(new DescribeKeyPairsRequest().withKeyNames(keyName));
         if (!r.getKeyPairs().isEmpty()) {
             System.out.println("delete existing key: " + keyName);

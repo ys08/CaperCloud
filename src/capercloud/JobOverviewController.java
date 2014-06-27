@@ -21,17 +21,13 @@ import capercloud.model.ResultModel;
 import capercloud.model.SpectrumModel;
 import capercloud.model.StatusModel;
 import capercloud.model.UploadTask;
-import com.amazonaws.handlers.AsyncHandler;
-import com.amazonaws.services.ec2.AmazonEC2AsyncClient;
-import com.amazonaws.services.ec2.model.CreateKeyPairRequest;
-import com.amazonaws.services.ec2.model.CreateKeyPairResult;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStateChange;
 import com.amazonaws.services.ec2.model.InstanceType;
+import com.amazonaws.services.ec2.model.RebootInstancesRequest;
 import com.amazonaws.services.ec2.model.Reservation;
-import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.StopInstancesRequest;
 import com.amazonaws.services.ec2.model.StopInstancesResult;
@@ -124,7 +120,6 @@ import org.controlsfx.dialog.Dialog;
 import org.controlsfx.dialog.Dialogs;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
-import uk.ac.ebi.jmzidml.model.mzidml.Peptide;
 import uk.ac.ebi.pride.tools.jmzreader.JMzReaderException;
 
 /**
@@ -182,6 +177,7 @@ public class JobOverviewController implements Initializable {
     @FXML private TextField tfNumOfInstances;
     @FXML public static TextField tfSelectedNumOfInputSpectra;
     @FXML private TableView tvModification;
+    @FXML private TextField tfKeyName;
     
 //Status Tab
     @FXML private TableView tvJobMonitor;
@@ -1097,14 +1093,6 @@ public class JobOverviewController implements Initializable {
             if (response == Dialog.Actions.CANCEL) {
                 return;
             }
-//            Stage confirmDialog = this.mainApp.createModalConfirmDialog(msg + "?", this.mainApp.getPrimaryStage());
-//            confirmDialog.showAndWait();
-//            if (this.mainApp.isCanceled()) {
-//                return;
-//            }
-//            this.mainApp.resetCanceled();            
-//            Stage progressDialog = this.mainApp.createStripedProgressDialog(msg, this.mainApp.getPrimaryStage());
-
         }
         
         if (obj instanceof S3Object) {
@@ -1136,65 +1124,19 @@ public class JobOverviewController implements Initializable {
             if (response == Dialog.Actions.CANCEL) {
                 return;
             }
-//            Stage confirmDialog = this.mainApp.createModalConfirmDialog(msg + "?", this.mainApp.getPrimaryStage());
-//            confirmDialog.showAndWait();
-//            if (this.mainApp.isCanceled()) {
-//                return;
-//            }
-//            this.mainApp.resetCanceled();
-//            
-//            Stage progressDialog = this.mainApp.createStripedProgressDialog(msg, this.mainApp.getPrimaryStage());
-
-//            progressDialog.showAndWait();
         }
-    }
-    
-//Job tab event
-    @FXML
-    private void handleRunJobAction() {
-//        for (InputObjectModel i : this.getInputObjectCache()) {
-//            log.debug(i.selectedProperty().getValue());
-//        }
-    }
-    
-    @FXML
-    private void handelLaunchInstances() {
-//for free test
-        CreateKeyPairRequest ckprqt = new CreateKeyPairRequest("capercloud");
-        CreateKeyPairResult ckpres = this.mainApp.getCloudManager().getEc2Manager().createKeyPair(ckprqt);
-        
-        RunInstancesRequest rirqt = new RunInstancesRequest("ami-018c9568", 1, 1);
-        rirqt.setInstanceType(InstanceType.T1Micro);
-        rirqt.setKeyName(ckpres.getKeyPair().getKeyName());
-        
-        this.mainApp.getCloudManager().getEc2Manager().runInstancesAsync(rirqt, new AsyncHandler<RunInstancesRequest,RunInstancesResult>() {
-            @Override
-            public void onError(Exception excptn) {
-                log.error(excptn.getMessage());
-            }
-            @Override
-            public void onSuccess(RunInstancesRequest rqst, RunInstancesResult result) {
-                for (Instance i : result.getReservation().getInstances()) {
-                    log.debug(i);
-                    InstanceModel im = new InstanceModel(i);
-                    JobOverviewController.this.sm.addInstance(im);
-                }
-            }
-        });
     }
     
     @FXML
     private void handleInstanceMonitorRefreshAction() {
-        this.mainApp.getCloudManager().getEc2Manager().describeInstancesAsync(new DescribeInstancesRequest(), new AsyncHandler<DescribeInstancesRequest,DescribeInstancesResult>() {
+        Service<DescribeInstancesResult> s = this.mainApp.getCloudManager().createDescribeInstancesService(new DescribeInstancesRequest());
+        s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
             @Override
-            public void onError(Exception ex) {
-                log.debug(ex.getMessage());
-            }
-
-            @Override
-            public void onSuccess(DescribeInstancesRequest rqst, DescribeInstancesResult result) {
+            public void handle(WorkerStateEvent t) {
                 ObservableList<InstanceModel> res = FXCollections.observableArrayList();
-                for (Reservation r : result.getReservations()) {
+                Iterator<Reservation> it = s.getValue().getReservations().iterator();
+                while (it.hasNext()) {
+                    Reservation r = it.next();
                     for (Instance i : r.getInstances()) {
                         res.add(new InstanceModel(i));
                     }
@@ -1202,7 +1144,8 @@ public class JobOverviewController implements Initializable {
                 JobOverviewController.this.tvInstanceMonitor.setItems(res);
                 JobOverviewController.this.sm.setInstancesCache(res);
             }
-    });
+        });
+        s.start();
     }
 //    
     @FXML
@@ -1218,23 +1161,21 @@ public class JobOverviewController implements Initializable {
                     .showError();
             return;
         }
-        instanceIds.add(selectedInstance.instanceIdProperty().getValue());       
-        final AmazonEC2AsyncClient ec2m = this.mainApp.getCloudManager().getEc2Manager();
-        ec2m.stopInstancesAsync(new StopInstancesRequest(instanceIds), new AsyncHandler<StopInstancesRequest,StopInstancesResult>() {
+        
+        instanceIds.add(selectedInstance.instanceIdProperty().getValue());   
+        
+        Service<StopInstancesResult> s = this.mainApp.getCloudManager().createStopInstancesService(new StopInstancesRequest(instanceIds));
+        s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
             @Override
-            public void onError(Exception excptn) {
-                log.debug(excptn.getMessage());
-            }
-
-            @Override
-            public void onSuccess(StopInstancesRequest rqst, StopInstancesResult result) {
-                log.debug("stop success!");
-                for (InstanceStateChange isc : result.getStoppingInstances()) {
+            public void handle(WorkerStateEvent t) {
+                StopInstancesResult r = s.getValue();
+                for (InstanceStateChange isc : r.getStoppingInstances()) {
                     InstanceModel im = JobOverviewController.this.sm.getInstance(isc.getInstanceId());
                     im.setState(isc.getCurrentState().getName());
                 }
             }
         });
+        s.start();
     }
     
     @FXML
@@ -1251,27 +1192,37 @@ public class JobOverviewController implements Initializable {
             return;
         }
         instanceIds.add(selectedInstance.instanceIdProperty().getValue());
-        final AmazonEC2AsyncClient ec2m = this.mainApp.getCloudManager().getEc2Manager();
-        ec2m.terminateInstancesAsync(new TerminateInstancesRequest(instanceIds), new AsyncHandler<TerminateInstancesRequest,TerminateInstancesResult>() {
+        Service<TerminateInstancesResult> s = this.mainApp.getCloudManager().createTerminateInstancesService(new TerminateInstancesRequest(instanceIds));
+        s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
             @Override
-            public void onError(Exception excptn) {
-                log.error(excptn.getMessage());
-            }
-
-            @Override
-            public void onSuccess(TerminateInstancesRequest rqst, TerminateInstancesResult result) {
-                List<InstanceStateChange> res = result.getTerminatingInstances();
+            public void handle(WorkerStateEvent t) {
+                TerminateInstancesResult r = s.getValue();
+                List<InstanceStateChange> res = r.getTerminatingInstances();
                 for (InstanceStateChange isc : res) {
                     InstanceModel im = JobOverviewController.this.sm.getInstance(isc.getInstanceId());
                     im.setState(isc.getCurrentState().getName());
                 }
             }
+            
         });
+        s.start();
     }
     
     @FXML
     private void handleInstanceMonitorRebootAction() {
-        //TO DO
+        List<String> instanceIds = new ArrayList<>();
+        InstanceModel selectedInstance = (InstanceModel) this.tvInstanceMonitor.getSelectionModel().getSelectedItem();
+        if (selectedInstance == null) {
+            Dialogs.create()
+                    .owner(this.mainApp.getPrimaryStage())
+                    .title("Error")
+                    .masthead(null)
+                    .message("No instance is selected!")
+                    .showError();
+            return;
+        }
+        Service<Void> s = this.mainApp.getCloudManager().createRebootInstancesService(new RebootInstancesRequest(instanceIds));
+        s.start();
     }
     
     @FXML
@@ -1419,13 +1370,6 @@ public class JobOverviewController implements Initializable {
             }
         });
         s.start();
-//        try {
-//            sendFiles(job).get();
-//        } catch (ExecutionException ex) {
-//            log.error("sth went wrong");
-//            return;
-//        }
-//        postJob(job);
     }
     
     private Future sendFiles(CloudJob job) throws IOException {
