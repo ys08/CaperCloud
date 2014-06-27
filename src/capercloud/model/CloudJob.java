@@ -175,44 +175,6 @@ public class CloudJob {
     public S3Object getDatabaseObj() {
         return databaseObj;
     }
-
-//master node will launch slave node    
-    public Service createLaunchMasterNodeService() {
-        //this.rir.setUserData(this.userdata());    
-        return new Service<RunInstancesResult>() {
-            @Override
-            protected Task<RunInstancesResult> createTask() {
-                return new Task<RunInstancesResult>() {
-                    @Override
-                    protected RunInstancesResult call() throws Exception {
-                        return CloudJob.this.mainApp.getCloudManager().getEc2Manager().runInstances(rir);
-                    }
-                };
-            }
-        };
-//        Future f = this.mainApp.getCloudManager().getEc2Manager().runInstancesAsync(rir, new AsyncHandler<RunInstancesRequest,RunInstancesResult>() {
-//            @Override
-//            public void onError(Exception excptn) {
-//                log.error(excptn.getMessage());
-//            }
-//
-//            @Override
-//            public void onSuccess(RunInstancesRequest rqst, RunInstancesResult result) {
-//                //update job tableview
-//                CloudJob.this.setStatus("launching compute nodes");
-//                Date d = Calendar.getInstance().getTime();
-//                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
-//                CloudJob.this.setStartTime(sdf.format(d));
-//                
-//                Instance i = result.getReservation().getInstances().get(0);
-//                InstanceModel im = new InstanceModel(i);
-//                CloudJob.this.setInstanceId(i.getInstanceId());
-//                
-//                //update instance tableview
-//                CloudJob.this.mainApp.getMainController().getSm().addInstance(im);
-//            }
-//        });
-    }
     
     public StringProperty jobIdProperty() {
         return new SimpleStringProperty(timestamp);

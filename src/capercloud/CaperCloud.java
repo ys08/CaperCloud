@@ -336,49 +336,6 @@ public class CaperCloud extends Application {
         }
     }
     
-    public Stage createModalConfirmDialog(String msg, final Stage parentStage) {
-        final Stage dialog = new Stage(StageStyle.TRANSPARENT);
-        dialog.initModality(Modality.WINDOW_MODAL);
-        dialog.initOwner(parentStage);
-        dialog.setScene(new Scene(
-                HBoxBuilder.create().styleClass("modal-dialog").children(
-                        LabelBuilder.create().text(msg).build(),
-                        ButtonBuilder.create().text("Yes").defaultButton(true).onAction(new EventHandler<ActionEvent>() {
-                            @Override public void handle(ActionEvent actionEvent) {
-                                parentStage.getScene().getRoot().setEffect(null); 
-                                dialog.close();
-                            }
-                        }).build(),
-                        ButtonBuilder.create().text("No").cancelButton(true).onAction(new EventHandler<ActionEvent>() {
-                            @Override public void handle(ActionEvent actionEvent) {
-                                parentStage.getScene().getRoot().setEffect(null);
-                                CaperCloud.this.canceled = true;
-                                dialog.close();
-                            }
-                        }).build()
-                ).build()
-                , Color.TRANSPARENT)
-        );
-        dialog.getScene().getStylesheets().add(getClass().getResource("res/theme.css").toExternalForm());
-// allow the dialog to be dragged around.
-        final Node root = dialog.getScene().getRoot();
-        final Delta dragDelta = new Delta();
-        root.setOnMousePressed(new EventHandler<MouseEvent>() {
-          @Override public void handle(MouseEvent mouseEvent) {
-// record a delta distance for the drag and drop operation.
-            dragDelta.x = dialog.getX() - mouseEvent.getScreenX();
-            dragDelta.y = dialog.getY() - mouseEvent.getScreenY();
-          }
-        });
-        root.setOnMouseDragged(new EventHandler<MouseEvent>() {
-          @Override public void handle(MouseEvent mouseEvent) {
-            dialog.setX(mouseEvent.getScreenX() + dragDelta.x);
-            dialog.setY(mouseEvent.getScreenY() + dragDelta.y);
-          }
-        });
-        return dialog;
-    }
-    
     public Stage createStripedProgressDialog(String title, Stage parentStage) {
         Stage dialog = new Stage();
         final ProgressBar bar = new ProgressBar(0);
