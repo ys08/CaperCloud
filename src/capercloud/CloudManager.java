@@ -34,9 +34,11 @@ import com.amazonaws.services.ec2.model.StopInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -91,7 +93,11 @@ public class CloudManager {
     public AWSCredentials getCurrentCredentials() {
         return currentCredentials;
     }
-    
+
+    public AmazonEC2Client getEc2Client() {
+        return ec2Client;
+    }
+
     /**
      * create S3Manager and EC2Manager instance
      * add credentials to hashmap
@@ -524,7 +530,7 @@ public class CloudManager {
         Set<String> states = new HashSet<>();
         while (isWaiting) {
             try {
-                System.out.println("waiting for instances start up...");
+                log.info("waiting for instances start up...");
                 //10 secs
                 Thread.sleep(10000);
                 DescribeInstancesResult r = this.ec2Client.describeInstances(new DescribeInstancesRequest().withInstanceIds(instanceIds));
@@ -533,7 +539,7 @@ public class CloudManager {
                     Reservation rr = ir.next();
                     List<Instance> instances = rr.getInstances();
                     for(Instance ii : instances){
-                        System.out.println(ii.getImageId() + "\t" + ii.getInstanceId()+ "\t" + ii.getState().getName() + "\t"+ ii.getPrivateDnsName() + "\t" + ii.getPublicIpAddress());
+                        log.info(ii.getImageId() + "\t" + ii.getInstanceId()+ "\t" + ii.getState().getName() + "\t"+ ii.getPrivateDnsName() + "\t" + ii.getPublicIpAddress());
                         states.add(ii.getState().getName());
                     }
                 }
@@ -557,7 +563,7 @@ public class CloudManager {
         jsch.addIdentity(privateKey.getAbsolutePath());
         JSch.setConfig("StrictHostKeyChecking", "no");
         Session session=jsch.getSession(userName, ipAddress, 22);
-        System.out.println("wait 40 seconds");
+        log.info("wait 40 seconds");
         Thread.sleep(40000);
         for(int i = 0; i < 10; i++) {
             try {
@@ -567,7 +573,7 @@ public class CloudManager {
                 if(i == 10 - 1) {
                     throw ex;
                 }
-                System.out.println("retry " + (i+1) + " times");
+                log.info("retry " + (i+1) + " times");
                 Thread.sleep(10000);
             }
         }
@@ -587,16 +593,55 @@ public class CloudManager {
             while (input.available() > 0) {
                 int i = input.read(tmp, 0, 1024);
                 if (i < 0) break;
-                System.out.println(new String(tmp, 0, i));
+                log.info(new String(tmp, 0, i));
             }
             if (channel.isClosed()){
-                System.out.println("exit-status: " + channel.getExitStatus());
+                log.info("exit-status: " + channel.getExitStatus());
                 break;
             }
             Thread.sleep(1000);
         }
         channel.disconnect();
         session.disconnect();
+    }
+    
+    public void sftp(String userName, String ipAddress, String lfile, String rfile, File privateKey) {
+        Session session = null;
+        ChannelSftp sftpChannel = null;
+        try {
+            JSch jsch = new JSch();
+            jsch.addIdentity(privateKey.getAbsolutePath());
+            
+            session = jsch.getSession(userName, ipAddress, 22);
+            session.setConfig("StrictHostKeyChecking", "no");
+            Thread.sleep(40000);
+            for(int i = 0; i < 10; i++) {
+                try {
+                    session.connect();
+                    break;
+                } catch(JSchException ex) {
+                    if(i == 10 - 1) {
+                        throw ex;
+                    }
+                    log.info("retry " + (i+1) + " times");
+                    Thread.sleep(10000);
+                }
+            }
+            
+            sftpChannel = (ChannelSftp) session.openChannel("sftp");
+            sftpChannel.connect();
+            sftpChannel.put(lfile, rfile);
+            
+        } catch (JSchException ex) {
+            ex.printStackTrace();
+        } catch (SftpException ex) {
+            ex.printStackTrace();
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+        }  finally {
+            sftpChannel.disconnect();
+            session.disconnect();
+        }
     }
     
     public List<String> getInstanceList() {
@@ -616,10 +661,10 @@ public class CloudManager {
     public File createKeyPair(String keyName, File directory) {
         DescribeKeyPairsResult r = this.ec2Client.describeKeyPairs(new DescribeKeyPairsRequest().withKeyNames(keyName));
         if (!r.getKeyPairs().isEmpty()) {
-            System.out.println("delete existing key: " + keyName);
+            log.info("delete existing key: " + keyName);
             this.ec2Client.deleteKeyPair(new DeleteKeyPairRequest().withKeyName(keyName));
         }
-        System.out.println("create new key: " + keyName);
+        log.info("create new key: " + keyName);
         CreateKeyPairResult rr = this.ec2Client.createKeyPair(new CreateKeyPairRequest().withKeyName(keyName));
         String fileName = keyName + ".pem";
         File outFile = new File(FileUtils.getUserDirectory(), fileName);
@@ -635,10 +680,10 @@ public class CloudManager {
     public String createSecurityGroup(String groupName, String groupDescription) {
         DescribeSecurityGroupsResult r = this.ec2Client.describeSecurityGroups(new DescribeSecurityGroupsRequest().withGroupNames(groupName));
         if (!r.getSecurityGroups().isEmpty()) {
-            System.out.println("delete existing security group: " + groupName);
+            log.info("delete existing security group: " + groupName);
             this.ec2Client.deleteSecurityGroup(new DeleteSecurityGroupRequest().withGroupName(groupName));
         }
-        System.out.println("create new security group: " + groupName);
+        log.info("create new security group: " + groupName);
         CreateSecurityGroupRequest createSecurityGroupRequest =  new CreateSecurityGroupRequest();
         createSecurityGroupRequest.withGroupName(groupName)
                 .withDescription(groupDescription);
@@ -646,8 +691,8 @@ public class CloudManager {
         CreateSecurityGroupResult csgr = this.ec2Client.createSecurityGroup(createSecurityGroupRequest);
 
         String groupid = csgr.getGroupId();
-        System.out.println("Security Group Id : " + groupid);
-        System.out.println("Create Security Group Permission");
+        log.info("Security Group Id : " + groupid);
+        log.info("Create Security Group Permission");
 
         Collection<IpPermission> ips = new ArrayList<IpPermission>();
 // Permission for SSH only to your ip
@@ -667,7 +712,7 @@ public class CloudManager {
                 .withFromPort(443).withToPort(443);
         ips.add(iphttps);
            
-        System.out.println("Attach Owner to security group");
+        log.info("Attach Owner to security group");
 // Register this security group with owner
         AuthorizeSecurityGroupIngressRequest authorizeSecurityGroupIngressRequest = new AuthorizeSecurityGroupIngressRequest();
         authorizeSecurityGroupIngressRequest
