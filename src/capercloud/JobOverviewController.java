@@ -1366,9 +1366,29 @@ public class JobOverviewController implements Initializable {
                 return new Task<List<String>>() {
                     @Override
                     protected List<String> call() throws Exception {
+                        //delete and create private key
                         File privateKey = JobOverviewController.this.mainApp.getCloudManager().createKeyPair(keyName, FileUtils.getUserDirectory());
+                        //delete and create security group
                         JobOverviewController.this.mainApp.getCloudManager().createSecurityGroup(securityGroup, "capercloud group");
-                        return JobOverviewController.this.mainApp.getCloudManager().createOnDemandInstances(imageId, instanceType, clusterSize, keyName, securityGroup);
+                        //create on-demand instances
+                        List<String> instances = JobOverviewController.this.mainApp.getCloudManager().createOnDemandInstances(imageId, instanceType, clusterSize, keyName, securityGroup);
+                        //copy file and run it
+                        String masterId = instances.get(0);
+                        String masterPrivateIp = JobOverviewController.this.mainApp.getCloudManager().getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(masterId)).getReservations().get(0).getInstances().get(0).getPrivateIpAddress();
+                        DescribeInstancesResult r = JobOverviewController.this.mainApp.getCloudManager().getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
+                        Iterator i = r.getReservations().iterator();
+
+                        while (i.hasNext()) {
+                            Reservation rr = (Reservation) i.next();
+                            for (Instance ii : rr.getInstances()) {
+                                System.out.println(ii.getPublicIpAddress());
+                                String cmd = "./hadoop-remote-init.sh " + masterPrivateIp;
+                                JobOverviewController.this.mainApp.getCloudManager().remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd, privateKey);
+                                JobOverviewController.this.mainApp.getCloudManager().sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/download_data.py", "/home/ec2-user/download_data.py", privateKey);
+                                
+                            }
+                        }
+                        return instances; 
                     }
                 };
             }
