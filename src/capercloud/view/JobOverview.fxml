@@ -670,7 +670,7 @@
                               <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="141.0" text="Passed Time" />
                               <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="98.0" text="Cluster Size" />
                               <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="147.0" text="Instance IDs" />
-                              <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="285.0" text="Progress" />
+                              <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="285.0" text="Status" />
                             </columns>
                           </TableView>
                         </center>

@@ -130,7 +130,11 @@ public class CloudJob {
     }
 
     public void setStartTime(String startTime) {
-        this.startTime = new SimpleStringProperty(startTime);
+        if (this.startTime == null) {
+            this.startTime = new SimpleStringProperty(startTime);
+            return;
+        }
+        this.startTime.set(startTime);
     }
 
     public StringProperty passedTimeProperty() {
@@ -146,7 +150,11 @@ public class CloudJob {
     }
     
     public void setInstanceId(String instanceId) {
-        this.instanceId = new SimpleStringProperty(instanceId);
+        if (this.instanceId == null) {
+            this.instanceId = new SimpleStringProperty(instanceId);
+            return;
+        }
+        this.instanceId.set(instanceId);
     }
 
     public StringProperty statusProperty() {
@@ -154,11 +162,19 @@ public class CloudJob {
     }
 
     public void setStatus(String status) {
-        this.status = new SimpleStringProperty(status);
+        if (this.status == null) {
+            this.status = new SimpleStringProperty(status);
+            return;
+        }
+        this.status.set(status);
     }
 
     public void setPassedTime(String passedTime) {
-        this.passedTime = new SimpleStringProperty(passedTime);
+        if (this.passedTime == null) {
+            this.passedTime = new SimpleStringProperty(passedTime);
+            return;
+        }
+        this.passedTime.set(passedTime);
     }
     
     public StringProperty spectraProperty() {

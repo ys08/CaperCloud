@@ -44,6 +44,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -1360,20 +1361,26 @@ public class JobOverviewController implements Initializable {
         InstanceType instanceType = cj.getInstanceType();
         Integer clusterSize = cj.getClusterSize();
         
+        CloudManager cm = JobOverviewController.this.mainApp.getCloudManager();     
         Service<List<String>> s = new Service<List<String>>() {
             @Override
             protected Task<List<String>> createTask() {
                 return new Task<List<String>>() {
                     @Override
                     protected List<String> call() throws Exception {
-                        CloudManager cm = JobOverviewController.this.mainApp.getCloudManager();
+                        Date d = Calendar.getInstance().getTime();
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
+                        cj.setStartTime(sdf.format(d));
+                        cj.setStatus("lauching instances");            
                         //delete and create private key
                         File privateKey = cm.createKeyPair(keyName, FileUtils.getUserDirectory());
                         //delete and create security group
                         cm.createSecurityGroup(securityGroup, "capercloud group");
                         //create on-demand instances
                         List<String> instances = cm.createOnDemandInstances(imageId, instanceType, clusterSize, keyName, securityGroup);
+                        cj.setInstanceId(instances.toString());
                         //copy file and run it
+                        cj.setStatus("copying config file to cluster");
                         String masterId = instances.get(0);
                         Instance masterInstance = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(masterId)).getReservations().get(0).getInstances().get(0);
                         String masterPrivateIp = masterInstance.getPrivateIpAddress();
@@ -1382,6 +1389,7 @@ public class JobOverviewController implements Initializable {
                         DescribeInstancesResult r = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
                         Iterator i = r.getReservations().iterator();
                         while (i.hasNext()) {
+                            // on every node
                             Reservation rr = (Reservation) i.next();
                             for (Instance ii : rr.getInstances()) {
                                 String cmd1 = "sudo chmod 777 /mnt;sudo service ntpd stop;sudo ntpdate 192.168.99.111;sudo service ntpd start;";
@@ -1392,7 +1400,7 @@ public class JobOverviewController implements Initializable {
                                 log.info("uploading download_data.py");
                                 cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/download_data.py", "/home/ec2-user/download_data.py", privateKey);
                                 log.info("uploading upload_data.py");
-                                cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/download_data.py", "/home/ec2-user/download_data.py", privateKey);
+                                cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/upload_data.py", "/home/ec2-user/upload_data.py", privateKey);
                                 log.info("uploading taxonomy file: " + cj.getTaxonomyFile().getAbsolutePath());
                                 cm.sftp("ec2-user", ii.getPublicIpAddress(), cj.getTaxonomyFile().getAbsolutePath(), "/mnt/"+cj.getTaxonomyFile().getName(), privateKey);
                                 log.info("uploading input file: " + cj.getInputFiles().get(0).getAbsolutePath());
@@ -1427,13 +1435,23 @@ public class JobOverviewController implements Initializable {
                                 }
                             }
                         }
-                        
+                        // on master
                         // execute mrtandem
+                        cj.setStatus("mrtandem searching");
                         String cmd4 = "cd /mnt/ && ./mrtandem " + cj.getInputFiles().get(0).getName();
                         log.debug(cmd4);
                         cm.remoteCallByShh("ec2-user", masterPublicIp, cmd4, privateKey);
-                        // upload result
-                        //String cmd5 = "cd ~ && python upload_data.py";
+                        
+                        // upload result to s3
+                        cj.setStatus("uploading result to s3");
+                        String bucketName = JobOverviewController.this.tfOutputBucketName.getText();
+                        String cmd5 = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
+                                + " " + cm.getCurrentCredentials().getSecretKey()
+                                + " " + bucketName
+                                + " " + "/mnt/output";
+                        log.debug(cmd5);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmd5, privateKey);
+                        
                         return instances;
                     }
                 };
@@ -1444,10 +1462,14 @@ public class JobOverviewController implements Initializable {
             @Override
             public void handle(WorkerStateEvent t) {
                 List<String> instances = s.getValue();
-                System.out.println(instances);
+                log.info("shutting down instances");
+                cj.setStatus("shutting down instances");
+                //cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
+                cj.setStatus("job completed");
             }
         });
         s.start();
+        
         //submit job-specific parameters here
 
 
@@ -1475,6 +1497,11 @@ public class JobOverviewController implements Initializable {
 //            }
 //        });
 //        s.start();
+    }
+    
+    private void refreshTable() {
+        ((TableColumn) JobOverviewController.this.tvJobMonitor.getColumns().get(0)).setVisible(false);
+        ((TableColumn) JobOverviewController.this.tvJobMonitor.getColumns().get(0)).setVisible(true);
     }
     
 //    private Future sendFiles(CloudJob job) throws IOException {
