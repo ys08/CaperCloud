@@ -8,7 +8,8 @@ s3_host = "192.168.99.111"
 access_key = sys.argv[1]
 secret_key = sys.argv[2]
 bucket_name = sys.argv[3]
-file_name = os.path.basename(sys.argv[4])
+full_path = sys.argv[4]
+file_name = os.path.basename(full_path)
  
 # Setup connection to Walrus
 s3conn = boto.connect_s3(aws_access_key_id=access_key,
@@ -28,5 +29,5 @@ except boto.exception.S3ResponseError:
     b = s3conn.create_bucket(bucket_name)
 k = Key(b)
 k.key = file_name
-k.set_contents_from_filename(file_name)
+k.set_contents_from_filename(full_path)
 
