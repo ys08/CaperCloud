@@ -350,10 +350,10 @@
                                           </TableView>
                                         </center>
                                         <top>
-                                          <HBox id="HBox" alignment="CENTER" spacing="15.0">
+                                          <HBox id="HBox" alignment="CENTER" spacing="10.0">
                                             <children>
-                                              <Label text="Inut File" />
-                                              <ComboBox fx:id="cbBucketSelection" prefHeight="23.0" prefWidth="129.0" promptText="select a bucket">
+                                              <Label prefHeight="29.0" prefWidth="61.0" text="Inut File" />
+                                              <ComboBox fx:id="cbBucketSelection" prefHeight="26.0" prefWidth="152.0" promptText="select a bucket">
                                                 <items>
                                                   <FXCollections fx:factory="observableArrayList">
                                                     <String fx:value="项 1" />
@@ -394,7 +394,7 @@
                                           <HBox id="HBox" alignment="CENTER" spacing="20.0">
                                             <children>
                                               <Label text="Job Type" />
-                                              <ComboBox fx:id="cbJobType" onAction="#handleJobTypeChange" prefHeight="21.0" prefWidth="170.0" promptText="Seletc a Job Type">
+                                              <ComboBox fx:id="cbJobType" onAction="#handleJobTypeChange" prefHeight="29.0" prefWidth="170.0" promptText="Seletc a Job Type">
                                                 <items>
                                                   <FXCollections fx:factory="observableArrayList">
                                                     <String fx:value="项 1" />
@@ -667,7 +667,7 @@
                               <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="95.0" text="Job Name" />
                               <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="113.0" text="Spectra" />
                               <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="125.0" text="Start Time" />
-                              <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="141.0" text="Passed Time" />
+                              <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="141.0" text="End Time" />
                               <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="98.0" text="Cluster Size" />
                               <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="147.0" text="Instance IDs" />
                               <TableColumn maxWidth="5000.0" minWidth="10.0" prefWidth="285.0" text="Status" />
