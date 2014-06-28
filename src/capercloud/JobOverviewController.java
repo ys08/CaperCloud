@@ -51,11 +51,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -99,6 +102,7 @@ import javafx.scene.web.WebView;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import javafx.util.Duration;
 import javafx.util.StringConverter;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -1361,17 +1365,19 @@ public class JobOverviewController implements Initializable {
         InstanceType instanceType = cj.getInstanceType();
         Integer clusterSize = cj.getClusterSize();
         
-        CloudManager cm = JobOverviewController.this.mainApp.getCloudManager();     
+        CloudManager cm = JobOverviewController.this.mainApp.getCloudManager(); 
+        Date startTime = Calendar.getInstance().getTime();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
+        cj.setStartTime(sdf.format(startTime));
+        cj.setStatus("lauching instances");  
+        
         Service<List<String>> s = new Service<List<String>>() {
             @Override
             protected Task<List<String>> createTask() {
                 return new Task<List<String>>() {
                     @Override
-                    protected List<String> call() throws Exception {
-                        Date d = Calendar.getInstance().getTime();
-                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
-                        cj.setStartTime(sdf.format(d));
-                        cj.setStatus("lauching instances");            
+                    protected List<String> call() throws Exception {    
+
                         //delete and create private key
                         File privateKey = cm.createKeyPair(keyName, FileUtils.getUserDirectory());
                         //delete and create security group
@@ -1464,8 +1470,10 @@ public class JobOverviewController implements Initializable {
                 List<String> instances = s.getValue();
                 log.info("shutting down instances");
                 cj.setStatus("shutting down instances");
-                //cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
+                cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
                 cj.setStatus("job completed");
+                Date stopTime = Calendar.getInstance().getTime();
+                cj.setPassedTime(sdf.format(stopTime));
             }
         });
         s.start();
