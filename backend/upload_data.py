@@ -1,4 +1,5 @@
 import sys
+import os
 import boto
 from boto.s3.connection import OrdinaryCallingFormat
 from boto.s3.key import Key
@@ -7,8 +8,7 @@ s3_host = "192.168.99.111"
 access_key = sys.argv[1]
 secret_key = sys.argv[2]
 bucket_name = sys.argv[3]
-key_name = sys.argv[4]
-out_dir = sys.argv[5]
+file_name = os.path.basename(sys.argv[4])
  
 # Setup connection to Walrus
 s3conn = boto.connect_s3(aws_access_key_id=access_key,
@@ -20,8 +20,13 @@ s3conn = boto.connect_s3(aws_access_key_id=access_key,
                        calling_format=OrdinaryCallingFormat())
  
 # Run commands
-b = s3conn.get_bucket(bucket_name)
+print "uploading result to bucket " + bucket_name
 
-k = b.get_key(key_name)
-k.get_contents_to_filename(out_dir + "/" + key_name)
+try:
+    b = s3conn.get_bucket(bucket_name)
+except boto.exception.S3ResponseError:
+    b = s3conn.create_bucket(bucket_name)
+k = Key(b)
+k.key = file_name
+k.set_contents_from_filename(file_name)
 

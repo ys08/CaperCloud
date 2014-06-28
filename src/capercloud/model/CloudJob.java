@@ -237,14 +237,20 @@ public class CloudJob {
                 + "\t<note type=\"input\" label=\"list path, default parameters\">default_input.xml</note>" + sep
                 + "\t<note type=\"input\" label=\"list path, taxonomy information\">" + this.taxonomyFile.getName() + "</note>" + sep
                 + "\t<note type=\"input\" label=\"protein, taxon\">all</note>" + sep
-                + "\t<note type=\"input\" label=\"spectrum, path\">" + spectrumObj.getName() + "</note>" + sep
-                + "\t<note type=\"input\" label=\"output, path\">output</note>" + sep
                 + "\t<note type=\"input\" label=\"protein, cleavage site\">" + sp.getEnzyme().getXTandemFormat() + "</note>" + sep
                 + "\t<note type=\"input\" label=\"protein, cleavage semi\">" + enzymeIsSemiSpecific + "</note>" + sep
-                + modDescription
+                + "\t<note type=\"input\" label=\"spectrum, path\">" + spectrumObj.getName() + "</note>" + sep
                 + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error\">" + sp.getFragmentIonAccuracy() + "</note>" + sep
                 + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error units\">" + fragmentUnit + "</note>" + sep
+                + "\t<note type=\"input\" label=\"spectrum, parent monoisotopic mass error plus\">10</note>" + sep
+                + "\t<note type=\"input\" label=\"spectrum, parent monoisotopic mass error minus\">10</note>" + sep
+                + "\t<note type=\"input\" label=\"spectrum, parent monoisotopic mass error units\">ppm</note>" + sep
                 + "\t<note type=\"input\" label=\"refine, maximum valid expectation value\">" + xp.getMaximumExpectationValueRefinement() + "</note>" + sep
+                + modDescription
+                + "\t<note type=\"input\" label=\"scoring, maximum missed cleavage sites\">2</note>" + sep
+                + "\t<note type=\"input\" label=\"output, path\">output</note>" + sep
+                + "\t<note type=\"input\" label=\"output, parameters\">yes</note>" + sep
+                + "\t<note type=\"input\" label=\"output, path hashing\">no</note>"
                 + "</bioml>" + sep;
         
         String inputFilename = timestamp + spectrumObj.getName() + ".xml";

@@ -563,8 +563,6 @@ public class CloudManager {
         jsch.addIdentity(privateKey.getAbsolutePath());
         JSch.setConfig("StrictHostKeyChecking", "no");
         Session session=jsch.getSession(userName, ipAddress, 22);
-        log.info("wait 40 seconds");
-        Thread.sleep(40000);
         for(int i = 0; i < 10; i++) {
             try {
                 session.connect();
@@ -574,7 +572,7 @@ public class CloudManager {
                     throw ex;
                 }
                 log.info("retry " + (i+1) + " times");
-                Thread.sleep(10000);
+                Thread.sleep(20000);
             }
         }
         //session.connect();
@@ -614,7 +612,6 @@ public class CloudManager {
             
             session = jsch.getSession(userName, ipAddress, 22);
             session.setConfig("StrictHostKeyChecking", "no");
-            Thread.sleep(40000);
             for(int i = 0; i < 10; i++) {
                 try {
                     session.connect();
@@ -624,7 +621,7 @@ public class CloudManager {
                         throw ex;
                     }
                     log.info("retry " + (i+1) + " times");
-                    Thread.sleep(10000);
+                    Thread.sleep(20000);
                 }
             }
             
