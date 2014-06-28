@@ -529,11 +529,11 @@ public class JobOverviewController implements Initializable {
         this.cbCleavageSites.setItems(this.jm.getCleavageSites());
 //
         this.cbFragmentMassType.setItems(this.jm.getMassAccuracyTypes());
-        this.cbFragmentMassType.getSelectionModel().selectFirst();
+        this.cbFragmentMassType.getSelectionModel().select(1);
         
 //
         this.cbRefinementExpect.setItems(this.jm.getRefinementExpects());
-        this.cbRefinementExpect.getSelectionModel().select(2);
+        this.cbRefinementExpect.getSelectionModel().selectFirst();
         
 //
         this.rm.init(this.apSpectrum);
@@ -1366,32 +1366,78 @@ public class JobOverviewController implements Initializable {
                 return new Task<List<String>>() {
                     @Override
                     protected List<String> call() throws Exception {
+                        CloudManager cm = JobOverviewController.this.mainApp.getCloudManager();
                         //delete and create private key
-                        File privateKey = JobOverviewController.this.mainApp.getCloudManager().createKeyPair(keyName, FileUtils.getUserDirectory());
+                        File privateKey = cm.createKeyPair(keyName, FileUtils.getUserDirectory());
                         //delete and create security group
-                        JobOverviewController.this.mainApp.getCloudManager().createSecurityGroup(securityGroup, "capercloud group");
+                        cm.createSecurityGroup(securityGroup, "capercloud group");
                         //create on-demand instances
-                        List<String> instances = JobOverviewController.this.mainApp.getCloudManager().createOnDemandInstances(imageId, instanceType, clusterSize, keyName, securityGroup);
+                        List<String> instances = cm.createOnDemandInstances(imageId, instanceType, clusterSize, keyName, securityGroup);
                         //copy file and run it
                         String masterId = instances.get(0);
-                        String masterPrivateIp = JobOverviewController.this.mainApp.getCloudManager().getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(masterId)).getReservations().get(0).getInstances().get(0).getPrivateIpAddress();
-                        DescribeInstancesResult r = JobOverviewController.this.mainApp.getCloudManager().getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
+                        Instance masterInstance = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(masterId)).getReservations().get(0).getInstances().get(0);
+                        String masterPrivateIp = masterInstance.getPrivateIpAddress();
+                        String masterPublicIp = masterInstance.getPublicIpAddress();
+                                
+                        DescribeInstancesResult r = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
                         Iterator i = r.getReservations().iterator();
-
                         while (i.hasNext()) {
                             Reservation rr = (Reservation) i.next();
                             for (Instance ii : rr.getInstances()) {
-                                System.out.println(ii.getPublicIpAddress());
-                                String cmd = "./hadoop-remote-init.sh " + masterPrivateIp;
-                                JobOverviewController.this.mainApp.getCloudManager().remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd, privateKey);
-                                JobOverviewController.this.mainApp.getCloudManager().sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/download_data.py", "/home/ec2-user/download_data.py", privateKey);
+                                String cmd1 = "sudo chmod 777 /mnt;sudo service ntpd stop;sudo ntpdate 192.168.99.111;sudo service ntpd start;";
+                                log.info("remote execute: " + cmd1);
+                                cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd1, privateKey);
+                                //String cmd = "./hadoop-remote-init.sh " + masterPrivateIp;
+                                //JobOverviewController.this.mainApp.getCloudManager().remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd, privateKey);
+                                log.info("uploading download_data.py");
+                                cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/download_data.py", "/home/ec2-user/download_data.py", privateKey);
+                                log.info("uploading upload_data.py");
+                                cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/download_data.py", "/home/ec2-user/download_data.py", privateKey);
+                                log.info("uploading taxonomy file: " + cj.getTaxonomyFile().getAbsolutePath());
+                                cm.sftp("ec2-user", ii.getPublicIpAddress(), cj.getTaxonomyFile().getAbsolutePath(), "/mnt/"+cj.getTaxonomyFile().getName(), privateKey);
+                                log.info("uploading input file: " + cj.getInputFiles().get(0).getAbsolutePath());
+                                cm.sftp("ec2-user", ii.getPublicIpAddress(), cj.getInputFiles().get(0).getAbsolutePath(), "/mnt/"+cj.getInputFiles().get(0).getName(), privateKey);
+                                log.info("uploading mrtandem binary file");
+                                cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Bio/tandem-bin/mrtandem-centos", "/mnt/mrtandem", privateKey);
+                                cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), "chmod 755 /mnt/mrtandem", privateKey); 
+                                log.info("uploading x!tandem default xml");
+                                cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Bio/tandem-bin/default_input.xml", "/mnt/default_input.xml", privateKey);
                                 
+                                int jobType = cj.getJobType();
+                                if (jobType == 1) {
+                                    String fdr = JobOverviewController.this.t1c.getFdr();
+                                    String chrNum = JobOverviewController.this.t1c.getSelectedChromosomeNumber();
+                                    String refDatabase = "chr_" + chrNum + "_six_20.fasta";
+                                    //download reference database from s3
+                                    String cmd2 = "python download_data.py " + cm.getCurrentCredentials().getAccessKey() 
+                                            + " " + cm.getCurrentCredentials().getSecretKey()
+                                            + " " + "capercloud-ref"
+                                            + " " + refDatabase
+                                            + " " + "/mnt";
+                                    log.debug(cmd2);
+                                    cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd2, privateKey); 
+                                    //download spectra file from s3
+                                    String cmd3 = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
+                                            + " " + cm.getCurrentCredentials().getSecretKey()
+                                            + " " + cj.getSpectrumObjs().get(0).getBucketName()
+                                            + " " + cj.getSpectrumObjs().get(0).getName()
+                                            + " " + "/mnt";
+                                    log.debug(cmd3);
+                                    cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd3, privateKey);
+                                }
                             }
                         }
-                        return instances; 
+                        
+                        // execute mrtandem
+                        String cmd4 = "cd /mnt/ && ./mrtandem " + cj.getInputFiles().get(0).getName();
+                        log.debug(cmd4);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmd4, privateKey);
+                        // upload result
+                        //String cmd5 = "cd ~ && python upload_data.py";
+                        return instances;
                     }
                 };
-            }
+            };
         };
         
         s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
@@ -1403,12 +1449,7 @@ public class JobOverviewController implements Initializable {
         });
         s.start();
         //submit job-specific parameters here
-        int jobType = cj.getJobType();
-        if (jobType == 1) {
-            String fdr = this.t1c.getFdr();
-            log.debug(cj.getTaxonomyFile());
-            log.debug(cj.getInputFiles());
-        }
+
 
         //CloudJob job = this.sm.getJobs().get(this.sm.getJobs().size() - 1);
         
@@ -1517,6 +1558,7 @@ public class JobOverviewController implements Initializable {
 //            }
 //        }
 //    }
+    
     @FXML
     private void handleDownloadResultAction() {
         //TO DO
