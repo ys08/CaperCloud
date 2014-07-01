@@ -1483,28 +1483,45 @@ public class JobOverviewController implements Initializable {
                         log.debug(cmdWaitHadoopCluster);
                         cm.remoteCallByShh("ec2-user", masterPublicIp, cmdWaitHadoopCluster, privateKey);
                         
-                        String cmdSearch = "cat step1input|/mnt/mrtandem -mapper1_1"
-                                + " hdfs://" + masterPrivateIp + ":9000/user/ec2-user/"
-                                + " /mnt/" + cj.getInputFiles().get(0).getName()
-                                + "|sort|/mnt/mrtandem -reducer1_1"
-                                + " hdfs://" + masterPrivateIp + ":9000/user/ec2-user/"
-                                + " /mnt/" + cj.getInputFiles().get(0).getName();
-                        log.debug(cmdSearch);
+                        //generate step1input
+                        StringBuilder step1InputLines = new StringBuilder();
+                        int multi = 2;
+                        int numOfMappers = Integer.parseInt(cj.clusterSizeProperty().get()) * multi;
+                        for (int j=1; j<numOfMappers; j++) {
+                            step1InputLines.append(j).append("    ").append(numOfMappers).append("\n");
+                        }
+                        step1InputLines.append(numOfMappers).append("    ").append(numOfMappers);
+                        File step1InputFile = new File("step1input");
+                        FileUtils.writeStringToFile(step1InputFile, step1InputLines.toString());
+                        cm.sftp("ec2-user", masterPublicIp, step1InputFile.getAbsolutePath(), "/home/ec2-user/step1input", privateKey);
+                        //upload step1input to hdfs
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, "hadoop dfs -put /home/ec2-user/step1input step1input", privateKey);
                         
-//                        cj.setStatus("mrtandem searching");
-//                        String cmd4 = "cd /mnt/ && ./mrtandem " + cj.getInputFiles().get(0).getName();
-//                        log.debug(cmd4);
-//                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmd4, privateKey);
-//                        
-//                        // upload result to s3
-//                        cj.setStatus("uploading result to s3");
-//                        String bucketName = JobOverviewController.this.tfOutputBucketName.getText();
-//                        String cmd5 = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
-//                                + " " + cm.getCurrentCredentials().getSecretKey()
-//                                + " " + bucketName
-//                                + " " + "/mnt/output";
-//                        log.debug(cmd5);
-//                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmd5, privateKey);
+                        //be careful, it's a mess
+                        String cmdStepOne = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1input -output step1output -mapper \"/mnt/mrtandem -mapper1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\" -reducer \"/mnt/mrtandem -reducer1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\"";
+                        log.debug(cmdStepOne);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepOne, privateKey);
+
+                        String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer1_1#reducer1_1 -mapper \"/mnt/mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\" -reducer \"/mnt/mrtandem -reducer2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\"";
+                        log.debug(cmdStepTwo);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepTwo, privateKey);
+                        
+                        String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer2_1#reducer2_1 -mapper \"/mnt/mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\" -reducer \"/mnt/mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/ec2-user/\"";
+                        log.debug(cmdStepThree);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepThree, privateKey);
+                        
+                        //download output(in hdfs) to local
+                        String cmdDownloadOutput = "hadoop dfs -copyToLocal output output";
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadOutput, privateKey);
+                        // upload result to s3
+                        cj.setStatus("uploading result to s3");
+                        String bucketName = JobOverviewController.this.tfOutputBucketName.getText();
+                        String cmd5 = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
+                                + " " + cm.getCurrentCredentials().getSecretKey()
+                                + " " + bucketName
+                                + " " + "/home/ec2-user/output";
+                        log.debug(cmd5);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmd5, privateKey);
                         
                         return instances;
                     }

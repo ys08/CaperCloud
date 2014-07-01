@@ -7,6 +7,7 @@
 package capercloud;
 
 import capercloud.s3.S3Manager;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.AuthorizeSecurityGroupIngressRequest;
@@ -595,6 +596,9 @@ public class CloudManager {
             }
             if (channel.isClosed()){
                 log.info("exit-status: " + channel.getExitStatus());
+                if (channel.getExitStatus() != 0) {
+                    System.exit(1);
+                }
                 break;
             }
             Thread.sleep(1000);
@@ -659,7 +663,12 @@ public class CloudManager {
         DescribeKeyPairsResult r = this.ec2Client.describeKeyPairs(new DescribeKeyPairsRequest().withKeyNames(keyName));
         if (!r.getKeyPairs().isEmpty()) {
             log.info("delete existing key: " + keyName);
-            this.ec2Client.deleteKeyPair(new DeleteKeyPairRequest().withKeyName(keyName));
+            try {
+                this.ec2Client.deleteKeyPair(new DeleteKeyPairRequest().withKeyName(keyName));
+            } catch (AmazonServiceException ex) {
+                ex.printStackTrace();
+                System.exit(1);
+            }
         }
         log.info("create new key: " + keyName);
         CreateKeyPairResult rr = this.ec2Client.createKeyPair(new CreateKeyPairRequest().withKeyName(keyName));
