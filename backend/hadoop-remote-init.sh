@@ -5,7 +5,7 @@ MASTER_IP=$1
 LOCAL_IP=`curl http://169.254.169.254/latest/meta-data/local-ipv4`
 IS_MASTER=false
 
-sudo mkdir /mnt/hadoop
+[ ! -f /etc/hosts ] &&  echo "127.0.0.1 localhost" > /etc/hosts
 
 if [ $MASTER_IP == $LOCAL_IP ]; then
   IS_MASTER=true
@@ -63,13 +63,13 @@ cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
 EOF
 
 if [ "$IS_MASTER" == "true" ]; then
-  [ ! -e /mnt/hadoop/dfs ] && sudo "$HADOOP_HOME"/bin/hadoop namenode -format
-  sudo "$HADOOP_HOME"/bin/hadoop-daemon.sh start namenode
-  sudo "$HADOOP_HOME"/bin/hadoop-daemon.sh start jobtracker
-  sudo "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
-  sudo "$HADOOP_HOME"/bin/hadoop-daemon.sh start tasktracker
+  [ ! -e /mnt/hadoop/dfs ] && "$HADOOP_HOME"/bin/hadoop namenode -format
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start namenode
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start jobtracker
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start tasktracker
 else
-  sudo "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
-  sudo "$HADOOP_HOME"/bin/hadoop-daemon.sh start tasktracker
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start tasktracker
 fi
 

@@ -1322,6 +1322,15 @@ public class JobOverviewController implements Initializable {
         if (cj.getJobType() == 1) {
             try {
                 String chromNum = this.t1c.getSelectedChromosomeNumber();
+                if (chromNum == null) {
+                    Dialogs.create()
+                            .owner(this.mainApp.getPrimaryStage())
+                            .title("Error")
+                            .masthead(null)
+                            .message("Please select one chromosome!")
+                            .showError();
+                    return;
+                }
                 cj.createTaxonomyFile("chr_" + chromNum + "_six_20.fasta");
                 cj.createInputFiles();
             } catch (IOException ex) {
@@ -1397,12 +1406,13 @@ public class JobOverviewController implements Initializable {
                                 
                         DescribeInstancesResult r = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
                         Iterator i = r.getReservations().iterator();
+                        
                         while (i.hasNext()) {
                             // on every node
                             Reservation rr = (Reservation) i.next();
                             for (Instance ii : rr.getInstances()) {
                                 //correct time on eucalyptus
-                                String cmd1 = "sudo chmod 777 /mnt;sudo service ntpd stop;sudo ntpdate 192.168.99.111;sudo service ntpd start;";
+                                String cmd1 = "sudo chmod 777 /mnt;mkdir /mnt/hadoop;sudo service ntpd stop;sudo ntpdate 192.168.99.111;sudo service ntpd start;echo \"export PATH=$PATH:/usr/local/hadoop-1.2.1/bin\" >> /home/ec2-user/.bashrc;source /home/ec2-user/.bashrc";
                                 log.info("remote execute: " + cmd1);
                                 cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd1, privateKey);
                                 
@@ -1454,9 +1464,17 @@ public class JobOverviewController implements Initializable {
                         cm.sftp("ec2-user", masterPublicIp, "/Users/shuai/Developer/CaperCloud/backend/wait_hadoop.sh", "/home/ec2-user/wait_hadoop.sh", privateKey);
                         // on master
                         // execute mrtandem
-                        String cmdWaitHadoopCluster = "chmod 755 wait_hadoop.sh;sudo ./wait_hadoop.sh " + cj.getClusterSize().toString() + ";sudo /usr/local/hadoop-1.2.1/bin/hadoop dfs -mkdir test";
+                        String cmdWaitHadoopCluster = "chmod 755 wait_hadoop.sh;./wait_hadoop.sh " + cj.getClusterSize().toString() + ";hadoop dfs -mkdir test";
                         log.debug(cmdWaitHadoopCluster);
                         cm.remoteCallByShh("ec2-user", masterPublicIp, cmdWaitHadoopCluster, privateKey);
+                        
+                        String cmdSearch = "cat step1input|/mnt/mrtandem -mapper1_1"
+                                + " hdfs://" + masterPrivateIp + ":9000/user/ec2-user/"
+                                + " /mnt/" + cj.getInputFiles().get(0).getName()
+                                + "|sort|/mnt/mrtandem -reducer1_1"
+                                + " hdfs://" + masterPrivateIp + ":9000/user/ec2-user/"
+                                + " /mnt/" + cj.getInputFiles().get(0).getName();
+                        log.debug(cmdSearch);
                         
 //                        cj.setStatus("mrtandem searching");
 //                        String cmd4 = "cd /mnt/ && ./mrtandem " + cj.getInputFiles().get(0).getName();
