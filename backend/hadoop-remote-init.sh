@@ -5,8 +5,6 @@ MASTER_IP=$1
 LOCAL_IP=`curl http://169.254.169.254/latest/meta-data/local-ipv4`
 IS_MASTER=false
 
-[ ! -f /etc/hosts ] &&  echo "127.0.0.1 localhost" > /etc/hosts
-
 if [ $MASTER_IP == $LOCAL_IP ]; then
   IS_MASTER=true
 fi

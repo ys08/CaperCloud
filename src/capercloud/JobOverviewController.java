@@ -1403,19 +1403,34 @@ public class JobOverviewController implements Initializable {
                         Instance masterInstance = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(masterId)).getReservations().get(0).getInstances().get(0);
                         String masterPrivateIp = masterInstance.getPrivateIpAddress();
                         String masterPublicIp = masterInstance.getPublicIpAddress();
-                                
+                        
+                        //make hosts file
                         DescribeInstancesResult r = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
                         Iterator i = r.getReservations().iterator();
+                        StringBuilder hosts = new StringBuilder();
+                        while (i.hasNext()) {
+                            Reservation rr = (Reservation) i.next();
+                            for (Instance ii : rr.getInstances()) {
+                                String hostIp = ii.getPrivateIpAddress();
+                                String hostName = "ip." + hostIp;
+                                hostName = hostName.replaceAll("\\.", "-");
+                                log.debug("hostname: " + hostName);
+                                hosts.append(hostIp).append("    ").append(hostName).append("\n");
+                            }
+                        }
+                        log.debug(hosts.toString());
                         
+                        r = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
+                        i = r.getReservations().iterator();
                         while (i.hasNext()) {
                             // on every node
                             Reservation rr = (Reservation) i.next();
                             for (Instance ii : rr.getInstances()) {
+                                log.debug(ii.getPublicDnsName());
                                 //correct time on eucalyptus
-                                String cmd1 = "sudo chmod 777 /mnt;mkdir /mnt/hadoop;sudo service ntpd stop;sudo ntpdate 192.168.99.111;sudo service ntpd start;echo \"export PATH=$PATH:/usr/local/hadoop-1.2.1/bin\" >> /home/ec2-user/.bashrc;source /home/ec2-user/.bashrc";
+                                String cmd1 = "sudo chmod 777 /mnt;mkdir /mnt/hadoop;sudo service ntpd stop;sudo ntpdate 192.168.99.111;sudo service ntpd start;echo \"export PATH=$PATH:/usr/local/hadoop-1.2.1/bin\" >> /home/ec2-user/.bashrc;source /home/ec2-user/.bashrc;echo '" + hosts.toString() + "' | sudo tee -a /etc/hosts";
                                 log.info("remote execute: " + cmd1);
                                 cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd1, privateKey);
-                                
                                 //launching hadoop cluster
                                 log.info("uploading hadoop-remote-init.sh");
                                 cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/hadoop-remote-init.sh", "/home/ec2-user/hadoop-remote-init.sh", privateKey);
