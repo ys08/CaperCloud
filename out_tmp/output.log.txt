@@ -1,0 +1,47 @@
+Percolator version 2.04, Build Date Feb  1 2012 09:22:50
+Copyright (c) 2006-9 University of Washington. All rights reserved.
+Written by Lukas Käll (lukall@u.washington.edu) in the
+Department of Genome Sciences at the University of Washington.
+Issued command:
+/Users/shuai/Developer/CaperCloud/backend/IPeak_release/percolator/percolator_mac.exe -j /Users/shuai/Developer/CaperCloud/out_tmp/output.features -X /Users/shuai/Developer/CaperCloud/out_tmp/output.tempXML -B /Users/shuai/Developer/CaperCloud/out_tmp/output.decoy.txt -U
+Started Sun Jun 29 14:33:42 2014
+Hyperparameters fdr=0.01, Cpos=0, Cneg=0, maxNiter=10
+Reading Tab delimetered input from datafile /Users/shuai/Developer/CaperCloud/out_tmp/output.features
+Reading Tab delimetered input from datafile /Users/shuai/Developer/CaperCloud/out_tmp/output.features
+Train/test set contains 331 positives and 125 negatives, size ratio=2.648 and pi0=1
+selecting cpos by cross validation
+selecting cneg by cross validation
+Selected feature number 24 as initial search direction, could separate 110 positives in that direction
+Selected feature number 24 as initial search direction, could separate 108 positives in that direction
+Selected feature number 24 as initial search direction, could separate 115 positives in that direction
+Estimating 165 over q=0.01 in initial direction
+Reading in data and feature calculation took 0.057986 cpu seconds or 0 seconds wall time
+---Training with Cpos selected by cross validation, Cneg selected by cross validation, fdr=0.01
+Iteration 1 :	After the iteration step, 252 target PSMs with q<0.01 were estimated by cross validation
+Iteration 2 :	After the iteration step, 267 target PSMs with q<0.01 were estimated by cross validation
+Iteration 3 :	After the iteration step, 272 target PSMs with q<0.01 were estimated by cross validation
+Iteration 4 :	After the iteration step, 274 target PSMs with q<0.01 were estimated by cross validation
+Iteration 5 :	After the iteration step, 275 target PSMs with q<0.01 were estimated by cross validation
+Iteration 6 :	After the iteration step, 275 target PSMs with q<0.01 were estimated by cross validation
+Iteration 7 :	After the iteration step, 275 target PSMs with q<0.01 were estimated by cross validation
+Iteration 8 :	After the iteration step, 275 target PSMs with q<0.01 were estimated by cross validation
+Iteration 9 :	After the iteration step, 275 target PSMs with q<0.01 were estimated by cross validation
+Iteration 10 :	After the iteration step, 275 target PSMs with q<0.01 were estimated by cross validation
+Obtained weights (only showing weights of first cross validation set)
+# first line contains normalized weights, second line the raw weights
+HyperScore	NextScore	DeltaScore	Mass	Charge	DeltaMass	DeltaMassPPM	absDM	absDMppm	IsoDM	IsoDMppm	MissedCleavages	VarModRatio	TotalIntensity	MatchedIonInt	relTotMatchedIonInt	MaxMatchedIonInt	BIons	BIonScore	YIons	YIonScore	Longest	PepLen	Log10Evalue	fracIonSeries_0	relIonSeriesInt_0	fracIonSeries_1	relIonSeriesInt_1	fracIonSeries_2	relIonSeriesInt_2	fracIonSeries_3	relIonSeriesInt_3	fracIonSeries_4	relIonSeriesInt_4	fracIonSeries_5	relIonSeriesInt_5	fracIonSeries_6	relIonSeriesInt_6	fracIonSeries_7	relIonSeriesInt_7	fracIonSeries_8	relIonSeriesInt_8	fracIonSeries_9	relIonSeriesInt_9	fracIonSeries_10	relIonSeriesInt_10	fracIonSeries_11	relIonSeriesInt_11	Peptide	Proteins	HyperScore	NextScore	DeltaScore	Mass	Charge	DeltaMass	DeltaMassPPM	absDM	absDMppm	IsoDM	IsoDMppm	MissedCleavages	VarModRatio	TotalIntensity	MatchedIonInt	relTotMatchedIonInt	MaxMatchedIonInt	BIons	BIonScore	YIons	YIonScore	Longest	PepLen	Log10Evalue	fracIonSeries_0	relIonSeriesInt_0	fracIonSeries_1	relIonSeriesInt_1	fracIonSeries_2	relIonSeriesInt_2	fracIonSeries_3	relIonSeriesInt_3	fracIonSeries_4	relIonSeriesInt_4	fracIonSeries_5	relIonSeriesInt_5	fracIonSeries_6	relIonSeriesInt_6	fracIonSeries_7	relIonSeriesInt_7	fracIonSeries_8	relIonSeriesInt_8	fracIonSeries_9	relIonSeriesInt_9	fracIonSeries_10	relIonSeriesInt_10	fracIonSeries_11	relIonSeriesInt_11	Peptide	Proteins	m0
+0.0889	-0.2105	0.1791	0.0985	0.3349	0.1313	-0.0052	0.1349	0.0054	0.1428	0.3087	-0.1373	-0.2187	0.1119	0.0836	-0.0026	-0.1923	-0.2732	0.3143	0.3713	0.3780	0.6949	-0.0125	0.2306	0.0669	0.0667	0.1090	-0.4940	0.1934	0.1585	0.2449	-0.3274	-0.1685	0.1958	0.2176	0.0664	0.4999	0.0858	-0.2333	0.0917	0.0005	0.1582	0.0737	-0.0350	0.4579	-0.1736	-0.0662	0.1480	0.4261
+0.0108	-0.0685	0.0233	0.0002	0.6572	0.3101	-0.0000	0.3194	0.0000	28.8203	0.1120	-0.0987	-0.7377	0.2790	0.1567	-0.0129	-0.0000	-0.1262	0.1015	0.1424	0.1904	0.2517	-0.0027	0.1118	0.0043	0.0109	0.0130	-0.2952	0.0176	0.0424	0.0328	-0.0951	-0.0308	0.1132	0.0395	0.0437	0.0205	0.0063	-0.0145	0.0318	0.0000	0.0687	0.0039	-0.0046	0.0798	-0.0758	-0.0053	0.0460	-11.2101
+After all training done, 131 target PSMs with q<0.0100 were found when measuring on the test set
+Found 131 target PSMs scoring over 1.0000% FDR level on testset
+Less identifications (131 vs 165) after percolator processing than before processing
+Reseting score vector, using default vector
+Selected feature number 24 as initial search direction, could separate 110 positives in that direction
+Selected feature number 24 as initial search direction, could separate 108 positives in that direction
+Selected feature number 24 as initial search direction, could separate 115 positives in that direction
+Merging results from 3 datasets
+Selecting pi_0=0.3004
+Calibrating statistics - calculating q values
+New pi_0 estimate on merged list gives 122 PSMs over q=0.0100
+Calibrating statistics - calculating Posterior error probabilities (PEPs)
+Processing took 2.115 cpu seconds or 2 seconds wall time

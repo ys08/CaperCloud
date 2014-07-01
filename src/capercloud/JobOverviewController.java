@@ -20,6 +20,7 @@ import capercloud.model.ResultModel;
 import capercloud.model.SpectrumModel;
 import capercloud.model.StatusModel;
 import capercloud.model.UploadTask;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.Instance;
@@ -31,6 +32,8 @@ import com.amazonaws.services.ec2.model.StopInstancesRequest;
 import com.amazonaws.services.ec2.model.StopInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.compomics.util.experiment.biology.Enzyme;
 import com.compomics.util.experiment.identification.SearchParameters;
 import com.compomics.util.experiment.identification.SearchParameters.MassAccuracyType;
@@ -38,7 +41,11 @@ import com.compomics.util.experiment.identification.identification_parameters.Xt
 import com.compomics.util.preferences.ModificationProfile;
 import impl.org.controlsfx.i18n.Localization;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -51,14 +58,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.ResourceBundle;
-import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -102,7 +106,6 @@ import javafx.scene.web.WebView;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import javafx.util.Duration;
 import javafx.util.StringConverter;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -1398,11 +1401,16 @@ public class JobOverviewController implements Initializable {
                             // on every node
                             Reservation rr = (Reservation) i.next();
                             for (Instance ii : rr.getInstances()) {
+                                //correct time on eucalyptus
                                 String cmd1 = "sudo chmod 777 /mnt;sudo service ntpd stop;sudo ntpdate 192.168.99.111;sudo service ntpd start;";
                                 log.info("remote execute: " + cmd1);
                                 cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd1, privateKey);
-                                //String cmd = "./hadoop-remote-init.sh " + masterPrivateIp;
-                                //JobOverviewController.this.mainApp.getCloudManager().remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd, privateKey);
+                                
+                                //launching hadoop cluster
+                                log.info("uploading hadoop-remote-init.sh");
+                                cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/hadoop-remote-init.sh", "/home/ec2-user/hadoop-remote-init.sh", privateKey);
+                                String cmd = "chmod 755 hadoop-remote-init.sh;./hadoop-remote-init.sh " + masterPrivateIp;
+                                cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd, privateKey);
                                 log.info("uploading download_data.py");
                                 cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/download_data.py", "/home/ec2-user/download_data.py", privateKey);
                                 log.info("uploading upload_data.py");
@@ -1441,22 +1449,29 @@ public class JobOverviewController implements Initializable {
                                 }
                             }
                         }
+                        
+                        //wait hadoop cluster start up
+                        cm.sftp("ec2-user", masterPublicIp, "/Users/shuai/Developer/CaperCloud/backend/wait_hadoop.sh", "/home/ec2-user/wait_hadoop.sh", privateKey);
                         // on master
                         // execute mrtandem
-                        cj.setStatus("mrtandem searching");
-                        String cmd4 = "cd /mnt/ && ./mrtandem " + cj.getInputFiles().get(0).getName();
-                        log.debug(cmd4);
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmd4, privateKey);
+                        String cmdWaitHadoopCluster = "chmod 755 wait_hadoop.sh;sudo ./wait_hadoop.sh " + cj.getClusterSize().toString() + ";sudo /usr/local/hadoop-1.2.1/bin/hadoop dfs -mkdir test";
+                        log.debug(cmdWaitHadoopCluster);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdWaitHadoopCluster, privateKey);
                         
-                        // upload result to s3
-                        cj.setStatus("uploading result to s3");
-                        String bucketName = JobOverviewController.this.tfOutputBucketName.getText();
-                        String cmd5 = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
-                                + " " + cm.getCurrentCredentials().getSecretKey()
-                                + " " + bucketName
-                                + " " + "/mnt/output";
-                        log.debug(cmd5);
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmd5, privateKey);
+//                        cj.setStatus("mrtandem searching");
+//                        String cmd4 = "cd /mnt/ && ./mrtandem " + cj.getInputFiles().get(0).getName();
+//                        log.debug(cmd4);
+//                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmd4, privateKey);
+//                        
+//                        // upload result to s3
+//                        cj.setStatus("uploading result to s3");
+//                        String bucketName = JobOverviewController.this.tfOutputBucketName.getText();
+//                        String cmd5 = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
+//                                + " " + cm.getCurrentCredentials().getSecretKey()
+//                                + " " + bucketName
+//                                + " " + "/mnt/output";
+//                        log.debug(cmd5);
+//                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmd5, privateKey);
                         
                         return instances;
                     }
@@ -1467,44 +1482,48 @@ public class JobOverviewController implements Initializable {
         s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
             @Override
             public void handle(WorkerStateEvent t) {
-                List<String> instances = s.getValue();
-                log.info("shutting down instances");
-                cj.setStatus("shutting down instances");
-                cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
-                cj.setStatus("job completed");
-                Date stopTime = Calendar.getInstance().getTime();
-                cj.setPassedTime(sdf.format(stopTime));
+//                List<String> instances = s.getValue();
+//                log.info("shutting down instances");
+//                cj.setStatus("shutting down instances");
+//                cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
+//                cj.setStatus("downloading result");
+//                AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
+//                s3Client.setEndpoint("http://192.168.99.111:8773/services/Walrus/");
+//                writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "output")).getObjectContent(), new File("backend/IPeak_release/output.xml"));
+//                try {
+//                    cj.setStatus("post processing");
+//                    if (cj.getJobType() == 1) {
+//                        String postProcessCMD = "backend/IPeak_release/post_process.py backend/IPeak_release/output.xml " + JobOverviewController.this.t1c.getFdr();
+//                        log.debug(postProcessCMD);
+//                        Runtime.getRuntime().exec("backend/IPeak_release/post_process.py backend/IPeak_release/output.xml");
+//                    }
+//                } catch (IOException ex) {
+//                    Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+//                }
+//                
+//                cj.setStatus("job completed");
+//                Date stopTime = Calendar.getInstance().getTime();       
+//                cj.setPassedTime(sdf.format(stopTime));
             }
         });
         s.start();
-        
-        //submit job-specific parameters here
-
-
-        //CloudJob job = this.sm.getJobs().get(this.sm.getJobs().size() - 1);
-        
-
-//        Service s = job.createLaunchMasterNodeService();
-//        s.setOnSucceeded(new EventHandler() {
-//            @Override
-//            public void handle(Event t) {
-//                RunInstancesResult res = (RunInstancesResult) s.getValue();
-////update job tableview
-//                job.setStatus("launching compute nodes");
-//                Date d = Calendar.getInstance().getTime();
-//                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
-//                job.setStartTime(sdf.format(d));
-//                
-//                Instance launchedInstance = res.getReservation().getInstances().get(0);
-//                InstanceModel im = new InstanceModel(launchedInstance);
-//                job.setInstanceId(launchedInstance.getInstanceId());
-//                
-//                JobOverviewController.this.sm.addInstance(im);
-//                ((TableColumn) JobOverviewController.this.tvJobMonitor.getColumns().get(0)).setVisible(false);
-//                ((TableColumn) JobOverviewController.this.tvJobMonitor.getColumns().get(0)).setVisible(true);
-//            }
-//        });
-//        s.start();
+    }
+    private static void writeInputStreamToFile(InputStream inputStream, File outFile) {
+        OutputStream outputStream = null;
+        try {
+            outputStream = new FileOutputStream(outFile);
+            int read = 0;
+            byte[] bytes = new byte[1024];
+            
+            while ((read = inputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, read);
+            }
+            outputStream.close();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
     private void refreshTable() {
@@ -1614,7 +1633,7 @@ public class JobOverviewController implements Initializable {
                         updateProgress(-1, 0);
                         updateMessage("Loading peptides...please wait");
                         try {
-                            JobOverviewController.this.rm.load(new File("/Users/shuai/Developer/CaperCloud/backend/IPeak_release/out_tmp/outputAddP.mzid"), 
+                            JobOverviewController.this.rm.load(new File("result.mzid"), 
                                     new File("/Users/shuai/Bio/tools/tandem-osx-13-09-01-1/bin/120426_Jurkat_highLC_Frac2.mgf"));
                             //this.rm.load(new File("/Users/shuai/Developer/CaperCloud/example_files/55merge_omssa.mzid"), new File("example_files/55merge.mgf"));
                         } catch (Exception ex) {
