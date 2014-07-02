@@ -1436,6 +1436,7 @@ public class JobOverviewController implements Initializable {
                                 cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/hadoop-remote-init.sh", "/home/ec2-user/hadoop-remote-init.sh", privateKey);
                                 String cmd = "chmod 755 hadoop-remote-init.sh;./hadoop-remote-init.sh " + masterPrivateIp;
                                 cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmd, privateKey);
+
                                 log.info("uploading download_data.py");
                                 cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/download_data.py", "/home/ec2-user/download_data.py", privateKey);
                                 log.info("uploading upload_data.py");

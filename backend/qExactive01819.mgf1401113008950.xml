@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<bioml>
+	<note type="input" label="list path, default parameters">default_input.xml</note>
+	<note type="input" label="list path, taxonomy information">1401113008950taxonomy.xml</note>
+	<note type="input" label="protein, taxon">all</note>
+	<note type="input" label="spectrum, path">qExactive01819.mgf</note>
+	<note type="input" label="output, path">output</note>
+	<note type="input" label="protein, cleavage site">[FYWL]|{P}</note>
+	<note type="input" label="protein, cleavage semi">no</note>
+	<note type="input" label="spectrum, fragment monoisotopic mass error">2.0</note>
+	<note type="input" label="spectrum, fragment monoisotopic mass error units">ppm</note>
+	<note type="input" label="refine, maximum valid expectation value">-2.0</note>
+</bioml>
