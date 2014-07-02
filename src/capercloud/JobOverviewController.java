@@ -1475,6 +1475,7 @@ public class JobOverviewController implements Initializable {
                             }
                         }
                         
+                        cj.setStatus("x!tandem searching");
                         //wait hadoop cluster start up
                         cm.sftp("ec2-user", masterPublicIp, "/Users/shuai/Developer/CaperCloud/backend/wait_hadoop.sh", "/home/ec2-user/wait_hadoop.sh", privateKey);
                         // on master
@@ -1495,20 +1496,27 @@ public class JobOverviewController implements Initializable {
                         FileUtils.writeStringToFile(step1InputFile, step1InputLines.toString());
                         cm.sftp("ec2-user", masterPublicIp, step1InputFile.getAbsolutePath(), "/home/ec2-user/step1input", privateKey);
                         //upload step1input to hdfs
+                        log.info("******************"+Calendar.getInstance().getTime());
                         cm.remoteCallByShh("ec2-user", masterPublicIp, "hadoop dfs -put /home/ec2-user/step1input step1input", privateKey);
                         
+                        String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
                         //be careful, it's a mess
-                        String cmdStepOne = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1input -output step1output -mapper \"/mnt/mrtandem -mapper1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\" -reducer \"/mnt/mrtandem -reducer1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\"";
+                        cj.setStatus("first stage of mapping and reducing");
+                        String cmdStepOne = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1input -output step1output -mapper \"/mnt/mrtandem -mapper1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\" -reducer \"/mnt/mrtandem -reducer1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
                         log.debug(cmdStepOne);
                         cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepOne, privateKey);
 
-                        String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer1_1#reducer1_1 -mapper \"/mnt/mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\" -reducer \"/mnt/mrtandem -reducer2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\"";
+                        cj.setStatus("second stage of mapping and reducing");
+                        String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer1_1#reducer1_1 -mapper \"/mnt/mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\" -reducer \"/mnt/mrtandem -reducer2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
                         log.debug(cmdStepTwo);
                         cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepTwo, privateKey);
                         
-                        String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer2_1#reducer2_1 -mapper \"/mnt/mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\" -reducer \"/mnt/mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/ec2-user/\"";
+                        cj.setStatus("final stage of mapping and reducing");
+                        String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer2_1#reducer2_1 -mapper \"/mnt/mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + "\" -reducer \"/mnt/mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ /mnt/" + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/ec2-user/\"" + stepArgs;
                         log.debug(cmdStepThree);
                         cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepThree, privateKey);
+                        
+                        log.info("******************"+Calendar.getInstance().getTime());
                         
                         //download output(in hdfs) to local
                         String cmdDownloadOutput = "hadoop dfs -copyToLocal output output";
@@ -1532,28 +1540,28 @@ public class JobOverviewController implements Initializable {
         s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
             @Override
             public void handle(WorkerStateEvent t) {
-//                List<String> instances = s.getValue();
-//                log.info("shutting down instances");
-//                cj.setStatus("shutting down instances");
-//                cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
-//                cj.setStatus("downloading result");
-//                AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
-//                s3Client.setEndpoint("http://192.168.99.111:8773/services/Walrus/");
-//                writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "output")).getObjectContent(), new File("backend/IPeak_release/output.xml"));
-//                try {
-//                    cj.setStatus("post processing");
-//                    if (cj.getJobType() == 1) {
-//                        String postProcessCMD = "backend/IPeak_release/post_process.py backend/IPeak_release/output.xml " + JobOverviewController.this.t1c.getFdr();
-//                        log.debug(postProcessCMD);
-//                        Runtime.getRuntime().exec("backend/IPeak_release/post_process.py backend/IPeak_release/output.xml");
-//                    }
-//                } catch (IOException ex) {
-//                    Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
-//                }
-//                
-//                cj.setStatus("job completed");
-//                Date stopTime = Calendar.getInstance().getTime();       
-//                cj.setPassedTime(sdf.format(stopTime));
+                List<String> instances = s.getValue();
+                log.info("shutting down instances");
+                cj.setStatus("shutting down instances");
+                cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
+                cj.setStatus("downloading result");
+                AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
+                s3Client.setEndpoint("http://192.168.99.111:8773/services/Walrus/");
+                writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "output")).getObjectContent(), new File("backend/IPeak_release/output.xml"));
+                try {
+                    cj.setStatus("post processing");
+                    if (cj.getJobType() == 1) {
+                        String postProcessCMD = "backend/IPeak_release/post_process.py backend/IPeak_release/output.xml " + JobOverviewController.this.t1c.getFdr();
+                        log.debug(postProcessCMD);
+                        Runtime.getRuntime().exec("backend/IPeak_release/post_process.py backend/IPeak_release/output.xml");
+                    }
+                } catch (IOException ex) {
+                    Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                
+                cj.setStatus("job completed");
+                Date stopTime = Calendar.getInstance().getTime();       
+                cj.setPassedTime(sdf.format(stopTime));
             }
         });
         s.start();
