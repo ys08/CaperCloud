@@ -213,7 +213,7 @@ public class CloudJob {
                 "<?xml version=\"1.0\"?>" + sep
                 + "<bioml label=\"x! taxon-to-file matching list\">" + sep
                 + "\t<taxon label=\"all\">" + sep
-                + "\t\t<file format=\"peptide\" URL=\"/mnt/" + databasePath + "\" />" + sep
+                + "\t\t<file format=\"peptide\" URL=\"" + databasePath + "\" />" + sep
                 + "\t</taxon>" + sep
                 + "</bioml>";
         
@@ -250,12 +250,12 @@ public class CloudJob {
         String content = 
                 "<?xml version=\"1.0\"?>" + sep
                 + "<bioml>" + sep
-                + "\t<note type=\"input\" label=\"list path, default parameters\">/mnt/default_input.xml</note>" + sep
-                + "\t<note type=\"input\" label=\"list path, taxonomy information\">/mnt/" + this.taxonomyFile.getName() + "</note>" + sep
+                + "\t<note type=\"input\" label=\"list path, default parameters\">default_input.xml</note>" + sep
+                + "\t<note type=\"input\" label=\"list path, taxonomy information\">" + this.taxonomyFile.getName() + "</note>" + sep
                 + "\t<note type=\"input\" label=\"protein, taxon\">all</note>" + sep
                 + "\t<note type=\"input\" label=\"protein, cleavage site\">" + sp.getEnzyme().getXTandemFormat() + "</note>" + sep
                 + "\t<note type=\"input\" label=\"protein, cleavage semi\">" + enzymeIsSemiSpecific + "</note>" + sep
-                + "\t<note type=\"input\" label=\"spectrum, path\">/mnt/" + spectrumObj.getName() + "</note>" + sep
+                + "\t<note type=\"input\" label=\"spectrum, path\">" + spectrumObj.getName() + "</note>" + sep
                 + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error\">" + sp.getFragmentIonAccuracy() + "</note>" + sep
                 + "\t<note type=\"input\" label=\"spectrum, fragment monoisotopic mass error units\">" + fragmentUnit + "</note>" + sep
                 + "\t<note type=\"input\" label=\"spectrum, parent monoisotopic mass error plus\">10</note>" + sep

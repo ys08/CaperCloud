@@ -8,3 +8,4 @@
 *.fasta
 *.mgf
 *.log
+out_tmp/
