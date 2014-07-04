@@ -40,8 +40,9 @@ import uk.ac.ebi.pride.tools.mgf_parser.MgfFile;
  */
 public class ResultModel {
     private File resultFile;
+    
+    private String bedUrl;
     private File spectraFile;
-
     
     private JMzReader jmzReader;
     private ObservableList<PeptideModel> peptideList;
@@ -66,11 +67,29 @@ public class ResultModel {
         return this.peptideToSpectrumMap.get(peptideId);
     }
 
-    public void load(File resultFile, File spectraFile) throws JMzReaderException, BaseXException {
-        this.resultFile = resultFile;
+    public void setBedUrl(String bedUrl) {
+        this.bedUrl = bedUrl;
+    }
+
+    public void setSpectraFile(File spectraFile) {
         this.spectraFile = spectraFile;
-        
-        this.jmzReader = new MgfFile(this.spectraFile);
+        try {
+            this.jmzReader = new MgfFile(this.spectraFile);
+        } catch (JMzReaderException ex) {
+            Logger.getLogger(ResultModel.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public String getBedUrl() {
+        return bedUrl;
+    }
+
+    public File getSpectraFile() {
+        return spectraFile;
+    }
+    
+    public void parse(File resultFile) throws BaseXException {
+        this.resultFile = resultFile;
         this.peptideList.clear();
         this.peptideToSpectrumMap.clear();
         
@@ -129,18 +148,7 @@ public class ResultModel {
                         }
                         this.peptideList.add(new PeptideModel(attributes[1], chrom, seq, proteinStart, proteinStop, pe_attrs[1], pe_attrs[2], mod.toString()));
                     }
-
                 }
-//                    String queryModification = 
-//                            "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
-//                            + "for $pep in doc('" + this.resultFile.getAbsolutePath() + "')//Peptide "
-//                            + "where $pep/@id=\"" + attributes[1] + "\" "
-//                            + "let $seq:=data($pep/@PeptideSequence) "
-//                            + "let $mods:=string-join((data($pep//Modification//cvParam/@name),data($pep//Modification/@monoisotopicMassDelta),data($pep//Modification/@location)), \"|\") "
-//                            + "return string-join(($seq,$mods), \",\")";
-//                    String peps = query(queryModification);
-//                    System.out.println(peps);
-
             }
         }
     generateBed();
@@ -158,13 +166,13 @@ public class ResultModel {
     }
     
     public void generateBed() {
-        File bedFile = new File("/Users/shuai/Desktop/result.bed");
+        File bedFile = new File("result.bed");
         if (bedFile.exists()) {
             FileUtils.deleteQuietly(bedFile);
         }
         
         StringBuilder line = new StringBuilder();
-        line.append("track name= \"capercloud-test\" description=\"capercloud test\" visibility=1 itemRgb=\"On\"")
+        line.append("track name= \"capercloud\" description=\"capercloud-generated track\" visibility=1 itemRgb=\"On\"")
                 .append(IOUtils.LINE_SEPARATOR);
         
         try {
@@ -201,6 +209,9 @@ public class ResultModel {
         }
     }
     public void drawSpectrum(int index) throws JMzReaderException {     
+        if (this.jmzReader == null) {
+            return;
+        }
         Spectrum spectrum = this.jmzReader.getSpectrumByIndex(index);
         List<Double> mzArrList = new ArrayList<>();
         List<Double> intentArrList = new ArrayList<>();

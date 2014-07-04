@@ -425,7 +425,7 @@
                                                                            </font></Label>
                                                   <HBox id="HBox" alignment="CENTER" spacing="5.0" GridPane.columnIndex="0" GridPane.rowIndex="3">
                                                     <children>
-                                                      <Label prefWidth="76.0" text="Cleavage site" />
+                                                      <Label prefHeight="16.0" prefWidth="150.0" text="Cleavage site:" />
                                                       <ComboBox fx:id="cbCleavageSites" prefWidth="186.0" promptText="Select">
                                                         <items>
                                                           <FXCollections fx:factory="observableArrayList">
@@ -443,8 +443,8 @@
                                                                            </font></Label>
                                                   <HBox id="HBox" alignment="CENTER" spacing="5.0" GridPane.columnIndex="0" GridPane.rowIndex="1">
                                                     <children>
-                                                      <Label text="Fragment mass error" />
-                                                      <TextField fx:id="tfFragmentMassError" prefWidth="112.0" text="0.05" />
+                                                      <Label prefHeight="16.0" prefWidth="155.0" text="Fragment mass error:" />
+                                                      <TextField fx:id="tfFragmentMassError" prefHeight="26.0" prefWidth="110.0" text="0.05" />
                                                       <ComboBox fx:id="cbFragmentMassType" promptText="">
                                                         <items>
                                                           <FXCollections fx:factory="observableArrayList">
@@ -467,8 +467,8 @@
                                                                            </font></Label>
                                                   <HBox id="HBox" alignment="CENTER" spacing="5.0" GridPane.columnIndex="0" GridPane.rowIndex="6">
                                                     <children>
-                                                      <Label text="Valid expectation: &lt;" />
-                                                      <ComboBox fx:id="cbRefinementExpect">
+                                                      <Label prefHeight="16.0" prefWidth="149.0" text="Valid expectation: &lt;" />
+                                                      <ComboBox fx:id="cbRefinementExpect" prefHeight="26.0" prefWidth="180.0">
                                                         <items>
                                                           <FXCollections fx:factory="observableArrayList">
                                                             <String fx:value="项 1" />
@@ -690,9 +690,19 @@
               <children>
                 <BorderPane prefHeight="737.0" prefWidth="1280.0" AnchorPane.bottomAnchor="1.0" AnchorPane.leftAnchor="1.0" AnchorPane.rightAnchor="1.0" AnchorPane.topAnchor="1.0">
                   <top>
-                    <HBox alignment="CENTER_RIGHT" prefHeight="22.0" prefWidth="1280.0" BorderPane.alignment="CENTER_RIGHT">
+                    <HBox alignment="CENTER" prefHeight="22.0" prefWidth="1280.0" BorderPane.alignment="CENTER_LEFT">
                       <children>
-                        <Button mnemonicParsing="false" onAction="#handleVisualizeAction" text="Visualize" />
+                                    <HBox alignment="CENTER" spacing="5.0">
+                                       <children>
+                                          <Button mnemonicParsing="false" onAction="#handleSelectSpectraFileAction" text="Select spectra file" />
+                                          <TextField fx:id="tfSpectraFile" editable="false" prefHeight="26.0" prefWidth="287.0" />
+                                          <Label text="BED File URL:" />
+                                          <TextField fx:id="tfBedUrl" prefHeight="26.0" prefWidth="534.0" />
+                                       </children>
+                                       <HBox.margin>
+                                          <Insets />
+                                       </HBox.margin>
+                                    </HBox>
                       </children>
                     </HBox>
                   </top>

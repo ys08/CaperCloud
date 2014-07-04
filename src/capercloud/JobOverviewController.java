@@ -104,6 +104,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
@@ -188,6 +189,8 @@ public class JobOverviewController implements Initializable {
     @FXML private AnchorPane apSpectrum;
     @FXML private WebView wvBrowser;
     @FXML private TableView tvPSMs;
+    @FXML private TextField tfSpectraFile;
+    @FXML private TextField tfBedUrl;
     
     public JobOverviewController() {
         //set dialog locale
@@ -584,16 +587,14 @@ public class JobOverviewController implements Initializable {
                             JobOverviewController.this.tvPSMs.setItems(JobOverviewController.this.rm.getSpectrumList(peptideId));
                             
                             String chrom = item.chromProperty().get();
-                            
-//                            String peptideStart = item.peptideStartProperty().get();
-//                            String peptideEnd = item.peptideEndProperty().get();
+
                             String proteinStart = item.proteinStartProperty().get();
                             String proteinEnd = item.proteinEndProperty().get();
 
 
                             String url = "http://61.50.130.100/ucsc/cgi-bin/hgTracks?org=human&position=chr" 
                                     + chrom + ":" + proteinStart + "-" + proteinEnd 
-                                    + "&hgt.customText=http://s3.amazonaws.com/bprc-ucsc/result.bed";
+                                    + "&hgt.customText=" + JobOverviewController.this.tfBedUrl.getText();
                             log.debug(url);
                             webEngine.load(url);
                         }      
@@ -1383,7 +1384,7 @@ public class JobOverviewController implements Initializable {
         cj.setStartTime(sdf.format(startTime));
         cj.setStatus("lauching instances");  
         
-        Service<List<String>> s = new Service<List<String>>() {
+        Service<List<String>> msSearchService = new Service<List<String>>() {
             @Override
             protected Task<List<String>> createTask() {
                 return new Task<List<String>>() {
@@ -1558,10 +1559,10 @@ public class JobOverviewController implements Initializable {
             };
         };
         
-        s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+        msSearchService.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
             @Override
             public void handle(WorkerStateEvent t) {
-                List<String> instances = s.getValue();
+                List<String> instances = msSearchService.getValue();
                 log.info("shutting down instances");
                 cj.setStatus("shutting down instances");
                 cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
@@ -1569,25 +1570,47 @@ public class JobOverviewController implements Initializable {
                 AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
                 s3Client.setEndpoint("http://192.168.99.111:8773/services/Walrus/");
                 writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "output")).getObjectContent(), new File("backend/IPeak_release/output.xml"));
-                try {
-                    cj.setStatus("post processing");
-                    if (cj.getJobType() == 1) {
-                        String postProcessCMD = "backend/IPeak_release/post_process.py backend/IPeak_release/output.xml " + JobOverviewController.this.t1c.getFdr();
-                        log.debug(postProcessCMD);
-                        Runtime.getRuntime().exec(postProcessCMD);
-                    }
-                } catch (IOException ex) {
-                    Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                 
+                Service<Void> postProcessService = new Service<Void>() {
+                    @Override
+                    protected Task<Void> createTask() {
+                        return new Task<Void>() {
+                            @Override
+                            protected Void call() throws Exception {
+                                updateProgress(-1, 0);
+                                updateMessage("Parsing result...please wait");
+                                if (cj.getJobType() == 1) {
+                                    String postProcessCMD = "backend/IPeak_release/post_process.py backend/IPeak_release/output.xml " + JobOverviewController.this.t1c.getFdr();
+                                    log.debug(postProcessCMD);
+                                    Runtime.getRuntime().exec(postProcessCMD);
+                                }
+                                JobOverviewController.this.rm.parse(new File("result.mzid"));
+                                return null;
+                            }
+                        };
+                    }     
+                };
                 
-                cj.setStatus("job completed");
-                Date stopTime = Calendar.getInstance().getTime();       
-                cj.setPassedTime(sdf.format(stopTime));
-            }
+                postProcessService.start();
+                postProcessService.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+                    @Override
+                    public void handle(WorkerStateEvent t) {
+                        cj.setStatus("job completed");
+                        Date stopTime = Calendar.getInstance().getTime();       
+                        cj.setPassedTime(sdf.format(stopTime));
+                        JobOverviewController.this.tvResults.setItems(JobOverviewController.this.rm.getPeptideList()); 
+                    }
+                });
+                
+                Dialogs.create()
+                        .owner(JobOverviewController.this.mainApp.getPrimaryStage())
+                        .title("Parsing result")
+                        .showWorkerProgress(postProcessService);
+                }
         });
-        s.start();
+        msSearchService.start();
     }
-    private static void writeInputStreamToFile(InputStream inputStream, File outFile) {
+    private void writeInputStreamToFile(InputStream inputStream, File outFile) {
         OutputStream outputStream = null;
         try {
             outputStream = new FileOutputStream(outFile);
@@ -1603,11 +1626,6 @@ public class JobOverviewController implements Initializable {
         } catch (IOException ex) {
             Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }
-    
-    private void refreshTable() {
-        ((TableColumn) JobOverviewController.this.tvJobMonitor.getColumns().get(0)).setVisible(false);
-        ((TableColumn) JobOverviewController.this.tvJobMonitor.getColumns().get(0)).setVisible(true);
     }
     
 //    private Future sendFiles(CloudJob job) throws IOException {
@@ -1700,39 +1718,20 @@ public class JobOverviewController implements Initializable {
     private void handleAdvancedSearchAction() {
         //TO DO
     }
+    @FXML
+    private void handleSelectSpectraFileAction() {
+        FileChooser fileChooser = new FileChooser();
+        File spectraFile = fileChooser.showOpenDialog(null);
+        if (spectraFile == null) {
+            return;
+        }
+        this.tfSpectraFile.setText(spectraFile.getAbsolutePath());
+        this.rm.setSpectraFile(spectraFile);
+    }
     
     @FXML
     private void handleVisualizeAction() {
-        Service<Void> s = new Service<Void>() {
-            @Override
-            protected Task<Void> createTask() {
-                return new Task<Void>() {
-                    @Override
-                    protected Void call() throws Exception {
-                        updateProgress(-1, 0);
-                        updateMessage("Loading peptides...please wait");
-                        try {
-                            JobOverviewController.this.rm.load(new File("result.mzid"), 
-                                    new File("/Users/shuai/Bio/tools/tandem-osx-13-09-01-1/bin/120426_Jurkat_highLC_Frac2.mgf"));
-                            //this.rm.load(new File("/Users/shuai/Developer/CaperCloud/example_files/55merge_omssa.mzid"), new File("example_files/55merge.mgf"));
-                        } catch (Exception ex) {
-                            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
-                        }                 
-                        return null;
-                    }
-                };
-            }     
-        };
-        s.start();
-        s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent t) {
-                JobOverviewController.this.tvResults.setItems(JobOverviewController.this.rm.getPeptideList()); 
-            }
-        });
-        Dialogs.create()
-                .owner(this.mainApp.getPrimaryStage())
-                .title("Loading")
-                .showWorkerProgress(s);
+        String bedUrl = this.tfBedUrl.getText();
+        this.rm.setBedUrl(bedUrl);
     }
 }
