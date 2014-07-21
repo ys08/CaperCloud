@@ -88,7 +88,7 @@ public class ResultModel {
         return spectraFile;
     }
     
-    public void parse(File resultFile) throws BaseXException {
+    public void parse(File resultFile, int jobType) throws BaseXException {
         this.resultFile = resultFile;
         this.peptideList.clear();
         this.peptideToSpectrumMap.clear();

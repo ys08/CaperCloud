@@ -597,7 +597,7 @@ public class CloudManager {
             if (channel.isClosed()){
                 log.info("exit-status: " + channel.getExitStatus());
                 if (channel.getExitStatus() != 0) {
-                    System.exit(1);
+                    log.error("Error occured on remote machines!!!");
                 }
                 break;
             }

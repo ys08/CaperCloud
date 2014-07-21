@@ -40,11 +40,13 @@ import com.compomics.util.experiment.identification.SearchParameters.MassAccurac
 import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
 import com.compomics.util.preferences.ModificationProfile;
 import impl.org.controlsfx.i18n.Localization;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
@@ -1510,81 +1512,115 @@ public class JobOverviewController implements Initializable {
                         cm.remoteCallByShh("ec2-user", masterPublicIp, cmdWaitHadoopCluster, privateKey);
                         
                         int jobType = cj.getJobType();
-                        //generate peptide database first
+                        //generate peptide database first in /mnt
                         if (jobType == 4) {
+                            String cmdDownloadCdsFasta = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
+                                    + " " + cm.getCurrentCredentials().getSecretKey()
+                                    + " " + "capercloud-ref"
+                                    + " Homo_sapiens.GRCh37.75.cds.all.fa"
+                                    + " /mnt";
+                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadCdsFasta, privateKey); 
+                            String cmdDownloadMapFile = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
+                                    + " " + cm.getCurrentCredentials().getSecretKey()
+                                    + " " + "capercloud-ref"
+                                    + " mrna-cds.txt"
+                                    + " /mnt";
+                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadMapFile, privateKey);
+                            String cmdDownloadVcfFile = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
+                                    + " " + cm.getCurrentCredentials().getSecretKey()
+                                    + " " + cj.getVcfObject().getBucketName()
+                                    + " " + cj.getVcfObject().getName()
+                                    + " /mnt";
+                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadVcfFile, privateKey);
                             
+                            cm.remoteCallByShh("ec2-user", masterPublicIp, "mkdir /mnt/lib", privateKey);
+                            cm.sftp("ec2-user", masterPublicIp, "remote-init/CustomVariantProtein.jar", "/mnt/CustomVariantProtein.jar", privateKey);
+                            cm.sftp("ec2-user", masterPublicIp, "remote-init/lib/commons-io-2.4.jar", "/mnt/lib/commons-io-2.4.jar", privateKey);
+                            cm.sftp("ec2-user", masterPublicIp, "remote-init/lib/jfasta-2.1.3-jar-with-dependencies.jar", "/mnt/lib/jfasta-2.1.3-jar-with-dependencies.jar", privateKey);
+                            
+                            String cmdCreateRefDatabase = "cd /mnt;/usr/local/jdk1.7.0_60/bin/java -Xmx512m -jar CustomVariantProtein.jar Homo_sapiens.GRCh37.75.cds.all.fa mrna-cds.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName();
+                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdCreateRefDatabase, privateKey);
+                            
+//                            String cmdUploadRefDatabase = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
+//                                    + " " + cm.getCurrentCredentials().getSecretKey()                       
+//                                    + " capercloud-ref"
+//                                    + " /mnt/" + cj.getRefDatabaseName();
+//                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdUploadRefDatabase, privateKey);
                         }
-                        if (jobType == 1) {
-                            String refDatabaseName = cj.getRefDatabaseName();
-                            
+                        
+                        String refDatabaseName = cj.getRefDatabaseName();
+                        //job type 4 does not need download reference database
+                        if (jobType != 4) {
                             //download reference database from s3
                             String cmdDownloadRef = "python download_data.py " + cm.getCurrentCredentials().getAccessKey() 
                                     + " " + cm.getCurrentCredentials().getSecretKey()
                                     + " " + "capercloud-ref"
                                     + " " + refDatabaseName
                                     + " " + "/mnt";
-//                            log.debug(cmdDownloadRef);
+    //                            log.debug(cmdDownloadRef);
                             cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadRef, privateKey); 
-                            //download spectra file from s3, only support single spectra now
-                            String spectraName = cj.getSpectrumObjs().get(0).getName();
-                            String cmdDownloadSpectra = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
-                                    + " " + cm.getCurrentCredentials().getSecretKey()
-                                    + " " + cj.getSpectrumObjs().get(0).getBucketName()
-                                    + " " + spectraName
-                                    + " " + "/mnt";
-                            log.debug(cmdDownloadSpectra);
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadSpectra, privateKey);
-                            
-                            String cmdUploadFilesToHDFS = "hadoop dfs -put /mnt/" + taxonomyFileName + " shared/" + taxonomyFileName + ";"
-                                    + "hadoop dfs -put /mnt/" + inputXmlFileName + " shared/" + inputXmlFileName + ";"
-                                    + "hadoop dfs -put /mnt/mrtandem shared/mrtandem;"
-                                    + "hadoop dfs -put /mnt/default_input.xml shared/default_input.xml;"
-                                    + "hadoop dfs -put /mnt/" + refDatabaseName + " shared/" + refDatabaseName + ";"
-                                    + "hadoop dfs -put /mnt/" + spectraName + " shared/" + spectraName;
-                            log.debug(cmdUploadFilesToHDFS);
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdUploadFilesToHDFS, privateKey);
-                            
-                            String sharedFiles = " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + taxonomyFileName + "#" + taxonomyFileName 
-                                    + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + inputXmlFileName + "#" + inputXmlFileName
-                                    + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/mrtandem#mrtandem"
-                                    + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/default_input.xml#default_input.xml"
-                                    + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + refDatabaseName + "#" + refDatabaseName
-                                    + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + spectraName + "#" + spectraName;
-                        
-                            cj.setStatus("x!tandem searching");
-                            StringBuilder step1InputLines = new StringBuilder();
-                            int multi = 2;
-                            int numOfMappers = Integer.parseInt(cj.clusterSizeProperty().get()) * multi;
-                            for (int j=1; j<numOfMappers; j++) {
-                                step1InputLines.append(j).append("    ").append(numOfMappers).append("\n");
-                            }
-                            step1InputLines.append(numOfMappers).append("    ").append(numOfMappers);
-                            File step1InputFile = new File("tmp", "step1input");
-                            FileUtils.writeStringToFile(step1InputFile, step1InputLines.toString());
-                            cm.sftp("ec2-user", masterPublicIp, step1InputFile.getAbsolutePath(), "/home/ec2-user/step1input", privateKey);
-                            //upload step1input to hdfs
-                            log.info("******************"+Calendar.getInstance().getTime()+"******************");
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, "hadoop dfs -put /home/ec2-user/step1input step1input", privateKey);
-
-                            String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
-                            //be careful, it's a mess
-                            cj.setStatus("first stage of mapping and reducing");
-                            String cmdStepOne = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1input -output step1output" + sharedFiles + " -mapper \"mrtandem -mapper1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
-                            log.debug(cmdStepOne);
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepOne, privateKey);
-
-                            cj.setStatus("second stage of mapping and reducing");
-                            String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer1_1#reducer1_1 -mapper \"mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
-                            log.debug(cmdStepTwo);
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepTwo, privateKey);
-
-                            cj.setStatus("final stage of mapping and reducing");
-                            String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer2_1#reducer2_1 -mapper \"mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/ec2-user/\"" + stepArgs;
-                            log.debug(cmdStepThree);
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepThree, privateKey);
-
-                            log.info("******************"+Calendar.getInstance().getTime()+"******************");
                         }
+
+                        //download spectra file from s3, only support single spectra now
+                        String spectraName = cj.getSpectrumObjs().get(0).getName();
+                        String cmdDownloadSpectra = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
+                                + " " + cm.getCurrentCredentials().getSecretKey()
+                                + " " + cj.getSpectrumObjs().get(0).getBucketName()
+                                + " " + spectraName
+                                + " " + "/mnt";
+                        log.debug(cmdDownloadSpectra);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadSpectra, privateKey);
+
+                        String cmdUploadFilesToHDFS = "hadoop dfs -put /mnt/" + taxonomyFileName + " shared/" + taxonomyFileName + ";"
+                                + "hadoop dfs -put /mnt/" + inputXmlFileName + " shared/" + inputXmlFileName + ";"
+                                + "hadoop dfs -put /mnt/mrtandem shared/mrtandem;"
+                                + "hadoop dfs -put /mnt/default_input.xml shared/default_input.xml;"
+                                + "hadoop dfs -put /mnt/" + refDatabaseName + " shared/" + refDatabaseName + ";"
+                                + "hadoop dfs -put /mnt/" + spectraName + " shared/" + spectraName;
+                        log.debug(cmdUploadFilesToHDFS);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdUploadFilesToHDFS, privateKey);
+
+                        String sharedFiles = " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + taxonomyFileName + "#" + taxonomyFileName 
+                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + inputXmlFileName + "#" + inputXmlFileName
+                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/mrtandem#mrtandem"
+                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/default_input.xml#default_input.xml"
+                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + refDatabaseName + "#" + refDatabaseName
+                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + spectraName + "#" + spectraName;
+
+                        cj.setStatus("x!tandem searching");
+                        StringBuilder step1InputLines = new StringBuilder();
+                        int multi = 2;
+                        int numOfMappers = Integer.parseInt(cj.clusterSizeProperty().get()) * multi;
+                        for (int j=1; j<numOfMappers; j++) {
+                            step1InputLines.append(j).append("    ").append(numOfMappers).append("\n");
+                        }
+                        
+                        step1InputLines.append(numOfMappers).append("    ").append(numOfMappers);
+                        File step1InputFile = new File("tmp", "step1input");
+                        FileUtils.writeStringToFile(step1InputFile, step1InputLines.toString());
+                        cm.sftp("ec2-user", masterPublicIp, step1InputFile.getAbsolutePath(), "/home/ec2-user/step1input", privateKey);
+                        //upload step1input to hdfs
+                        log.info("******************"+Calendar.getInstance().getTime()+"******************");
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, "hadoop dfs -put /home/ec2-user/step1input step1input", privateKey);
+
+                        String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
+                        //be careful, it's a mess
+                        cj.setStatus("first stage of mapping and reducing");
+                        String cmdStepOne = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1input -output step1output" + sharedFiles + " -mapper \"mrtandem -mapper1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
+                        log.debug(cmdStepOne);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepOne, privateKey);
+
+                        cj.setStatus("second stage of mapping and reducing");
+                        String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer1_1#reducer1_1 -mapper \"mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
+                        log.debug(cmdStepTwo);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepTwo, privateKey);
+
+                        cj.setStatus("final stage of mapping and reducing");
+                        String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer2_1#reducer2_1 -mapper \"mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/ec2-user/\"" + stepArgs;
+                        log.debug(cmdStepThree);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepThree, privateKey);
+
+                        log.info("******************"+Calendar.getInstance().getTime()+"******************");
                      
                         //download output(in hdfs) to local
                         String cmdDownloadOutput = "hadoop dfs -copyToLocal output output";
@@ -1615,7 +1651,7 @@ public class JobOverviewController implements Initializable {
                 cj.setStatus("retrieving result");
                 AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
                 s3Client.setEndpoint("http://192.168.99.111:8773/services/Walrus/");
-                writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "output")).getObjectContent(), new File("backend/IPeak_release/output.xml"));
+                writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "output")).getObjectContent(), new File("tmp/output.xml"));
                  
                 Service<Void> postProcessService = new Service<Void>() {
                     @Override
@@ -1624,13 +1660,24 @@ public class JobOverviewController implements Initializable {
                             @Override
                             protected Void call() throws Exception {
                                 updateProgress(-1, 0);
-                                updateMessage("Parsing result...please wait");
-                                if (cj.getJobType() == 1) {
-                                    String postProcessCMD = "backend/IPeak_release/post_process.py backend/IPeak_release/output.xml " + JobOverviewController.this.t1c.getFdr();
-                                    log.debug(postProcessCMD);
-                                    Runtime.getRuntime().exec(postProcessCMD);
-                                }
-                                JobOverviewController.this.rm.parse(new File("result.mzid"));
+                                updateMessage("Post Processing");
+                                
+                                //convert x!tandem output to mzid format
+                                String runPercolator = "java -jar post_process/mzidentml-lib-1.6.10.jar Tandem2mzid tmp/output.xml tmp/output.mzid -outputFragmentation false -decoyRegex ###REV### -databaseFileFormatID MS:1001348 -massSpecFileFormatID MS:1001062 -idsStartAtZero false -compress false";
+//                                log.debug(postProcessCMD);
+                                String cmdLog = executeCommand(runPercolator);
+                                log.info(cmdLog);
+                                //calculate fdr
+                                String calculateFdrValue = "java -jar post_process/mzidentml-lib-1.6.10.jar FalseDiscoveryRate tmp/output.mzid tmp/output_fdr.mzid -decoyRegex ###REV### -decoyValue 1 -cvTerm MS:1001330 -betterScoresAreLower true -compress false";
+                                cmdLog = executeCommand(calculateFdrValue);       
+                                log.info(cmdLog);
+                                
+                                //cut off 
+                                String cmdThresHold = "java -jar post_process/mzidentml-lib-1.6.10.jar Threshold tmp/output_fdr.mzid result.mzid -isPSMThreshold true -cvAccessionForScoreThreshold MS:1002354 -threshValue " + cj.getFdrValue() + " -betterScoresAreLower true -deleteUnderThreshold true -compress false";
+                                cmdLog = executeCommand(cmdThresHold);       
+                                log.info(cmdLog);
+//job specific parser
+                                JobOverviewController.this.rm.parse(new File("result.mzid"), cj.getJobType());
                                 return null;
                             }
                         };
@@ -1672,6 +1719,24 @@ public class JobOverviewController implements Initializable {
         } catch (IOException ex) {
             Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    private String executeCommand(String command) {
+        String line = "";
+        StringBuffer output = new StringBuffer();
+        try {
+            Process p;
+            p = Runtime.getRuntime().exec(command);
+            p.waitFor();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+   
+            while ((line = reader.readLine())!= null) {
+                output.append(line + "\n");
+            }
+        } catch (IOException | InterruptedException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+        }                 		
+        return output.toString();
     }
     
 //    private Future sendFiles(CloudJob job) throws IOException {
