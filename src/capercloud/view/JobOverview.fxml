@@ -174,18 +174,6 @@
                                         <Tooltip text="Create Bucket" />
                                       </tooltip>
                                     </Button>
-                                    <Button disable="true" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" text="">
-                                      <graphic>
-                                        <ImageView fitHeight="22.0" fitWidth="22.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
-                                          <image>
-                                            <Image url="@../res/images/edit-icon.png" />
-                                          </image>
-                                        </ImageView>
-                                      </graphic>
-                                      <tooltip>
-                                        <Tooltip text="Edit ACL" />
-                                      </tooltip>
-                                    </Button>
                                     <Button fx:id="btnRemoteRefresh" disable="true" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#handleRemoteRefreshAction" prefHeight="22.0" prefWidth="22.0" text="">
                                       <graphic>
                                         <ImageView fitHeight="20.0" fitWidth="20.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
@@ -230,8 +218,7 @@
                       <children>
                         <Button id="btnManageAccounts" mnemonicParsing="false" onAction="#handleManageAccountsAction" text="Manage Accounts" />
                         <Label text="Current User:" />
-                        <Label fx:id="username" prefWidth="72.0" text="" />
-                        <Button id="btnTransferPreferences" mnemonicParsing="false" onAction="#handleTransferPreferenceAction" text="Transfer Preferences" />
+                        <Label fx:id="username" prefHeight="16.0" prefWidth="316.0" text="" />
                         <Button fx:id="btnLogout" disable="true" mnemonicParsing="false" onAction="#handleLogoutAction" text="Logout" />
                       </children>
                       <padding>
@@ -262,51 +249,11 @@
                         <Insets bottom="5.0" left="5.0" right="5.0" />
                       </padding>
                       <top>
-                        <HBox id="HBox" alignment="CENTER" prefHeight="28.0" prefWidth="888.0" spacing="5.0">
-                          <children>
-                            <Label prefWidth="138.0" text="Data Transfer Task">
-                              <font>
-                                <Font name="System Bold" size="14.0" fx:id="x1" />
-                              </font>
-                            </Label>
-                            <Button minHeight="-Infinity" mnemonicParsing="false" onAction="#handleDataTransferCancelAction" prefHeight="21.0" text="Cancel">
-                              <graphic>
-                                <ImageView fitHeight="21.0" fitWidth="21.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
-                                  <image>
-                                    <Image url="@../res/images/Cancel-icon.png" />
-                                  </image>
-                                </ImageView>
-                              </graphic>
-                            </Button>
-                            <Button minHeight="-Infinity" mnemonicParsing="false" prefHeight="21.0" text="Pause">
-                              <graphic>
-                                <ImageView fitHeight="21.0" fitWidth="21.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
-                                  <image>
-                                    <Image url="@../res/images/Pause-Pressed-icon.png" />
-                                  </image>
-                                </ImageView>
-                              </graphic>
-                            </Button>
-                            <Button minHeight="-Infinity" mnemonicParsing="false" prefHeight="21.0" text="Clear Completed">
-                              <graphic>
-                                <ImageView fitHeight="21.0" fitWidth="21.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
-                                  <image>
-                                    <Image url="@../res/images/Check-icon.png" />
-                                  </image>
-                                </ImageView>
-                              </graphic>
-                            </Button>
-                            <Button minHeight="-Infinity" mnemonicParsing="false" prefHeight="21.0" text="Retry Failed Tasks">
-                              <graphic>
-                                <ImageView fitHeight="21.0" fitWidth="21.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
-                                  <image>
-                                    <Image url="@../res/images/failed.png" />
-                                  </image>
-                                </ImageView>
-                              </graphic>
-                            </Button>
-                          </children>
-                        </HBox>
+                      <Label prefHeight="18.0" prefWidth="204.0" text="Data Transfer Task" BorderPane.alignment="CENTER">
+                        <font>
+                          <Font name="System Bold" size="14.0" fx:id="x1" />
+                        </font>
+                      </Label>
                       </top>
                     </BorderPane>
                   </children>
@@ -387,6 +334,7 @@
                                             <children>
                                               <Label text="Output Bucket" />
                                               <TextField fx:id="tfOutputBucketName" prefWidth="200.0" text="capercloud-output" />
+                                                                  <Text fill="RED" strokeType="OUTSIDE" strokeWidth="0.0" text="Requres a Unique Name" />
                                             </children>
                                           </HBox>
                                         </bottom>
@@ -507,8 +455,10 @@
                                         <top>
                                           <HBox id="HBox" alignment="CENTER" spacing="20.0" BorderPane.margin="$x2">
                                             <children>
-                                              <Label text="Search Options" />
-                                                                  <Button mnemonicParsing="false" onAction="#handleAdvancedSearchAction" text="Advanced" />
+                                              <Label text="Search Options">
+                                                                     <font>
+                                                                        <Font size="19.0" />
+                                                                     </font></Label>
                                             </children>
                                             <padding>
                                               <Insets bottom="1.0" />
@@ -657,7 +607,7 @@
                           </AnchorPane>
                         </center>
                         <top>
-                          <Label styleClass="custom-label" text="Instances Monitor" />
+                          <Label styleClass="custom-label" text="Instances Monitor" BorderPane.alignment="CENTER" />
                         </top>
                       </BorderPane>
                       <BorderPane prefHeight="364.0" prefWidth="1278.0">
@@ -675,7 +625,7 @@
                           </TableView>
                         </center>
                         <top>
-                          <Label styleClass="custom-label" text="Job Monitor" />
+                          <Label styleClass="custom-label" text="Job Monitor" BorderPane.alignment="CENTER" />
                         </top>
                       </BorderPane>
                     </items>

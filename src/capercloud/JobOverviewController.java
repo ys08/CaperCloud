@@ -863,7 +863,7 @@ public class JobOverviewController implements Initializable {
             }
         }
         
-       if(cbJobType.getSelectionModel().getSelectedIndex() == 1) {
+        if(cbJobType.getSelectionModel().getSelectedIndex() == 1) {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeTwo.fxml"));
                 AnchorPane ap = (AnchorPane) loader.load();
@@ -873,6 +873,7 @@ public class JobOverviewController implements Initializable {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+       
         if(cbJobType.getSelectionModel().getSelectedIndex() == 2) {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeThree.fxml"));
@@ -883,6 +884,7 @@ public class JobOverviewController implements Initializable {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+       
         if(cbJobType.getSelectionModel().getSelectedIndex() == 3) {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeFour.fxml"));
@@ -1254,6 +1256,7 @@ public class JobOverviewController implements Initializable {
         this.runListingInputObjectModelsService(bucket);
     }
     
+    //generate x!tandem parameter files: input.xml, taxonomy.xml
     @FXML
     private void handleJobSaveAction() {
         int jobType = this.cbJobType.getSelectionModel().getSelectedIndex() + 1;
@@ -1333,10 +1336,37 @@ public class JobOverviewController implements Initializable {
                             .showError();
                     return;
                 }
-                cj.createTaxonomyFile("chr_" + chromNum + "_six_20.fasta");
+                cj.createTaxonomyFile("chr" + chromNum + "_six_7.fa");
                 cj.createInputFiles();
             } catch (IOException ex) {
                 ex.printStackTrace();
+            }
+        }
+        
+        if (cj.getJobType() == 2) {
+            try {
+                cj.createTaxonomyFile("missense_snv_protein_40.fa");
+                cj.createInputFiles();
+            } catch (IOException ex) {
+                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        if (cj.getJobType() == 3) {
+            try {
+                cj.createTaxonomyFile("EEJ_peptide.fa");
+                cj.createInputFiles();
+            } catch (IOException ex) {
+                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        if (cj.getJobType() == 4) {
+            try {
+                cj.createTaxonomyFile("custom_snv_peptide_40.fa");
+                cj.createInputFiles();
+            } catch (IOException ex) {
+                Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         
@@ -1351,7 +1381,6 @@ public class JobOverviewController implements Initializable {
     
     @FXML
     private void handleRunCloudJobAction() throws UnsupportedEncodingException, IOException, InterruptedException {
-//        cj.launchMasterNode();
         if (this.sm.getJobs().isEmpty()) {
             Dialogs.create()
                     .owner(this.mainApp.getPrimaryStage())
