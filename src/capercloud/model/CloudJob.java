@@ -46,6 +46,10 @@ public class CloudJob {
     private Integer clusterSize;
     private InstanceType instanceType;
     private String outputBucketName;
+    private String refDatabaseName;
+    private String fdrValue;
+    //job type 4
+    private S3Object vcfObject;
     
     private File taxonomyFile;
     private List<File> inputFiles;
@@ -67,7 +71,8 @@ public class CloudJob {
         this.jobType = jobType;
         
         this.inputFiles = new ArrayList<>();
-        this.tmpPath = FileUtils.getTempDirectoryPath() + "capercloud";
+        this.tmpPath = "tmp";
+//        this.tmpPath = FileUtils.getTempDirectoryPath() + "capercloud";
 
         this.timestamp = Long.toString(System.currentTimeMillis());
         this.instanceModelList = new ArrayList<>();
@@ -75,6 +80,30 @@ public class CloudJob {
     
     public String getOutputBucketName() {
         return outputBucketName;
+    }
+
+    public String getRefDatabaseName() {
+        return refDatabaseName;
+    }
+
+    public void setRefDatabaseName(String refDatabaseName) {
+        this.refDatabaseName = refDatabaseName;
+    }
+
+    public String getFdrValue() {
+        return fdrValue;
+    }
+
+    public void setFdrValue(String fdrValue) {
+        this.fdrValue = fdrValue;
+    }
+
+    public S3Object getVcfObject() {
+        return vcfObject;
+    }
+
+    public void setVcfObject(S3Object vcfObject) {
+        this.vcfObject = vcfObject;
     }
 
     public void setOutputBucketName(String outputBucketName) {

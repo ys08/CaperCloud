@@ -1336,7 +1336,10 @@ public class JobOverviewController implements Initializable {
                             .showError();
                     return;
                 }
-                cj.createTaxonomyFile("chr" + chromNum + "_six_7.fa");
+                String refDatabaseName = "chr" + chromNum + "_six_7.fa";
+                cj.createTaxonomyFile(refDatabaseName);
+                cj.setRefDatabaseName(refDatabaseName);
+                cj.setFdrValue(this.t1c.getFdr());
                 cj.createInputFiles();
             } catch (IOException ex) {
                 ex.printStackTrace();
@@ -1345,7 +1348,10 @@ public class JobOverviewController implements Initializable {
         
         if (cj.getJobType() == 2) {
             try {
-                cj.createTaxonomyFile("missense_snv_protein_40.fa");
+                String refDatabaseName = "missense_snv_protein_40.fa";
+                cj.createTaxonomyFile(refDatabaseName);
+                cj.setRefDatabaseName(refDatabaseName);
+                cj.setFdrValue(this.t2c.getFdr());
                 cj.createInputFiles();
             } catch (IOException ex) {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
@@ -1354,7 +1360,10 @@ public class JobOverviewController implements Initializable {
         
         if (cj.getJobType() == 3) {
             try {
-                cj.createTaxonomyFile("EEJ_peptide.fa");
+                String refDatabaseName = "EEJ_peptide.fa";
+                cj.createTaxonomyFile(refDatabaseName);
+                cj.setRefDatabaseName(refDatabaseName);
+                cj.setFdrValue(this.t3c.getFdr());
                 cj.createInputFiles();
             } catch (IOException ex) {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
@@ -1363,8 +1372,13 @@ public class JobOverviewController implements Initializable {
         
         if (cj.getJobType() == 4) {
             try {
-                cj.createTaxonomyFile("custom_snv_peptide_40.fa");
+                String refDatabaseName = "custom_snv_peptide_40.fa";
+                cj.createTaxonomyFile(refDatabaseName);
+                cj.setRefDatabaseName(refDatabaseName);
+                cj.setFdrValue(this.t4c.getFdr());
                 cj.createInputFiles();
+                
+                cj.setVcfObject(this.t4c.getSelectedObj());
             } catch (IOException ex) {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -1401,6 +1415,7 @@ public class JobOverviewController implements Initializable {
             return;
         }  
         
+        //get the last saved job
         CloudJob cj = this.sm.getJobs().get(this.sm.getJobs().size()-1);
         String imageId = cj.getImageId();
         String keyName = cj.getKeyName();
@@ -1410,7 +1425,6 @@ public class JobOverviewController implements Initializable {
         
         CloudManager cm = JobOverviewController.this.mainApp.getCloudManager(); 
         Date startTime = Calendar.getInstance().getTime();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
         cj.setStartTime(sdf.format(startTime));
         cj.setStatus("lauching instances");  
         
@@ -1445,70 +1459,73 @@ public class JobOverviewController implements Initializable {
                                 String hostIp = ii.getPrivateIpAddress();
                                 String hostName = "ip." + hostIp;
                                 hostName = hostName.replaceAll("\\.", "-");
-                                log.debug("hostname: " + hostName);
+//                                log.debug("hostname: " + hostName);
                                 hosts.append(hostIp).append("    ").append(hostName).append("\n");
                             }
                         }
-                        log.debug(hosts.toString());
+//                        log.debug(hosts.toString());
                         
+                        //initialize cloud cluster
+                        cj.setStatus("initializing cluster");
                         r = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
                         i = r.getReservations().iterator();
                         while (i.hasNext()) {
                             // on every node
                             Reservation rr = (Reservation) i.next();
                             for (Instance ii : rr.getInstances()) {
-                                log.debug(ii.getPublicDnsName());
                                 //correct time on eucalyptus
                                 String cmdCorrectNtpTime = "sudo chmod 777 /mnt;mkdir /mnt/hadoop;sudo service ntpd stop;sudo ntpdate 192.168.99.111;sudo service ntpd start;echo \"export PATH=$PATH:/usr/local/hadoop-1.2.1/bin\" >> /home/ec2-user/.bashrc;source /home/ec2-user/.bashrc;echo '" + hosts.toString() + "' | sudo tee -a /etc/hosts";
-                                log.info("remote execute: " + cmdCorrectNtpTime);
+//                                log.info("remote execute: " + cmdCorrectNtpTime);
                                 cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmdCorrectNtpTime, privateKey);
                                 //launching hadoop cluster
-                                log.info("uploading hadoop-remote-init.sh");
-                                cm.sftp("ec2-user", ii.getPublicIpAddress(), "/Users/shuai/Developer/CaperCloud/backend/hadoop-remote-init.sh", "/home/ec2-user/hadoop-remote-init.sh", privateKey);
+//                                log.info("uploading hadoop-remote-init.sh");
+                                cm.sftp("ec2-user", ii.getPublicIpAddress(), "remote-init/hadoop-remote-init.sh", "/home/ec2-user/hadoop-remote-init.sh", privateKey);
                                 String cmdRemoteInit = "chmod 755 hadoop-remote-init.sh;./hadoop-remote-init.sh " + masterPrivateIp;
                                 cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmdRemoteInit, privateKey);
                             }
-                        }                
-                        // on master    
-
-
+                        }     
+                        
+                        // on master
                         //download data from s3 and upload to hdfs
-                        log.info("uploading download_data.py");
-                        cm.sftp("ec2-user", masterPublicIp, "/Users/shuai/Developer/CaperCloud/backend/download_data.py", "/home/ec2-user/download_data.py", privateKey);
-                        log.info("uploading upload_data.py");
-                        cm.sftp("ec2-user", masterPublicIp, "/Users/shuai/Developer/CaperCloud/backend/upload_data.py", "/home/ec2-user/upload_data.py", privateKey);
-                        log.info("uploading taxonomy file: " + cj.getTaxonomyFile().getAbsolutePath());
+//                        log.info("uploading download_data.py");
+                        cm.sftp("ec2-user", masterPublicIp, "remote-init/download_data.py", "/home/ec2-user/download_data.py", privateKey);
+//                        log.info("uploading upload_data.py");
+                        cm.sftp("ec2-user", masterPublicIp, "remote-init/upload_data.py", "/home/ec2-user/upload_data.py", privateKey);
+//                        log.info("uploading taxonomy file: " + cj.getTaxonomyFile().getAbsolutePath());
                         String taxonomyFileName =  cj.getTaxonomyFile().getName();
                         cm.sftp("ec2-user", masterPublicIp, cj.getTaxonomyFile().getAbsolutePath(), "/mnt/" + taxonomyFileName, privateKey);
-                        log.info("uploading input file: " + cj.getInputFiles().get(0).getAbsolutePath());
+//                        log.info("uploading input file: " + cj.getInputFiles().get(0).getAbsolutePath());
                         String inputXmlFileName = cj.getInputFiles().get(0).getName();
                         cm.sftp("ec2-user", masterPublicIp, cj.getInputFiles().get(0).getAbsolutePath(), "/mnt/" + inputXmlFileName , privateKey);
-                        log.info("uploading mrtandem binary file");
-                        cm.sftp("ec2-user", masterPublicIp, "/Users/shuai/Bio/tandem-bin/mrtandem-centos", "/mnt/mrtandem", privateKey);
+//                        log.info("uploading mrtandem binary file");
+                        cm.sftp("ec2-user", masterPublicIp, "remote-init/mrtandem-centos", "/mnt/mrtandem", privateKey);
                         cm.remoteCallByShh("ec2-user", masterPublicIp, "chmod 755 /mnt/mrtandem", privateKey); 
-                        log.info("uploading x!tandem default xml");
-                        cm.sftp("ec2-user", masterPublicIp, "/Users/shuai/Bio/tandem-bin/default_input.xml", "/mnt/default_input.xml", privateKey);
+//                        log.info("uploading x!tandem default xml");
+                        cm.sftp("ec2-user", masterPublicIp, "remote-init/default_input.xml", "/mnt/default_input.xml", privateKey);
                         
                         //wait hadoop cluster start up
-                        cm.sftp("ec2-user", masterPublicIp, "/Users/shuai/Developer/CaperCloud/backend/wait_hadoop.sh", "/home/ec2-user/wait_hadoop.sh", privateKey);
+                        cm.sftp("ec2-user", masterPublicIp, "remote-init/wait_hadoop.sh", "/home/ec2-user/wait_hadoop.sh", privateKey);
                         String cmdWaitHadoopCluster = "chmod 755 wait_hadoop.sh;./wait_hadoop.sh " + cj.getClusterSize().toString() + ";hadoop dfs -mkdir shared";
-                        log.debug(cmdWaitHadoopCluster);
+//                        log.debug(cmdWaitHadoopCluster);
                         cm.remoteCallByShh("ec2-user", masterPublicIp, cmdWaitHadoopCluster, privateKey);
                         
                         int jobType = cj.getJobType();
+                        //generate peptide database first
+                        if (jobType == 4) {
+                            
+                        }
                         if (jobType == 1) {
-                            String fdr = JobOverviewController.this.t1c.getFdr();
-                            String chrNum = JobOverviewController.this.t1c.getSelectedChromosomeNumber();
-                            String refDatabase = "chr_" + chrNum + "_six_20.fasta";
+                            String refDatabaseName = cj.getRefDatabaseName();
+                            
                             //download reference database from s3
                             String cmdDownloadRef = "python download_data.py " + cm.getCurrentCredentials().getAccessKey() 
                                     + " " + cm.getCurrentCredentials().getSecretKey()
                                     + " " + "capercloud-ref"
-                                    + " " + refDatabase
+                                    + " " + refDatabaseName
                                     + " " + "/mnt";
-                            log.debug(cmdDownloadRef);
+//                            log.debug(cmdDownloadRef);
                             cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadRef, privateKey); 
-                            //download spectra file from s3
+                            //download spectra file from s3, only support single spectra now
                             String spectraName = cj.getSpectrumObjs().get(0).getName();
                             String cmdDownloadSpectra = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
                                     + " " + cm.getCurrentCredentials().getSecretKey()
@@ -1522,7 +1539,7 @@ public class JobOverviewController implements Initializable {
                                     + "hadoop dfs -put /mnt/" + inputXmlFileName + " shared/" + inputXmlFileName + ";"
                                     + "hadoop dfs -put /mnt/mrtandem shared/mrtandem;"
                                     + "hadoop dfs -put /mnt/default_input.xml shared/default_input.xml;"
-                                    + "hadoop dfs -put /mnt/" + refDatabase + " shared/" + refDatabase + ";"
+                                    + "hadoop dfs -put /mnt/" + refDatabaseName + " shared/" + refDatabaseName + ";"
                                     + "hadoop dfs -put /mnt/" + spectraName + " shared/" + spectraName;
                             log.debug(cmdUploadFilesToHDFS);
                             cm.remoteCallByShh("ec2-user", masterPublicIp, cmdUploadFilesToHDFS, privateKey);
@@ -1531,7 +1548,7 @@ public class JobOverviewController implements Initializable {
                                     + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + inputXmlFileName + "#" + inputXmlFileName
                                     + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/mrtandem#mrtandem"
                                     + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/default_input.xml#default_input.xml"
-                                    + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + refDatabase + "#" + refDatabase
+                                    + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + refDatabaseName + "#" + refDatabaseName
                                     + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + spectraName + "#" + spectraName;
                         
                             cj.setStatus("x!tandem searching");
@@ -1542,11 +1559,11 @@ public class JobOverviewController implements Initializable {
                                 step1InputLines.append(j).append("    ").append(numOfMappers).append("\n");
                             }
                             step1InputLines.append(numOfMappers).append("    ").append(numOfMappers);
-                            File step1InputFile = new File("step1input");
+                            File step1InputFile = new File("tmp", "step1input");
                             FileUtils.writeStringToFile(step1InputFile, step1InputLines.toString());
                             cm.sftp("ec2-user", masterPublicIp, step1InputFile.getAbsolutePath(), "/home/ec2-user/step1input", privateKey);
                             //upload step1input to hdfs
-                            log.info("******************"+Calendar.getInstance().getTime());
+                            log.info("******************"+Calendar.getInstance().getTime()+"******************");
                             cm.remoteCallByShh("ec2-user", masterPublicIp, "hadoop dfs -put /home/ec2-user/step1input step1input", privateKey);
 
                             String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
@@ -1566,8 +1583,7 @@ public class JobOverviewController implements Initializable {
                             log.debug(cmdStepThree);
                             cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepThree, privateKey);
 
-                            log.info("******************"+Calendar.getInstance().getTime());
-                        
+                            log.info("******************"+Calendar.getInstance().getTime()+"******************");
                         }
                      
                         //download output(in hdfs) to local
@@ -1575,7 +1591,7 @@ public class JobOverviewController implements Initializable {
                         cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadOutput, privateKey);
                         // upload result to s3
                         cj.setStatus("uploading result to s3");
-                        String bucketName = JobOverviewController.this.tfOutputBucketName.getText();
+                        String bucketName = cj.getOutputBucketName();
                         String cmd5 = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
                                 + " " + cm.getCurrentCredentials().getSecretKey()
                                 + " " + bucketName
@@ -1593,10 +1609,10 @@ public class JobOverviewController implements Initializable {
             @Override
             public void handle(WorkerStateEvent t) {
                 List<String> instances = msSearchService.getValue();
-                log.info("shutting down instances");
-                cj.setStatus("shutting down instances");
+//                log.info("shutting down instances");
+                cj.setStatus("closing cluster");
                 cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
-                cj.setStatus("downloading result");
+                cj.setStatus("retrieving result");
                 AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
                 s3Client.setEndpoint("http://192.168.99.111:8773/services/Walrus/");
                 writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "output")).getObjectContent(), new File("backend/IPeak_release/output.xml"));

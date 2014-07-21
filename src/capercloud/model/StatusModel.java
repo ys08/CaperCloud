@@ -6,7 +6,6 @@
 
 package capercloud.model;
 
-import com.amazonaws.services.ec2.model.Instance;
 import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;

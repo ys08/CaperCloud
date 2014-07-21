@@ -53,6 +53,10 @@ public class TypeFourController implements Initializable {
         }
         this.tfVcf.setText(this.selectedObj.getName());
     }
+
+    public S3Object getSelectedObj() {
+        return selectedObj;
+    }
     
     public String getFdr() {
         return this.tfFdr.getText();
