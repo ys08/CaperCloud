@@ -48,10 +48,11 @@ public class JobModel {
     
     private final ObservableList jobTypes = FXCollections.observableArrayList(
         "Novel Protein", 
-        "SAP", 
-        "AS",
-        "Custom Protein Database"
+        "Missense SNV", 
+        "Exon-Exon Junction",
+        "Sample-specific SNV"
     );
+    
     private final ObservableList refinementExpects = FXCollections.observableArrayList(
             "0.01",
             "0.02",

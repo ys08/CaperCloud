@@ -8,7 +8,12 @@ package capercloud;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.TextField;
 
 /**
  * FXML Controller class
@@ -16,13 +21,21 @@ import javafx.fxml.Initializable;
  * @author shuai
  */
 public class TypeThreeController implements Initializable {
+    
+    private ObservableList<String> items = FXCollections.observableArrayList("Exon-Exon Junction");
 
+    @FXML ComboBox cbDatabase;
+    @FXML TextField tfFdr;
     /**
      * Initializes the controller class.
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // TODO
+        cbDatabase.setItems(items);
+        cbDatabase.getSelectionModel().selectFirst();
     }    
     
+    public String getFdr() {
+        return tfFdr.getText();
+    }
 }

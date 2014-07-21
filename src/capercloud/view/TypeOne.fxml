@@ -23,13 +23,16 @@
         </FXCollections>
       </items>
     </ComboBox>
-    <Label layoutY="96.0" text="Filter Stage" AnchorPane.leftAnchor="10.0" />
+    <Label layoutY="96.0" text="Filter Stage" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="96.0" />
     <Label text="Database Selection" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="15.0" />
     <Separator prefWidth="454.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="80.0" />
-    <TextArea editable="false" layoutX="10.0" layoutY="306.0" prefHeight="75.0" prefWidth="430.0" text="Unique spectrum means spectrum matches to only one peptide sequence&#10;Unique peptide means peptide that belongs to only one ORF" wrapText="true" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" />
-      <CheckBox layoutX="145.0" layoutY="209.0" mnemonicParsing="false" text="Filter Known Peptides" />
-      <TextField fx:id="tfFdr" layoutX="152.0" layoutY="157.0" />
-      <Label layoutX="115.0" layoutY="162.0" text="FDR" />
+    <TextArea editable="false" layoutX="10.0" layoutY="306.0" prefHeight="75.0" prefWidth="430.0" text="Min-Sik Kim et al., A draft map of the human proteome, Nature 2014, 509" wrapText="true" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="310.0" />
+      <HBox alignment="CENTER_LEFT" layoutX="115.0" layoutY="167.0" spacing="20.0" AnchorPane.leftAnchor="110.0" AnchorPane.topAnchor="160.0">
+         <children>
+            <Label layoutX="115.0" layoutY="172.0" text="FDR" />
+            <TextField fx:id="tfFdr" layoutX="152.0" layoutY="167.0" text="0.01" />
+         </children>
+      </HBox>
   </children>
   <padding>
     <Insets />

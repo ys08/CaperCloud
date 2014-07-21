@@ -225,7 +225,7 @@ public class CaperCloud extends Application {
         
         this.getRootLayout().setCenter(this.getMainView());
         //let JobOverviewController know us
-        log.debug(this);
+//        log.debug(this);
         this.getMainController().setMainApp(this);
     }
     

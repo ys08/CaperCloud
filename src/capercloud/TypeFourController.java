@@ -14,6 +14,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextField;
 import javafx.util.Callback;
 import org.jets3t.service.model.S3Object;
 
@@ -24,14 +25,13 @@ import org.jets3t.service.model.S3Object;
  */
 public class TypeFourController implements Initializable {
     private CaperCloud mainApp;
-    private ObservableList<S3Object> ol;
     
     private S3Object selectedObj;
     
-    @FXML private ListView lvPath;
+    @FXML private TextField tfVcf;
+    @FXML private TextField tfFdr;
 
     public TypeFourController() {
-        this.ol = FXCollections.observableArrayList();
     }
     
     public void setMainApp(CaperCloud mainApp) {
@@ -42,30 +42,7 @@ public class TypeFourController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // TODO
-        lvPath.setCellFactory(new Callback<ListView<S3Object>, ListCell<S3Object>>() {
-            @Override
-            public ListCell<S3Object> call(ListView<S3Object> p) {
-                return new ListCell<S3Object>() {
-                    @Override
-                    protected void updateItem(S3Object t, boolean bln) {
-                        super.updateItem(t, bln); //To change body of generated methods, choose Tools | Templates.
-                        if (t != null) {
-                            setText(t.getBucketName() + ":" + t.getName());
-                        }
-                    }
-                    
-                };
-            }
-        });
-        lvPath.setItems(ol);
-    }    
-    
-    public S3Object getDatabaseObj() {
-        if (this.ol.isEmpty()) {
-            return null;
-        }
-        return this.ol.get(0);
+        
     }
     
     @FXML
@@ -74,7 +51,10 @@ public class TypeFourController implements Initializable {
         if (this.selectedObj == null) {
             return;
         }
-        this.ol.clear();
-        this.ol.add(this.selectedObj);
+        this.tfVcf.setText(this.selectedObj.getName());
+    }
+    
+    public String getFdr() {
+        return this.tfFdr.getText();
     }
 }

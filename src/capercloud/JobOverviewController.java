@@ -200,7 +200,7 @@ public class JobOverviewController implements Initializable {
         this.fm = new FileModel();
         this.sm = new StatusModel();
         this.rm = new ResultModel();
-        log.debug("mainApp: " + this.mainApp);
+//        log.debug("mainApp: " + this.mainApp);
     }
 
     public void setUsername(String username) {
@@ -660,7 +660,7 @@ public class JobOverviewController implements Initializable {
         this.tvJobMonitor.setItems(this.sm.getJobs());
         //----------------------------init end-------------------------
         
-        log.debug("mainApp: " + this.mainApp);
+//        log.debug("mainApp: " + this.mainApp);
     }
 
     public void enableButton() {
@@ -852,7 +852,7 @@ public class JobOverviewController implements Initializable {
     
     @FXML
     private void handleJobTypeChange(ActionEvent ae) {
-        if("Novel Protein".equals(cbJobType.getValue())) {
+        if(cbJobType.getSelectionModel().getSelectedIndex() == 0) {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeOne.fxml"));
                 AnchorPane ap = (AnchorPane) loader.load();
@@ -862,7 +862,8 @@ public class JobOverviewController implements Initializable {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-       if("SAP".equals(cbJobType.getValue())) {
+        
+       if(cbJobType.getSelectionModel().getSelectedIndex() == 1) {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeTwo.fxml"));
                 AnchorPane ap = (AnchorPane) loader.load();
@@ -872,7 +873,7 @@ public class JobOverviewController implements Initializable {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        if("AS".equals(cbJobType.getValue())) {
+        if(cbJobType.getSelectionModel().getSelectedIndex() == 2) {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeThree.fxml"));
                 AnchorPane ap = (AnchorPane) loader.load();
@@ -882,7 +883,7 @@ public class JobOverviewController implements Initializable {
                 Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        if("Custom Protein Database".equals(cbJobType.getValue())) {
+        if(cbJobType.getSelectionModel().getSelectedIndex() == 3) {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("view/TypeFour.fxml"));
                 AnchorPane ap = (AnchorPane) loader.load();
