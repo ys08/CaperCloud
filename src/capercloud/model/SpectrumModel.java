@@ -17,22 +17,24 @@ public class SpectrumModel {
     private StringProperty spectrumId;
     private StringProperty calculatedMassToCharge;
     private StringProperty experimentalMassToCharge;
+    private StringProperty chargeState;
     private StringProperty xtandemExpect;
     private StringProperty xtandemHyperscore;
-    private StringProperty percolatorScore;
-    private StringProperty percolatorQvalue;
-    private StringProperty percolatorPEP;
+    private StringProperty localFdr;
+    private StringProperty qValue;
+    private StringProperty fdrScore;
     
-    public SpectrumModel(String spectrumId, String calculatedMassToCharge, String experimentalMassToCharge,
-            String xtandemExpect, String xtandemHyperscore, String percolatorScore, String percolatorQvalue, String percolatorPEP) {
+    public SpectrumModel(String spectrumId, String calculatedMassToCharge, String experimentalMassToCharge, String chargeState,
+            String xtandemExpect, String xtandemHyperscore, String localFdr, String qValue, String fdrScore) {
         this.spectrumId = new SimpleStringProperty(spectrumId);
         this.calculatedMassToCharge = new SimpleStringProperty(calculatedMassToCharge);
         this.experimentalMassToCharge = new SimpleStringProperty(experimentalMassToCharge);
+        this.chargeState = new SimpleStringProperty(chargeState);
         this.xtandemExpect = new SimpleStringProperty(xtandemExpect);
         this.xtandemHyperscore = new SimpleStringProperty(xtandemHyperscore);
-        this.percolatorScore = new SimpleStringProperty(percolatorScore);
-        this.percolatorQvalue = new SimpleStringProperty(percolatorQvalue);
-        this.percolatorPEP = new SimpleStringProperty(percolatorPEP);
+        this.localFdr = new SimpleStringProperty(localFdr);
+        this.qValue = new SimpleStringProperty(qValue);
+        this.fdrScore = new SimpleStringProperty(fdrScore);
     }
 
     public StringProperty spectrumIdProperty() {
@@ -46,6 +48,10 @@ public class SpectrumModel {
     public StringProperty experimentalMassToChargeProperty() {
         return experimentalMassToCharge;
     }
+    
+    public StringProperty chargeStateProperty() {
+        return this.chargeState;
+    }
 
     public StringProperty xtandemExpectProperty() {
         return xtandemExpect;
@@ -55,16 +61,15 @@ public class SpectrumModel {
         return xtandemHyperscore;
     }
 
-    public StringProperty percolatorScoreProperty() {
-        return percolatorScore;
+    public StringProperty localFdrProperty() {
+        return localFdr;
     }
 
-    public StringProperty percolatorQvalueProperty() {
-        return percolatorQvalue;
+    public StringProperty qValueProperty() {
+        return qValue;
     }
 
-    public StringProperty percolatorPEPProperty() {
-        return percolatorPEP;
+    public StringProperty fdrScoreProperty() {
+        return fdrScore;
     }
-    
 }

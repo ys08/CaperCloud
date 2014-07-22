@@ -16,6 +16,7 @@ import capercloud.model.InstanceModel;
 import capercloud.model.JobModel;
 import capercloud.model.ModificationTableModel;
 import capercloud.model.PeptideModel;
+import capercloud.model.Range;
 import capercloud.model.ResultModel;
 import capercloud.model.SpectrumModel;
 import capercloud.model.StatusModel;
@@ -115,6 +116,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.comparator.DirectoryFileComparator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.basex.core.BaseXException;
 import org.controlsfx.control.action.Action;
 import org.controlsfx.dialog.Dialog;
 import org.controlsfx.dialog.Dialogs;
@@ -552,19 +554,19 @@ public class JobOverviewController implements Initializable {
         this.rm.init(this.apSpectrum);
 //init result table
         ((TableColumn) this.tvResults.getColumns().get(0))
-                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("chrom"));
+                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("id"));
         ((TableColumn) this.tvResults.getColumns().get(1))
-                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("peptideSeq"));
+                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("chrom"));
         ((TableColumn) this.tvResults.getColumns().get(2))
-                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("proteinStart"));
+                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("strand"));
         ((TableColumn) this.tvResults.getColumns().get(3))
-                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("proteinEnd"));
+                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("peptideSeq"));
         ((TableColumn) this.tvResults.getColumns().get(4))
-                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("peptideStart"));
-        ((TableColumn) this.tvResults.getColumns().get(5))
-                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("peptideEnd"));
-        ((TableColumn) this.tvResults.getColumns().get(6))
                 .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("modifications"));
+        ((TableColumn) this.tvResults.getColumns().get(5))
+                .setCellValueFactory(new PropertyValueFactory<PeptideModel, String>("description"));
+        
+        this.tvResults.setItems(this.rm.getPeptideList());
 
         //init web engine
         WebEngine webEngine = JobOverviewController.this.wvBrowser.getEngine();
@@ -585,17 +587,17 @@ public class JobOverviewController implements Initializable {
                             TableRow tr = (TableRow) event.getSource();
                             PeptideModel item = (PeptideModel) tr.getItem();
                             //display PSMs
-                            String peptideId = item.getId();
+                            String peptideId = item.getPeptideRef();
                             JobOverviewController.this.tvPSMs.setItems(JobOverviewController.this.rm.getSpectrumList(peptideId));
                             
                             String chrom = item.chromProperty().get();
 
-                            String proteinStart = item.proteinStartProperty().get();
-                            String proteinEnd = item.proteinEndProperty().get();
-
+                            Range ucscRange = item.getUcscRange();
+                            String ucscStart = String.valueOf(ucscRange.getStartPos());
+                            String ucscEnd = String.valueOf(ucscRange.getEndPos());
 
                             String url = "http://61.50.130.100/ucsc/cgi-bin/hgTracks?org=human&position=chr" 
-                                    + chrom + ":" + proteinStart + "-" + proteinEnd 
+                                    + chrom + ":" + ucscStart + "-" + ucscEnd 
                                     + "&hgt.customText=" + JobOverviewController.this.tfBedUrl.getText();
                             log.debug(url);
                             webEngine.load(url);
@@ -612,15 +614,15 @@ public class JobOverviewController implements Initializable {
         ((TableColumn) this.tvPSMs.getColumns().get(2))
                 .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("experimentalMassToCharge"));
         ((TableColumn) this.tvPSMs.getColumns().get(3))
-                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("xtandemExpect"));
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("chargeState"));
         ((TableColumn) this.tvPSMs.getColumns().get(4))
-                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("xtandemHyperscore"));
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("xtandemExpect"));
         ((TableColumn) this.tvPSMs.getColumns().get(5))
-                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("percolatorScore"));
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("xtandemHyperscore"));
         ((TableColumn) this.tvPSMs.getColumns().get(6))
-                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("percolatorQvalue"));
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("localFdr"));
         ((TableColumn) this.tvPSMs.getColumns().get(7))
-                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("percolatorPEP"));
+                .setCellValueFactory(new PropertyValueFactory<SpectrumModel, String>("qValue"));
         
         this.tvPSMs.setRowFactory(new Callback<TableView<SpectrumModel>, TableRow<SpectrumModel>>() {
             @Override
@@ -1677,7 +1679,7 @@ public class JobOverviewController implements Initializable {
                                 cmdLog = executeCommand(cmdThresHold);       
                                 log.info(cmdLog);
 //job specific parser
-//                                JobOverviewController.this.rm.parse(new File("result.mzid"), cj.getJobType());
+                                JobOverviewController.this.rm.parse(new File("result.mzid"), cj.getJobType());
                                 return null;
                             }
                         };
@@ -1844,5 +1846,13 @@ public class JobOverviewController implements Initializable {
     private void handleVisualizeAction() {
         String bedUrl = this.tfBedUrl.getText();
         this.rm.setBedUrl(bedUrl);
+    }
+    @FXML
+    private void handleTestAction() {
+        try {
+            JobOverviewController.this.rm.parse(new File("np.mzid"), 1);
+        } catch (BaseXException ex) {
+            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }

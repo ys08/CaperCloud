@@ -653,6 +653,7 @@
                                           <Insets />
                                        </HBox.margin>
                                     </HBox>
+                                    <Button mnemonicParsing="false" onAction="#handleTestAction" text="Test" />
                       </children>
                     </HBox>
                   </top>
@@ -667,13 +668,12 @@
                                                    <children>
                                             <TableView fx:id="tvResults" prefHeight="351.0" prefWidth="1276.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                               <columns>
-                                                <TableColumn prefWidth="52.0" text="Chromosome" />
-                                                <TableColumn prefWidth="87.0" text="Peptide Sequence" />
-                                                <TableColumn prefWidth="88.0" text="Protein Start" />
-                                                            <TableColumn prefWidth="90.0" text="Protein End" />
-                                                            <TableColumn prefWidth="88.0" text="Peptide Start" />
-                                                            <TableColumn prefWidth="84.0" text="Peptide End" />
-                                                            <TableColumn prefWidth="130.0" text="Modifications" />
+                                                <TableColumn prefWidth="52.0" text="id" />
+                                                <TableColumn prefWidth="63.0" text="chromosome" />
+                                                <TableColumn prefWidth="75.0" text="strand" />
+                                                            <TableColumn prefWidth="174.0" text="sequence" />
+                                                            <TableColumn prefWidth="121.0" text="modifications" />
+                                                            <TableColumn prefWidth="133.0" text="description" />
                                               </columns>
                                             </TableView>
                                                    </children>
@@ -683,13 +683,13 @@
                                                       <TableView fx:id="tvPSMs" prefHeight="349.0" prefWidth="470.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                                         <columns>
                                                           <TableColumn prefWidth="54.0" text="ID" />
-                                                            <TableColumn prefWidth="60.0" text="Calculated m/z" />
-                                                            <TableColumn prefWidth="77.0" text="Experimental m/z" />
-                                                            <TableColumn text="X!Tandem expect" />
-                                                <TableColumn minWidth="0.0" prefWidth="87.0" text="X!Tandem hyperscore" />
-                                                            <TableColumn minWidth="0.0" prefWidth="79.0" text="Percolator score" />
-                                                            <TableColumn prefWidth="81.0" text="Percolator Q value" />
-                                                            <TableColumn prefWidth="82.0" text="Percolator PEP" />
+                                                            <TableColumn prefWidth="83.0" text="Calculated m/z" />
+                                                            <TableColumn prefWidth="81.0" text="Experimental m/z" />
+                                                            <TableColumn prefWidth="87.0" text="Charge State" />
+                                                <TableColumn minWidth="0.0" prefWidth="73.0" text="X!Tandem Expect" />
+                                                            <TableColumn minWidth="0.0" text="X!Tandem Hyperscore" />
+                                                            <TableColumn minWidth="0.0" prefWidth="86.0" text="Local FDR" />
+                                                            <TableColumn prefWidth="75.0" text="Q Value" />
                                                         </columns>
                                                       </TableView>
                                                    </children>

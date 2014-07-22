@@ -9,3 +9,4 @@
 *.mgf
 *.log
 out_tmp/
+post_process/

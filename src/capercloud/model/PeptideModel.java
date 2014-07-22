@@ -6,6 +6,7 @@
 
 package capercloud.model;
 
+import java.util.ArrayList;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
@@ -14,57 +15,81 @@ import javafx.beans.property.StringProperty;
  * @author shuai
  */
 public class PeptideModel {
-    private String id;
+    private String peptideRef;
     
+    private StringProperty id;
     private StringProperty chrom;
+    private StringProperty strand;
     private StringProperty peptideSeq;
-    private StringProperty proteinStart;
-    private StringProperty proteinEnd;
-    private StringProperty peptideStart;
-    private StringProperty peptideEnd;
     private StringProperty modifications;
+    private StringProperty description;
     
-    public PeptideModel(String id, String chrom, String peptideSeq, String proteinStart, String proteinEnd, String peptideStart, String peptideEnd, String modifications) {
-        this.id = id;
+    private ArrayList<Range> regions;
+    
+    public PeptideModel(String peptideRef, String id, String chrom, String strand, String modifications, String peptideSeq, String description) {
+        this.peptideRef = peptideRef;
+        this.id = new SimpleStringProperty(id);
         this.chrom = new SimpleStringProperty(chrom);
+        this.strand = new SimpleStringProperty(strand);
         this.peptideSeq = new SimpleStringProperty(peptideSeq);
-        this.proteinStart = new SimpleStringProperty(proteinStart);
-        this.proteinEnd = new SimpleStringProperty(proteinEnd);
-        this.peptideStart = new SimpleStringProperty(peptideStart);
-        this.peptideEnd = new SimpleStringProperty(peptideEnd);
         this.modifications = new SimpleStringProperty(modifications);
+        this.description = new SimpleStringProperty(description);
+        
+        this.regions = new ArrayList<>();
     }
 
-    public String getId() {
+    public StringProperty idProperty() {
         return id;
     }
 
     public StringProperty chromProperty() {
         return chrom;
     }
+    
+    public StringProperty strandProperty() {
+        return this.strand;
+    }
 
     public StringProperty peptideSeqProperty() {
         return peptideSeq;
     }
 
-    public StringProperty proteinStartProperty() {
-        return proteinStart;
-    }
-
-    public StringProperty proteinEndProperty() {
-        return proteinEnd;
-    }
-
-    public StringProperty peptideStartProperty() {
-        return peptideStart;
-    }
-
-    public StringProperty peptideEndProperty() {
-        return peptideEnd;
-    }
-
     public StringProperty modificationsProperty() {
         return modifications;
     }
+        
+    public StringProperty descriptionProperty() {
+        return this.description;
+    }
     
+    public void addRegions(Range r) {
+        this.regions.add(r);
+    }
+
+    public ArrayList<Range> getRegions() {
+        return regions;
+    }
+
+    public String getPeptideRef() {
+        return peptideRef;
+    }
+    
+    public Range getUcscRange() {
+        if (this.regions.size() == 1) {
+            return regions.get(0);
+        }
+        
+        Range leftRange = this.regions.get(0);
+        Range rightRange = this.regions.get(this.regions.size()-1);
+        int leftStart = leftRange.getStartPos();
+        int leftEnd = leftRange.getEndPos();
+        int rightStart = rightRange.getStartPos();
+        int rightEnd = rightRange.getEndPos();
+        
+        if (leftStart < rightStart) {
+            return new Range(leftStart, rightEnd);
+        } else {
+            return new Range(rightStart, leftEnd);
+        }
+    }
 }
