@@ -1677,7 +1677,7 @@ public class JobOverviewController implements Initializable {
                                 cmdLog = executeCommand(cmdThresHold);       
                                 log.info(cmdLog);
 //job specific parser
-                                JobOverviewController.this.rm.parse(new File("result.mzid"), cj.getJobType());
+//                                JobOverviewController.this.rm.parse(new File("result.mzid"), cj.getJobType());
                                 return null;
                             }
                         };

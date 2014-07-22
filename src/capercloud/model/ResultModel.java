@@ -39,7 +39,6 @@ import uk.ac.ebi.pride.tools.mgf_parser.MgfFile;
  * @author shuai
  */
 public class ResultModel {
-    private File resultFile;
     
     private String bedUrl;
     private File spectraFile;
@@ -89,13 +88,12 @@ public class ResultModel {
     }
     
     public void parse(File resultFile, int jobType) throws BaseXException {
-        this.resultFile = resultFile;
         this.peptideList.clear();
         this.peptideToSpectrumMap.clear();
         
         String querySpectrumIdentificationResult =
                 "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
-                + "for $sir in doc('" + this.resultFile.getAbsolutePath() + "')//SpectrumIdentificationResult "
+                + "for $sir in doc('" + resultFile.getAbsolutePath() + "')//SpectrumIdentificationResult "
                 + "let $id:=data($sir/@spectrumID) "
                 + "for $sii in $sir//SpectrumIdentificationItem "
                 + "where $sii/@rank=\"1\" "
@@ -117,7 +115,7 @@ public class ResultModel {
 
                 String queryPeptideEvidence = 
                         "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
-                        + "for $pe in doc('" + this.resultFile.getAbsolutePath() + "')//PeptideEvidence "
+                        + "for $pe in doc('" + resultFile.getAbsolutePath() + "')//PeptideEvidence "
                         + "where $pe/@peptide_ref=\"" + attributes[1] + "\" "
                         + "let $id:=data($pe/@id) "
                         + "let $end:=data($pe/@end) "
