@@ -10,3 +10,4 @@
 *.log
 out_tmp/
 post_process/
+example_data/

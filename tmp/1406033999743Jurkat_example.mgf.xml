@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<bioml>
+	<note type="input" label="list path, default parameters">default_input.xml</note>
+	<note type="input" label="list path, taxonomy information">1406033999743taxonomy.xml</note>
+	<note type="input" label="protein, taxon">all</note>
+	<note type="input" label="protein, cleavage site">[RK]|{P}</note>
+	<note type="input" label="protein, cleavage semi">no</note>
+	<note type="input" label="spectrum, path">Jurkat_example.mgf</note>
+	<note type="input" label="spectrum, fragment monoisotopic mass error">0.05</note>
+	<note type="input" label="spectrum, fragment monoisotopic mass error units">Daltons</note>
+	<note type="input" label="spectrum, parent monoisotopic mass error plus">10</note>
+	<note type="input" label="spectrum, parent monoisotopic mass error minus">10</note>
+	<note type="input" label="spectrum, parent monoisotopic mass error units">ppm</note>
+	<note type="input" label="refine, maximum valid expectation value">0.01</note>
+	<note type="input" label="residue, modification mass">57.021464@C</note>
+		<note>carbamidomethyl c</note>
+	<note type="input" label="residue, potential modification mass">15.994915@C</note>
+		<note>oxidation of c</note>
+	<note type="input" label="scoring, maximum missed cleavage sites">2</note>
+	<note type="input" label="output, path">output</note>
+	<note type="input" label="output, parameters">yes</note>
+	<note type="input" label="output, path hashing">no</note>
+	<note type="input" label="output, message">...</note>
+</bioml>

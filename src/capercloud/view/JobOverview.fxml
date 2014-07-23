@@ -644,16 +644,14 @@
                       <children>
                                     <HBox alignment="CENTER" spacing="5.0">
                                        <children>
-                                          <Button mnemonicParsing="false" onAction="#handleSelectSpectraFileAction" text="Select spectra file" />
-                                          <TextField fx:id="tfSpectraFile" editable="false" prefHeight="26.0" prefWidth="287.0" />
-                                          <Label text="BED File URL:" />
+                                          <Label text="BED File URL (Eucalyptus Mode):" />
                                           <TextField fx:id="tfBedUrl" prefHeight="26.0" prefWidth="534.0" />
                                        </children>
                                        <HBox.margin>
                                           <Insets />
                                        </HBox.margin>
                                     </HBox>
-                                    <Button mnemonicParsing="false" onAction="#handleTestAction" text="Test" />
+                                    <Button mnemonicParsing="false" onAction="#handleImportHistoryResultAction" text="import history result" />
                       </children>
                     </HBox>
                   </top>

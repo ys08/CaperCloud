@@ -7,22 +7,18 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
-<BorderPane id="BorderPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="768.0" prefWidth="1280.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.RootLayoutController">
+<BorderPane id="BorderPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="768.0" prefWidth="1280.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="capercloud.RootLayoutController">
   <top>
     <MenuBar>
       <menus>
         <Menu mnemonicParsing="false" text="CaperCloud">
           <items>
-            <MenuItem mnemonicParsing="false" text="About" />
-            <MenuItem mnemonicParsing="false" text="Preference" />
-            <MenuItem mnemonicParsing="false" text="Clear" />
+                  <CheckMenuItem fx:id="cmiEucalyptusEnabled" mnemonicParsing="false" text="Use Eucalyptus" />
+            <MenuItem fx:id="miPrivateCloudMode" mnemonicParsing="false" text="Private Cloud Mode" />
+            <MenuItem fx:id="miAbout" mnemonicParsing="false" text="About" />
           </items>
         </Menu>
-        <Menu mnemonicParsing="false" text="Help">
-          <items>
-            <MenuItem mnemonicParsing="false" text="User Guide" />
-          </items>
-        </Menu>
+        <Menu mnemonicParsing="false" text="Help" />
       </menus>
     </MenuBar>
   </top>

@@ -13,7 +13,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -160,7 +159,7 @@ public class ResultModel {
                     Pattern descPattern = Pattern.compile("dbseq_(.*)\\|SIX-FRAME\\|(.*):(-?\\d)\\|orf:(.*)"); 
                     Matcher descMatcher = descPattern.matcher(seqDescription);
                     if (descMatcher.find()) {
-                        System.out.println(seqDescription);
+//                        System.out.println(seqDescription);
                         String id = descMatcher.group(1);
                         String chrom = descMatcher.group(2);
                         String strand = descMatcher.group(3);
@@ -191,7 +190,7 @@ public class ResultModel {
                         
                         //variant point in peptide
                         if (relStartPos<=varPos && varPos<=relEndPos) {
-                            System.out.println(seqDescription);
+//                            System.out.println(seqDescription);
                             ArrayList<Range> regions = this.reconstructRanges(genomicRegions);
                             int nnStartPos = relStartPos * 3;
                             int nnEndPos = relEndPos * 3;
@@ -260,7 +259,7 @@ public class ResultModel {
                         
                         //junction site in peptide
                         if (relStartPos<=jPos && jPos<=relEndPos) {
-                            System.out.println(seqDescription);
+//                            System.out.println(seqDescription);
                             ArrayList<Range> regions = reconstructRanges(genomicRegions);
                             int firstStartPos = regions.get(0).getStartPos() + (jPos - relStartPos) * 3;
                             int secondEndPos = regions.get(1).getStartPos() + (relEndPos - jPos) * 3 + 2;
@@ -310,7 +309,7 @@ public class ResultModel {
         }
         
         StringBuilder line = new StringBuilder();
-        line.append("track name= \"capercloud\" description=\"capercloud-generated track\" visibility=1 itemRgb=\"On\"")
+        line.append("track name=\"capercloud\" description=\"capercloud-generated track\" visibility=1 itemRgb=\"On\"")
                 .append(IOUtils.LINE_SEPARATOR);
         
         try {
@@ -354,7 +353,6 @@ public class ResultModel {
                     .append(R).append(",").append(G).append(",").append(B)
                     .append(IOUtils.LINE_SEPARATOR);
             }
-
             try {
                 FileUtils.writeStringToFile(bedFile , line.toString(), true);
             } catch (IOException ex) {
@@ -362,6 +360,7 @@ public class ResultModel {
             }
         }
     }
+    
     public void drawSpectrum(int index) throws JMzReaderException {     
         if (this.jmzReader == null) {
             return;
@@ -397,5 +396,47 @@ public class ResultModel {
                 swingNode.setContent(container);
             }
         });
+    }
+    
+    public int getJobTypeFromResult(File resultFile) {
+        String accession = "none";
+        String queryDbSequence =
+                "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                + "let $ds:=doc('" + resultFile.getAbsolutePath() + "')//DBSequence "
+                + "let $accession:=data($ds/@accession) "
+                + "return $accession";
+        try {
+            accession = query(queryDbSequence);
+        } catch (BaseXException ex) {
+            return 0;
+        }
+        if (accession.contains("SIX-FRAME")) {
+            return 1;
+        }
+        if (accession.contains("VAR")) {
+            return 2;
+        }
+        if (accession.contains("EEJ")) {
+            return 3;
+        }
+        if (accession.contains("VCF")) {
+            return 4;
+        }
+        return 0;
+    }
+    
+    public String getSpectraFilenameFromResult(File resultFile) {
+        String querySpectraData =
+                "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                + "let $ds:=doc('" + resultFile.getAbsolutePath() + "')//SpectraData "
+                + "let $location:=data($ds/@location) "
+                + "return $location";
+        String fileName = null;
+        try {
+            fileName = query(querySpectraData);
+        } catch (BaseXException ex) {
+            Logger.getLogger(ResultModel.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return fileName;
     }
 }

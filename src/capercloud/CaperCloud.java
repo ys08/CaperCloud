@@ -6,13 +6,17 @@
 
 package capercloud;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
@@ -36,10 +40,9 @@ import org.apache.commons.logging.LogFactory;
 public class CaperCloud extends Application {
     
     public static final String APPLICATION_DESCRIPTION = "CaperCloud/1.0";
-    public static final int NOVEL_GENE = 1;
-    public static final int SAP = 2;
-    public static final int AS = 3;
-    public static final int CUSTOM_DB = 4;
+    
+    private SimpleBooleanProperty eucalyptusEnabled;
+    private String eucalyptusClcIpAddress = null;
     
     private Log log = LogFactory.getLog(getClass());
     private CloudManager cloudManager;
@@ -72,8 +75,9 @@ public class CaperCloud extends Application {
      * @author Yang Shuai
      */
     public CaperCloud() {
+        this.eucalyptusEnabled = new SimpleBooleanProperty(false);
         this.cloudManager = CloudManager.getInstance();
-        this.cloudManager.setMainApp(this);     
+        this.cloudManager.setMainApp(this);  
     }
     
     //geters and setters
@@ -117,6 +121,7 @@ public class CaperCloud extends Application {
             //we should load fxml only one time, so set controller here
             this.rootController = loader.getController();
         }
+        
         return rootLayout;
     }
 
@@ -183,6 +188,23 @@ public class CaperCloud extends Application {
     public void resetCanceled() {
         this.canceled = false;
     }
+
+    public SimpleBooleanProperty getEucalyptusEnabled() {
+        return eucalyptusEnabled;
+    }
+
+    public void setEucalyptusEnabled(SimpleBooleanProperty eucalyptusEnabled) {
+        this.eucalyptusEnabled = eucalyptusEnabled;
+    }
+    
+
+    public String getEucalyptusClcIpAddress() {
+        return eucalyptusClcIpAddress;
+    }
+
+    public void setEucalyptusClcIpAddress(String eucalyptusClcIpAddress) {
+        this.eucalyptusClcIpAddress = eucalyptusClcIpAddress;
+    }
     
     @Override
     public void start(Stage stage) throws Exception {
@@ -190,9 +212,17 @@ public class CaperCloud extends Application {
         this.getPrimaryStage().setOnHidden(new EventHandler() {
             @Override
             public void handle(Event t) {
-//                if (CaperCloud.this.getCloudManager().getEc2Manager() != null) {
+                try {
+                    //                if (CaperCloud.this.getCloudManager().getEc2Manager() != null) {
 //                    CaperCloud.this.getCloudManager().getEc2Manager().shutdown();
 //                }
+                    OutputStream fos = new FileOutputStream(CaperCloud.this.getMainController().getHistoryFile()); 
+                    CaperCloud.this.getMainController().getProperty().store(fos, "capercloud history file");
+                } catch (FileNotFoundException ex) {
+                    Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException ex) {
+                    Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         });
         
@@ -201,8 +231,7 @@ public class CaperCloud extends Application {
         stage.setScene(scene);
         stage.setTitle("CaperCloud");
         stage.show();
-
-        log.debug("mainApp: " + this);
+        
         this.getRootController().setMainApp(this);
         
         //show the tabpane

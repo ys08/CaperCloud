@@ -74,9 +74,9 @@ public class CloudManager {
     private AmazonEC2Client ec2Client;
     
     private CloudManager() {
+        
     }
-    
-    
+
     public static CloudManager getInstance() {
         if (singleton == null) {
             singleton = new CloudManager();
@@ -111,7 +111,10 @@ public class CloudManager {
         this.s3m = new S3Manager(currentCredentials);
         this.ec2Client = new AmazonEC2Client(new BasicAWSCredentials(currentCredentials.getAccessKey(), currentCredentials.getSecretKey()));  
         //test in eucalyptus
-        this.ec2Client.setEndpoint("http://192.168.99.111:8773/services/Eucalyptus");
+        if (this.mainApp.getEucalyptusEnabled().get()) {
+            String endPoint = "http://" + this.mainApp.getEucalyptusClcIpAddress() + ":8773/services/Eucalyptus";
+            this.ec2Client.setEndpoint(endPoint);
+        }
     }
     
     public void logoutCloud() {

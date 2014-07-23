@@ -34,7 +34,9 @@ import com.amazonaws.services.ec2.model.StopInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.compomics.util.experiment.biology.Enzyme;
 import com.compomics.util.experiment.identification.SearchParameters;
 import com.compomics.util.experiment.identification.SearchParameters.MassAccuracyType;
@@ -43,6 +45,7 @@ import com.compomics.util.preferences.ModificationProfile;
 import impl.org.controlsfx.i18n.Localization;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -60,6 +63,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -132,6 +136,9 @@ import uk.ac.ebi.pride.tools.jmzreader.JMzReaderException;
 public class JobOverviewController implements Initializable {
     private Log log = LogFactory.getLog(getClass());
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private Properties property;
+    File historyFile;
+    private String bedUrl;
     
     private CaperCloud mainApp;
     private TypeOneController t1c;
@@ -197,14 +204,31 @@ public class JobOverviewController implements Initializable {
     @FXML private TextField tfBedUrl;
     
     public JobOverviewController() {
+        property = new Properties(); 
+        historyFile= new File("history.prop");
+        
+        try { 
+            property.load(new FileInputStream(historyFile));
+        } catch (IOException ex) {
+            log.debug("history.prop does not exist!");
+        }
+        property.setProperty("b", "a");
+        
         //set dialog locale
         Localization.setLocale(new Locale("en", "US"));
         this.jm = new JobModel();
-
         this.fm = new FileModel();
         this.sm = new StatusModel();
         this.rm = new ResultModel();
 //        log.debug("mainApp: " + this.mainApp);
+    }
+
+    public Properties getProperty() {
+        return property;
+    }
+
+    public File getHistoryFile() {
+        return historyFile;
     }
 
     public void setUsername(String username) {
@@ -573,7 +597,7 @@ public class JobOverviewController implements Initializable {
         webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<State>() {
             @Override
             public void changed(ObservableValue<? extends State> ov, State t, State t1) {
-                log.debug(webEngine.getLocation());
+//                log.debug(webEngine.getLocation());
             }
                     });
         
@@ -586,6 +610,10 @@ public class JobOverviewController implements Initializable {
                     public void handle(MouseEvent event) {
                             TableRow tr = (TableRow) event.getSource();
                             PeptideModel item = (PeptideModel) tr.getItem();
+                            
+                            if (item == null) {
+                                return;
+                            }
                             //display PSMs
                             String peptideId = item.getPeptideRef();
                             JobOverviewController.this.tvPSMs.setItems(JobOverviewController.this.rm.getSpectrumList(peptideId));
@@ -598,7 +626,7 @@ public class JobOverviewController implements Initializable {
 
                             String url = "http://61.50.130.100/ucsc/cgi-bin/hgTracks?org=human&position=chr" 
                                     + chrom + ":" + ucscStart + "-" + ucscEnd 
-                                    + "&hgt.customText=" + JobOverviewController.this.tfBedUrl.getText();
+                                    + "&hgt.customText=" + JobOverviewController.this.bedUrl;
                             log.debug(url);
                             webEngine.load(url);
                         }      
@@ -633,6 +661,9 @@ public class JobOverviewController implements Initializable {
                     public void handle(MouseEvent event) {
                             TableRow tr = (TableRow) event.getSource();
                             SpectrumModel item = (SpectrumModel) tr.getItem();
+                            if (item == null) {
+                                return;
+                            }
                             //display PSMs
                             try {
                                 String index = item.spectrumIdProperty().get();
@@ -918,6 +949,8 @@ public class JobOverviewController implements Initializable {
         
 //create transfer task
         for (File f : selectedFiles) {
+            //store file-path map for every file
+            this.property.setProperty(f.getName(), f.getAbsolutePath());
             final DataTransferTask task = new UploadTask(f, this.fm.getBucketPath(), this.mainApp.getCloudManager().getCurrentCredentials());
             task.setOnCancelled(new EventHandler() {
                 @Override
@@ -1389,6 +1422,10 @@ public class JobOverviewController implements Initializable {
         }
         
         this.sm.addJob(cj);
+      
+        //save output bucket
+        this.property.setProperty("output-bucket", cj.getOutputBucketName());
+        
         Dialogs.create()
                 .owner(this.mainApp.getPrimaryStage())
                 .title("Information")
@@ -1652,9 +1689,11 @@ public class JobOverviewController implements Initializable {
                 cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
                 cj.setStatus("retrieving result");
                 AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
-                s3Client.setEndpoint("http://192.168.99.111:8773/services/Walrus/");
+                if (JobOverviewController.this.mainApp.getEucalyptusEnabled().get()) {
+                    String endPoint = "http://" + JobOverviewController.this.mainApp.getEucalyptusClcIpAddress() + ":8773/services/Walrus/";
+                    s3Client.setEndpoint(endPoint);
+                }
                 writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "output")).getObjectContent(), new File("tmp/output.xml"));
-                 
                 Service<Void> postProcessService = new Service<Void>() {
                     @Override
                     protected Task<Void> createTask() {
@@ -1680,6 +1719,25 @@ public class JobOverviewController implements Initializable {
                                 log.info(cmdLog);
 //job specific parser
                                 JobOverviewController.this.rm.parse(new File("result.mzid"), cj.getJobType());
+                                
+                                String spectraFilename = cj.getSpectrumObjs().get(0).getName();
+                                String spectraFilePath = JobOverviewController.this.property.getProperty(spectraFilename);
+                                if (spectraFilePath != null) {
+                                    File spectraFile = new File(spectraFilePath);
+                                    if (spectraFile.exists()) {
+                                        JobOverviewController.this.rm.setSpectraFile(spectraFile);
+                                    }
+                                }
+
+                                //upload bed file to s3
+                                AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials("AKIAIWNERGLUEYZL7N7Q", "2vg5/PqUH1DGRTi1ONYRXwf9lfrV6Mblf2vFIb4U"));
+                                //make s3 and object public readable
+                        
+                                s3Client.setBucketAcl(cj.getOutputBucketName(), CannedAccessControlList.PublicRead);
+                                File bedFile = new File("result.bed");
+                                s3Client.putObject(new PutObjectRequest(cj.getOutputBucketName(), bedFile.getName(), bedFile).withCannedAcl(CannedAccessControlList.PublicRead));
+                                JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + cj.getOutputBucketName() + "/" + bedFile.getName();
+                                
                                 return null;
                             }
                         };
@@ -1854,5 +1912,89 @@ public class JobOverviewController implements Initializable {
         } catch (BaseXException ex) {
             Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    @FXML
+    private void handleImportHistoryResultAction() {
+        FileChooser fileChooser = new FileChooser();
+        File resultFile = fileChooser.showOpenDialog(null);
+        if (resultFile == null) {
+            return;
+        }
+
+        int jobType = this.rm.getJobTypeFromResult(resultFile);
+        if (jobType == 0) {
+            Dialogs.create()
+                    .owner(this.mainApp.getPrimaryStage())
+                    .title("Error")
+                    .masthead(null)
+                    .message("It is not a valid result file!")
+                    .showError();
+            return;
+        }
+        
+        String spectraFilename = this.rm.getSpectraFilenameFromResult(resultFile);
+        String spectraFilePath = this.property.getProperty(spectraFilename);
+        if (spectraFilePath == null) {
+            Dialogs.create()
+                    .owner(this.mainApp.getPrimaryStage())
+                    .title("Warning")
+                    .masthead(null)
+                    .message("Could not find the spectra file, click OK to continue!")
+                    .showWarning();
+        } else {
+            File spectraFile = new File(spectraFilePath);
+            if (!spectraFile.exists()) {
+                Dialogs.create()
+                        .owner(this.mainApp.getPrimaryStage())
+                        .title("Warning")
+                        .masthead(null)
+                        .message("Could not find the spectra file, click OK to continue!")
+                        .showWarning();
+            } else {
+                this.rm.setSpectraFile(spectraFile);
+            }
+        }
+        
+        this.tvResults.setItems(null);
+        this.tvPSMs.setItems(null);
+        
+        Service<Void> parseResultService = new Service<Void>() {
+            @Override
+            protected Task<Void> createTask() {
+                return new Task<Void>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        updateMessage("Parsing Result File " + resultFile.getName());
+                        updateProgress(-1, 0);
+                        
+                        JobOverviewController.this.rm.parse(resultFile, jobType);
+                        
+                        String bucketName = JobOverviewController.this.property.getProperty("output-bucket");
+                        if (bucketName == null) {
+                            bucketName = "capercloud-output";
+                        }
+                        
+                        //upload bed file to s3
+                        AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials("AKIAIWNERGLUEYZL7N7Q", "2vg5/PqUH1DGRTi1ONYRXwf9lfrV6Mblf2vFIb4U"));
+                        //make s3 and object public readable
+                        s3Client.setBucketAcl(bucketName, CannedAccessControlList.PublicRead);
+                        File bedFile = new File("result.bed");
+                        s3Client.putObject(new PutObjectRequest(bucketName, bedFile.getName(), bedFile).withCannedAcl(CannedAccessControlList.PublicRead));
+                        JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + bucketName + "/" + bedFile.getName();
+                        
+                        JobOverviewController.this.tvResults.setItems(JobOverviewController.this.rm.getPeptideList());
+                        return null;
+                    }
+                };
+            }
+        };
+        
+        Dialogs.create()
+                .owner(JobOverviewController.this.mainApp.getPrimaryStage())
+                .title("Progress")
+                .masthead(null)
+                .showWorkerProgress(parseResultService);
+
+        parseResultService.start(); 
     }
 }
