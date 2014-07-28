@@ -47,10 +47,10 @@ public class JobModel {
     private ObservableList<ModificationTableModel> defaultModifications;
     
     private final ObservableList jobTypes = FXCollections.observableArrayList(
-        "Novel Protein", 
-        "Missense SNV", 
-        "Exon-Exon Junction",
-        "Sample-specific SNV"
+        "Novel Protein detection", 
+        "Known SAV identification", 
+        "Exon skipping events identification",
+        "Sample-specific SAV identification"
     );
     
     private final ObservableList refinementExpects = FXCollections.observableArrayList(

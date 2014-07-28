@@ -1,5 +1,11 @@
 #capercloud history file
-#Wed Jul 23 20:21:29 CST 2014
+#Mon Jul 28 16:30:00 CST 2014
+chr3_six_7.fa=/Volumes/NORMAL/caper3 database/six-frame/chr3_six_7.fa
+chr6_six_7.fa=/Volumes/NORMAL/caper3 database/six-frame/chr6_six_7.fa
+chr4_six_7.fa=/Volumes/NORMAL/caper3 database/six-frame/chr4_six_7.fa
+capercloud_test.mgf=/Users/shuai/Developer/CaperCloud/example_data/capercloud_test.mgf
+chr5_six_7.fa=/Volumes/NORMAL/caper3 database/six-frame/chr5_six_7.fa
+Jurkat_example.mgf=/Users/shuai/Developer/CaperCloud/example_data/Jurkat_example.mgf
 b=a
 output-bucket=capercloud-output
-Jurkat_example.mgf=/Users/shuai/Developer/CaperCloud/example_data/Jurkat_example.mgf
+sapFinder_test.vcf=/Users/shuai/Developer/CaperCloud/example_data/sapFinder_test.vcf

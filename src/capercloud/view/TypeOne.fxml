@@ -26,13 +26,19 @@
     <Label layoutY="96.0" text="Filter Stage" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="96.0" />
     <Label text="Database Selection" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="15.0" />
     <Separator prefWidth="454.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="80.0" />
-    <TextArea editable="false" layoutX="10.0" layoutY="306.0" prefHeight="75.0" prefWidth="430.0" text="Min-Sik Kim et al., A draft map of the human proteome, Nature 2014, 509" wrapText="true" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="310.0" />
       <HBox alignment="CENTER_LEFT" layoutX="115.0" layoutY="167.0" spacing="20.0" AnchorPane.leftAnchor="110.0" AnchorPane.topAnchor="160.0">
          <children>
             <Label layoutX="115.0" layoutY="172.0" text="FDR" />
             <TextField fx:id="tfFdr" layoutX="152.0" layoutY="167.0" text="0.01" />
          </children>
       </HBox>
+      <Text layoutX="30.0" layoutY="331.568359375" strokeType="OUTSIDE" strokeWidth="0.0" text="Min-Sik Kim et al., A draft map of the human proteome, Nature 2014, 509" wrappingWidth="393.2724609375" AnchorPane.leftAnchor="30.0" AnchorPane.topAnchor="319.0">
+         <font>
+            <Font name="System Bold Italic" size="13.0" />
+         </font>
+      </Text>
+      <Separator layoutX="12.0" layoutY="269.0" prefWidth="454.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="269.0" />
+      <Label layoutX="10.0" layoutY="279.0" text="Analysis Protocol" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="279.0" />
   </children>
   <padding>
     <Insets />

@@ -160,10 +160,10 @@ public class ResultModel {
                     Matcher descMatcher = descPattern.matcher(seqDescription);
                     if (descMatcher.find()) {
 //                        System.out.println(seqDescription);
-                        String id = descMatcher.group(1);
+                        String id = descMatcher.group(1) + "_" + descMatcher.group(4);
                         String chrom = descMatcher.group(2);
                         String strand = descMatcher.group(3);
-                        String description = descMatcher.group(4);
+                        String description = "ORF:" + descMatcher.group(4);
                         String genomicRegions = descMatcher.group(4);
                         
                         Range region = reconstructRanges(genomicRegions).get(0);
@@ -175,25 +175,29 @@ public class ResultModel {
                     }
                 }
                 
-                if (jobType == 2) {
-                    Pattern descPattern = Pattern.compile("dbseq_(.*)\\|VAR\\|(.*):(-?\\d)\\|(.*:\\w/\\w)/(\\d+)\\|cds:(.*)"); 
+                if (jobType == 2 || jobType == 4) {
+                    Pattern descPattern = Pattern.compile("dbseq_(.*)\\|(VAR|VCF)\\|(.*):(-?\\d)\\|(.*:\\w/\\w)/(\\d+)\\|cds:(.*)"); 
                     Matcher descMatcher = descPattern.matcher(seqDescription);
                     if (descMatcher.find()) {
+//                        System.out.println(seqDescription);
+//                        System.out.println(descMatcher.group(1) + " " + descMatcher.group(2) + " " + descMatcher.group(3) + " " + descMatcher.group(4) + " " + descMatcher.group(5));
                         String id = descMatcher.group(1);
-                        String chrom = descMatcher.group(2);
-                        String strand = descMatcher.group(3);
-                        String description = descMatcher.group(4);
-                        int varPos = Integer.parseInt(descMatcher.group(5));
-                        String genomicRegions = descMatcher.group(6);
+                        String chrom = descMatcher.group(3);
+                        String strand = descMatcher.group(4);
+                        String description = descMatcher.group(5);
+                        int varPos = Integer.parseInt(descMatcher.group(6));
+                        String genomicRegions = descMatcher.group(7);
                         
                         PeptideModel pm = new PeptideModel(peptideRef, id, chrom, strand, mod.toString(), seq, description);
                         
+//                        System.out.println(relStartPos + " " + varPos + " " + relEndPos);
                         //variant point in peptide
                         if (relStartPos<=varPos && varPos<=relEndPos) {
 //                            System.out.println(seqDescription);
                             ArrayList<Range> regions = this.reconstructRanges(genomicRegions);
-                            int nnStartPos = relStartPos * 3;
-                            int nnEndPos = relEndPos * 3;
+                            //0-based
+                            int nnStartPos = relStartPos * 3 - 3;
+                            int nnEndPos = relEndPos * 3 - 3;
                             
                             int window = 0;
                             int leftCrIndex = -1;
@@ -220,11 +224,13 @@ public class ResultModel {
                             }
                             
                             if (leftCrIndex == rightCrIndex) {
+                                System.out.println(leftCrIndex+" "+rightCrIndex+" "+nnStartPos+" "+nnEndPos+" "+genomicRegions+" "+window);
                                 int startPos = leftInOffset + regions.get(leftCrIndex).getStartPos();
                                 int endPos = rightInOffset + regions.get(rightCrIndex).getStartPos() + 2;
                                 Range r = new Range(startPos, endPos);
                                 pm.addRegions(r);
                             } else {
+                                System.out.println(leftCrIndex+" "+rightCrIndex+" "+nnStartPos+" "+nnEndPos+" "+genomicRegions+" "+window);
                                 int leftStartPos = leftInOffset + regions.get(leftCrIndex).getStartPos();
                                 int leftEndPos = regions.get(leftCrIndex).getEndPos();
                                 Range newLeftCr = new Range(leftStartPos, leftEndPos);

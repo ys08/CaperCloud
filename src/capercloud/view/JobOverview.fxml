@@ -31,7 +31,7 @@
                               <columns>
                                 <TableColumn fx:id="tcLocalFilename" editable="false" maxWidth="5000.0" minWidth="10.0" prefWidth="203.0" sortable="false" text="File Name" />
                                 <TableColumn fx:id="tcLocalFilesize" editable="false" maxWidth="5000.0" minWidth="10.0" prefWidth="130.0" sortable="false" text="File Size" />
-                                <TableColumn fx:id="tcLocalModifiedTime" editable="false" maxWidth="5000.0" minWidth="10.0" prefWidth="239.0" sortable="false" text="Modified Time" />
+                                <TableColumn fx:id="tcLocalModifiedTime" editable="false" maxWidth="5000.0" minWidth="10.0" prefWidth="239.0" sortable="false" text="Last Modified Time" />
                               </columns>
                               <BorderPane.margin>
                                 <Insets bottom="1.0" left="1.0" />
@@ -135,7 +135,7 @@
                                   <columns>
                                     <TableColumn fx:id="tcRemoteFilename" editable="false" maxWidth="5000.0" minWidth="10.0" prefWidth="206.0" sortable="false" style="" text="File Name" />
                                     <TableColumn fx:id="tcRemoteFilesize" editable="false" maxWidth="5000.0" minWidth="10.0" prefWidth="140.0" sortable="false" text="File Size" />
-                                    <TableColumn fx:id="tcRemoteUploadTime" editable="false" maxWidth="5000.0" minWidth="10.0" prefWidth="219.0" sortable="false" text="Upload Time" />
+                                    <TableColumn fx:id="tcRemoteUploadTime" editable="false" maxWidth="5000.0" minWidth="10.0" prefWidth="219.0" sortable="false" text="Last Modified Time" />
                                   </columns>
                                   <BorderPane.margin>
                                     <Insets bottom="1.0" right="1.0" />
@@ -342,7 +342,7 @@
                                           <HBox id="HBox" alignment="CENTER" spacing="20.0">
                                             <children>
                                               <Label text="Job Type" />
-                                              <ComboBox fx:id="cbJobType" onAction="#handleJobTypeChange" prefHeight="29.0" prefWidth="170.0" promptText="Seletc a Job Type">
+                                              <ComboBox fx:id="cbJobType" onAction="#handleJobTypeChange" prefHeight="29.0" prefWidth="276.0" promptText="Seletc a Job Type">
                                                 <items>
                                                   <FXCollections fx:factory="observableArrayList">
                                                     <String fx:value="项 1" />

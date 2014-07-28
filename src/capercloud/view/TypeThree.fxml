@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.text.*?>
 <?import javafx.collections.*?>
 <?import java.lang.*?>
 <?import java.util.*?>
@@ -16,7 +17,6 @@
             <TextField fx:id="tfFdr" layoutX="162.0" layoutY="177.0" text="0.01" />
          </children>
       </HBox>
-      <TextArea editable="false" layoutX="20.0" layoutY="316.0" prefHeight="75.0" prefWidth="430.0" text="Fan Mo et al., A compatible exon-exon junction database for the identification of exon skipping events using tandem mass spectrum, BMC Bioinformatics 2008, 9:537" wrapText="true" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="310.0" />
       <Separator layoutX="8.0" layoutY="92.0" prefWidth="454.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="80.0" />
       <Label layoutX="10.0" layoutY="10.0" text="Database Selection" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="15.0" />
       <Label layoutX="10.0" layoutY="106.0" text="Filter Stage" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="96.0" />
@@ -30,5 +30,12 @@
             </FXCollections>
          </items>
       </ComboBox>
+      <Text layoutX="30.0" layoutY="331.568359375" strokeType="OUTSIDE" strokeWidth="0.0" text="Fan Mo et al., A compatible exon-exon junction database for the identification of exon skipping events using tandem mass spectrum, BMC Bioinformatics 2008, 9:537" wrappingWidth="393.2724609375" AnchorPane.leftAnchor="30.0" AnchorPane.topAnchor="319.0">
+         <font>
+            <Font name="System Bold Italic" size="13.0" />
+         </font>
+      </Text>
+      <Separator layoutX="12.0" layoutY="269.0" prefWidth="454.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="269.0" />
+      <Label layoutX="10.0" layoutY="279.0" text="Analysis Protocol" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="279.0" />
    </children>
 </AnchorPane>

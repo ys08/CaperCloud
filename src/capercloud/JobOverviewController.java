@@ -624,7 +624,9 @@ public class JobOverviewController implements Initializable {
                             String ucscStart = String.valueOf(ucscRange.getStartPos());
                             String ucscEnd = String.valueOf(ucscRange.getEndPos());
 
-                            String url = "http://61.50.130.100/ucsc/cgi-bin/hgTracks?org=human&position=chr" 
+                            //genome.ucsc.edu
+                            //61.50.130.100:17436/ucsc
+                            String url = "http://61.50.130.100:17436/ucsc/cgi-bin/hgTracks?org=human&position=chr" 
                                     + chrom + ":" + ucscStart + "-" + ucscEnd 
                                     + "&hgt.customText=" + JobOverviewController.this.bedUrl;
                             log.debug(url);
@@ -1553,6 +1555,7 @@ public class JobOverviewController implements Initializable {
                         int jobType = cj.getJobType();
                         //generate peptide database first in /mnt
                         if (jobType == 4) {
+                            
                             String cmdDownloadCdsFasta = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
                                     + " " + cm.getCurrentCredentials().getSecretKey()
                                     + " " + "capercloud-ref"
@@ -1576,8 +1579,9 @@ public class JobOverviewController implements Initializable {
                             cm.sftp("ec2-user", masterPublicIp, "remote-init/CustomVariantProtein.jar", "/mnt/CustomVariantProtein.jar", privateKey);
                             cm.sftp("ec2-user", masterPublicIp, "remote-init/lib/commons-io-2.4.jar", "/mnt/lib/commons-io-2.4.jar", privateKey);
                             cm.sftp("ec2-user", masterPublicIp, "remote-init/lib/jfasta-2.1.3-jar-with-dependencies.jar", "/mnt/lib/jfasta-2.1.3-jar-with-dependencies.jar", privateKey);
+                            cm.sftp("ec2-user", masterPublicIp, "remote-init/my_decoy.pl", "/mnt/my_decoy.pl", privateKey);
                             
-                            String cmdCreateRefDatabase = "cd /mnt;/usr/local/jdk1.7.0_60/bin/java -Xmx512m -jar CustomVariantProtein.jar Homo_sapiens.GRCh37.75.cds.all.fa mrna-cds.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName();
+                            String cmdCreateRefDatabase = "cd /mnt;chmod 755 my_decoy.pl;/usr/local/jdk1.7.0_60/bin/java -Xmx512m -jar CustomVariantProtein.jar Homo_sapiens.GRCh37.75.cds.all.fa mrna-cds.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName() + ";./my_decoy --append " + cj.getRefDatabaseName();
                             cm.remoteCallByShh("ec2-user", masterPublicIp, cmdCreateRefDatabase, privateKey);
                             
 //                            String cmdUploadRefDatabase = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
@@ -1688,12 +1692,6 @@ public class JobOverviewController implements Initializable {
                 cj.setStatus("closing cluster");
                 cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
                 cj.setStatus("retrieving result");
-                AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
-                if (JobOverviewController.this.mainApp.getEucalyptusEnabled().get()) {
-                    String endPoint = "http://" + JobOverviewController.this.mainApp.getEucalyptusClcIpAddress() + ":8773/services/Walrus/";
-                    s3Client.setEndpoint(endPoint);
-                }
-                writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "output")).getObjectContent(), new File("tmp/output.xml"));
                 Service<Void> postProcessService = new Service<Void>() {
                     @Override
                     protected Task<Void> createTask() {
@@ -1703,21 +1701,32 @@ public class JobOverviewController implements Initializable {
                                 updateProgress(-1, 0);
                                 updateMessage("Post Processing");
                                 
-                                //convert x!tandem output to mzid format
+                                AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
+                                if (JobOverviewController.this.mainApp.getEucalyptusEnabled().get()) {
+                                    String endPoint = "http://" + JobOverviewController.this.mainApp.getEucalyptusClcIpAddress() + ":8773/services/Walrus/";
+                                    s3Client.setEndpoint(endPoint);
+                                }
+                                writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "output")).getObjectContent(), new File("tmp/output.xml"));
+                                
+                                //convert x!tandem output to mzid format, parsing xml is too slow
+                                log.info("Tandem2mzid");
                                 String runPercolator = "java -jar post_process/mzidentml-lib-1.6.10.jar Tandem2mzid tmp/output.xml tmp/output.mzid -outputFragmentation false -decoyRegex ###REV### -databaseFileFormatID MS:1001348 -massSpecFileFormatID MS:1001062 -idsStartAtZero false -compress false";
 //                                log.debug(postProcessCMD);
                                 String cmdLog = executeCommand(runPercolator);
                                 log.info(cmdLog);
                                 //calculate fdr
+                                log.info("FalseDiscoveryRate");
                                 String calculateFdrValue = "java -jar post_process/mzidentml-lib-1.6.10.jar FalseDiscoveryRate tmp/output.mzid tmp/output_fdr.mzid -decoyRegex ###REV### -decoyValue 1 -cvTerm MS:1001330 -betterScoresAreLower true -compress false";
                                 cmdLog = executeCommand(calculateFdrValue);       
                                 log.info(cmdLog);
                                 
                                 //cut off 
+                                log.info("Threshold");
                                 String cmdThresHold = "java -jar post_process/mzidentml-lib-1.6.10.jar Threshold tmp/output_fdr.mzid result.mzid -isPSMThreshold true -cvAccessionForScoreThreshold MS:1002354 -threshValue " + cj.getFdrValue() + " -betterScoresAreLower true -deleteUnderThreshold true -compress false";
                                 cmdLog = executeCommand(cmdThresHold);       
                                 log.info(cmdLog);
 //job specific parser
+                                log.info("Generating Peptide List");
                                 JobOverviewController.this.rm.parse(new File("result.mzid"), cj.getJobType());
                                 
                                 String spectraFilename = cj.getSpectrumObjs().get(0).getName();
@@ -1730,12 +1739,12 @@ public class JobOverviewController implements Initializable {
                                 }
 
                                 //upload bed file to s3
-                                AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials("AKIAIWNERGLUEYZL7N7Q", "2vg5/PqUH1DGRTi1ONYRXwf9lfrV6Mblf2vFIb4U"));
+                                AmazonS3Client s3ClientTest = new AmazonS3Client(new BasicAWSCredentials("AKIAIWNERGLUEYZL7N7Q", "2vg5/PqUH1DGRTi1ONYRXwf9lfrV6Mblf2vFIb4U"));
                                 //make s3 and object public readable
                         
-                                s3Client.setBucketAcl(cj.getOutputBucketName(), CannedAccessControlList.PublicRead);
+                                s3ClientTest.setBucketAcl(cj.getOutputBucketName(), CannedAccessControlList.PublicRead);
                                 File bedFile = new File("result.bed");
-                                s3Client.putObject(new PutObjectRequest(cj.getOutputBucketName(), bedFile.getName(), bedFile).withCannedAcl(CannedAccessControlList.PublicRead));
+                                s3ClientTest.putObject(new PutObjectRequest(cj.getOutputBucketName(), bedFile.getName(), bedFile).withCannedAcl(CannedAccessControlList.PublicRead));
                                 JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + cj.getOutputBucketName() + "/" + bedFile.getName();
                                 
                                 return null;
@@ -1905,14 +1914,7 @@ public class JobOverviewController implements Initializable {
         String bedUrl = this.tfBedUrl.getText();
         this.rm.setBedUrl(bedUrl);
     }
-    @FXML
-    private void handleTestAction() {
-        try {
-            JobOverviewController.this.rm.parse(new File("np.mzid"), 1);
-        } catch (BaseXException ex) {
-            Logger.getLogger(JobOverviewController.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
+    
     @FXML
     private void handleImportHistoryResultAction() {
         FileChooser fileChooser = new FileChooser();
@@ -1957,7 +1959,8 @@ public class JobOverviewController implements Initializable {
         
         this.tvResults.setItems(null);
         this.tvPSMs.setItems(null);
-        
+
+            
         Service<Void> parseResultService = new Service<Void>() {
             @Override
             protected Task<Void> createTask() {
@@ -1988,7 +1991,7 @@ public class JobOverviewController implements Initializable {
                 };
             }
         };
-        
+        //            this.rm.parse(resultFile, jobType);
         Dialogs.create()
                 .owner(JobOverviewController.this.mainApp.getPrimaryStage())
                 .title("Progress")

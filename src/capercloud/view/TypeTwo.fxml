@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.text.*?>
 <?import javafx.collections.*?>
 <?import java.lang.*?>
 <?import java.util.*?>
@@ -29,6 +30,12 @@
             </FXCollections>
          </items>
       </ComboBox>
-      <TextArea editable="false" layoutX="20.0" layoutY="316.0" prefHeight="75.0" prefWidth="430.0" text="Min-Sik Kim et al., A draft map of the human proteome, Nature 2014, 509" wrapText="true" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="310.0" />
+      <Label layoutX="10.0" layoutY="279.0" text="Analysis Protocol" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="279.0" />
+      <Separator layoutX="12.0" layoutY="269.0" prefWidth="454.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="269.0" />
+      <Text layoutX="30.0" layoutY="332.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Suresh Mathivanan et al., Identifying mutated proteins secreted by colon cancer cell lines using mass spectrometry, J. Proteomics 2012, 76" wrappingWidth="393.2724609375" AnchorPane.leftAnchor="30.0" AnchorPane.topAnchor="319.0">
+         <font>
+            <Font name="System Bold Italic" size="13.0" />
+         </font>
+      </Text>
    </children>
 </AnchorPane>
