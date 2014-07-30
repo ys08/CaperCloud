@@ -108,7 +108,7 @@ public class CloudManager {
      */
     public void loginCloud(AWSCredentials credentials) throws ServiceException {
         this.currentCredentials = credentials;
-        this.s3m = new S3Manager(currentCredentials);
+        this.s3m = new S3Manager(currentCredentials, this.mainApp);
         this.ec2Client = new AmazonEC2Client(new BasicAWSCredentials(currentCredentials.getAccessKey(), currentCredentials.getSecretKey()));  
         //test in eucalyptus
         if (this.mainApp.getEucalyptusEnabled().get()) {

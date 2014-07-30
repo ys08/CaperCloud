@@ -953,7 +953,7 @@ public class JobOverviewController implements Initializable {
         for (File f : selectedFiles) {
             //store file-path map for every file
             this.property.setProperty(f.getName(), f.getAbsolutePath());
-            final DataTransferTask task = new UploadTask(f, this.fm.getBucketPath(), this.mainApp.getCloudManager().getCurrentCredentials());
+            final DataTransferTask task = new UploadTask(f, this.fm.getBucketPath(), this.mainApp.getCloudManager().getCurrentCredentials(), this.mainApp);
             task.setOnCancelled(new EventHandler() {
                 @Override
                 public void handle(Event t) {
@@ -993,7 +993,7 @@ public class JobOverviewController implements Initializable {
 //create transfer task
         for (S3Object obj : selectedObjects) {
             this.fm.addDataTransferTask(
-                new DownloadTask(obj, this.fm.getFolderPath(), this.mainApp.getCloudManager().getCurrentCredentials()));
+                new DownloadTask(obj, this.fm.getFolderPath(), this.mainApp.getCloudManager().getCurrentCredentials(), this.mainApp));
         }
         
         ExecutorService executor = Executors.newFixedThreadPool(this.fm.getDataTransferTaskList().size(), new ThreadFactory() {

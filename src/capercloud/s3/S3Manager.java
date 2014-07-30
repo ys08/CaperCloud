@@ -4,9 +4,12 @@ import capercloud.CaperCloud;
 import capercloud.model.DataTransferTask;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.NoSuchAlgorithmException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.auth.AuthScope;
@@ -49,20 +52,26 @@ import org.jets3t.service.utils.Mimetypes;
 public class S3Manager implements StorageServiceEventListener, CredentialsProvider{
 
     private Log log = LogFactory.getLog(getClass());
-    public static Jets3tProperties jets3tProperties = Jets3tProperties.getInstance(Constants.JETS3T_PROPERTIES_FILENAME);;
+    
+    public static Jets3tProperties jets3tProperties;
     private CredentialsProvider mCredentialProvider;
     private RestS3Service s3Service;
     private ThreadedS3Service storageService;
     private final ByteFormatter byteFormatter = new ByteFormatter();
     
     private DataTransferTask transferTask;
-    /**
-     * 
-     * @param currentCredentials
-     * @throws ServiceException 
-     */
-    public S3Manager(AWSCredentials currentCredentials) throws ServiceException {
-//constructor for listing action
+    
+    public S3Manager(AWSCredentials currentCredentials, CaperCloud mainApp) throws ServiceException {
+        try {
+            //constructor for listing action
+            if (mainApp.getEucalyptusEnabled().get()) {
+                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream("jets3t.euca.properties"), "jets3tProperties");
+            } else {
+                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream(Constants.JETS3T_PROPERTIES_FILENAME), "jets3tProperties");
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(S3Manager.class.getName()).log(Level.SEVERE, null, ex);
+        }
         this.mCredentialProvider = new BasicCredentialsProvider();
         this.s3Service = new RestS3Service(currentCredentials, CaperCloud.APPLICATION_DESCRIPTION, this, this.jets3tProperties);
         this.storageService = new ThreadedS3Service(this.s3Service, this);
@@ -70,8 +79,19 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
         this.transferTask = null;
     }
     
-    public S3Manager(AWSCredentials currentCredentials, DataTransferTask transferTask) throws ServiceException {
+    public S3Manager(AWSCredentials currentCredentials, DataTransferTask transferTask, CaperCloud mainApp) throws ServiceException {
 //constructor for data transfers task
+        try {
+            //constructor for listing action
+            if (mainApp.getEucalyptusEnabled().get()) {
+                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream("jets3t.euca.properties"), "jets3tProperties");
+            } else {
+                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream(Constants.JETS3T_PROPERTIES_FILENAME), "jets3tProperties");
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(S3Manager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
         this.mCredentialProvider = new BasicCredentialsProvider();
         this.s3Service = new RestS3Service(currentCredentials, CaperCloud.APPLICATION_DESCRIPTION, this, this.jets3tProperties);
         this.storageService = new ThreadedS3Service(this.s3Service, this);

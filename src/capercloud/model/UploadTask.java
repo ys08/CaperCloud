@@ -6,10 +6,13 @@
 
 package capercloud.model;
 
+import capercloud.CaperCloud;
 import capercloud.s3.S3Manager;
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.security.AWSCredentials;
@@ -25,14 +28,18 @@ public class UploadTask extends DataTransferTask {
     private AWSCredentials currentCredentials;
     private S3Manager s3m;
 
-    public UploadTask(File uploadFile, S3Bucket toBucket, AWSCredentials currentCredentials) {
+    public UploadTask(File uploadFile, S3Bucket toBucket, AWSCredentials currentCredentials, CaperCloud mainApp) {
         this.uploadFile = uploadFile;
         this.toBucket = toBucket;
         this.currentCredentials = currentCredentials;
+        try {
+            this.s3m = new S3Manager(this.currentCredentials, this, mainApp);
+        } catch (ServiceException ex) {
+            Logger.getLogger(UploadTask.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
-    private void runUploadTask() throws ServiceException, IOException, NoSuchAlgorithmException {
-        this.s3m = new S3Manager(this.currentCredentials, this);
+    private void runUploadTask() throws NoSuchAlgorithmException, IOException {
         s3m.uploadFile(uploadFile, toBucket);
     }
 
