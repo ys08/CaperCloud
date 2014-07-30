@@ -65,9 +65,10 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
         try {
             //constructor for listing action
             if (mainApp.getEucalyptusEnabled().get()) {
-                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream("jets3t.euca.properties"), "jets3tProperties");
+                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream("configs/jets3t.euca.properties"), "jets3tProperties");
+                jets3tProperties.setProperty("s3service.s3-endpoint", mainApp.getEucalyptusClcIpAddress());
             } else {
-                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream(Constants.JETS3T_PROPERTIES_FILENAME), "jets3tProperties");
+                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream("configs/jets3t.properties"), "jets3tProperties");
             }
         } catch (IOException ex) {
             Logger.getLogger(S3Manager.class.getName()).log(Level.SEVERE, null, ex);
@@ -84,9 +85,10 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
         try {
             //constructor for listing action
             if (mainApp.getEucalyptusEnabled().get()) {
-                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream("jets3t.euca.properties"), "jets3tProperties");
+                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream("configs/jets3t.euca.properties"), "jets3tProperties");
+                jets3tProperties.setProperty("s3service.s3-endpoint", mainApp.getEucalyptusClcIpAddress());
             } else {
-                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream(Constants.JETS3T_PROPERTIES_FILENAME), "jets3tProperties");
+                jets3tProperties = Jets3tProperties.getInstance(new FileInputStream("configs/jets3t.properties"), "jets3tProperties");
             }
         } catch (IOException ex) {
             Logger.getLogger(S3Manager.class.getName()).log(Level.SEVERE, null, ex);

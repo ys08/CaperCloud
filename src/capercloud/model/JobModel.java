@@ -74,7 +74,7 @@ public class JobModel {
         this.defaultModifications = FXCollections.observableArrayList();
         try {
             this.enzymeFactory = EnzymeFactory.getInstance();
-            File enzymesFile = new File("enzymes.xml");
+            File enzymesFile = new File("configs/enzymes.xml");
             this.enzymeFactory.importEnzymes(enzymesFile);
             List<Enzyme> enzymes = this.enzymeFactory.getEnzymes();
             for (Enzyme e : enzymes) {
@@ -85,7 +85,7 @@ public class JobModel {
         }
         this.ptmFactory = PTMFactory.getInstance();
         try {
-            this.ptmFactory.importModifications(new File("mods.xml"), false);
+            this.ptmFactory.importModifications(new File("configs/mods.xml"), false);
             for (String modName: this.ptmFactory.getDefaultModificationsOrdered()) {
                 this.defaultModifications.add(new ModificationTableModel(this.ptmFactory.getPTM(modName)));
             }
