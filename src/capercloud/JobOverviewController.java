@@ -212,7 +212,6 @@ public class JobOverviewController implements Initializable {
         } catch (IOException ex) {
             log.debug("history.prop does not exist!");
         }
-        property.setProperty("b", "a");
         
         //set dialog locale
         Localization.setLocale(new Locale("en", "US"));
