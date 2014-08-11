@@ -120,7 +120,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.comparator.DirectoryFileComparator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.basex.core.BaseXException;
 import org.controlsfx.control.action.Action;
 import org.controlsfx.dialog.Dialog;
 import org.controlsfx.dialog.Dialogs;
@@ -1378,6 +1377,7 @@ public class JobOverviewController implements Initializable {
                 cj.createTaxonomyFile(refDatabaseName);
                 cj.setRefDatabaseName(refDatabaseName);
                 cj.setFdrValue(this.t1c.getFdr());
+                cj.setIsFilterSelected(this.t1c.isFilterSelected());
                 cj.createInputFiles();
             } catch (IOException ex) {
                 ex.printStackTrace();
@@ -1491,6 +1491,11 @@ public class JobOverviewController implements Initializable {
                         String masterPrivateIp = masterInstance.getPrivateIpAddress();
                         String masterPublicIp = masterInstance.getPublicIpAddress();
                         
+                        List<String> otherInstances = new ArrayList<>();
+                        for (int i=1; i<instances.size(); i++) {
+                            otherInstances.add(instances.get(i));
+                        }
+                        
                         //make hosts file
                         DescribeInstancesResult r = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
                         Iterator i = r.getReservations().iterator();
@@ -1516,7 +1521,7 @@ public class JobOverviewController implements Initializable {
                             Reservation rr = (Reservation) i.next();
                             for (Instance ii : rr.getInstances()) {
                                 //correct time on eucalyptus
-                                String cmdCorrectNtpTime = "sudo chmod 777 /mnt;mkdir /mnt/hadoop;sudo service ntpd stop;sudo ntpdate 192.168.99.111;sudo service ntpd start;echo \"export PATH=$PATH:/usr/local/hadoop-1.2.1/bin\" >> /home/ec2-user/.bashrc;source /home/ec2-user/.bashrc;echo '" + hosts.toString() + "' | sudo tee -a /etc/hosts";
+                                String cmdCorrectNtpTime = "sudo chmod 777 /mnt;mkdir /mnt/hadoop;sudo service ntpd stop;sudo ntpdate " + JobOverviewController.this.mainApp.getEucalyptusClcIpAddress() + ";sudo service ntpd start;echo \"export PATH=$PATH:/usr/local/hadoop-1.2.1/bin\" >> /home/ec2-user/.bashrc;source /home/ec2-user/.bashrc;echo '" + hosts.toString() + "' | sudo tee -a /etc/hosts";
 //                                log.info("remote execute: " + cmdCorrectNtpTime);
                                 cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmdCorrectNtpTime, privateKey);
                                 //launching hadoop cluster
@@ -1667,16 +1672,40 @@ public class JobOverviewController implements Initializable {
                         //download output(in hdfs) to local
                         String cmdDownloadOutput = "hadoop dfs -copyToLocal output output";
                         cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadOutput, privateKey);
+                        
+                        //shut down other instances
+                        if (!otherInstances.isEmpty()) {
+                            cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(otherInstances));
+                        }
+                        
+                        //convert x!tandem output to mzid format, parsing xml is too slow
+                        log.info("post processing");
+                        String cmdTandem2MzId = "java -jar post_process/mzidentml-lib-1.6.10.jar Tandem2mzid output output.mzid -outputFragmentation false -decoyRegex \"###REV###\" -databaseFileFormatID MS:1001348 -massSpecFileFormatID MS:1001062 -idsStartAtZero false -compress false";
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdTandem2MzId, privateKey);
+                        log.info(cmdTandem2MzId);
+                        
+                        //calculate fdr
+                        log.info("FalseDiscoveryRate");
+                        String cmdCalculateFdrValue = "java -jar post_process/mzidentml-lib-1.6.10.jar FalseDiscoveryRate output.mzid output_fdr.mzid -decoyRegex \"###REV###\" -decoyValue 1 -cvTerm MS:1001330 -betterScoresAreLower true -compress false";
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdCalculateFdrValue, privateKey);      
+
+                        //cut off 
+                        log.info("Threshold");
+                        String cmdThresHold = "java -jar post_process/mzidentml-lib-1.6.10.jar Threshold output_fdr.mzid result.mzid -isPSMThreshold true -cvAccessionForScoreThreshold MS:1002354 -threshValue " + cj.getFdrValue() + " -betterScoresAreLower true -deleteUnderThreshold true -compress false";
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdThresHold, privateKey); 
+                        
                         // upload result to s3
                         cj.setStatus("uploading result to s3");
                         String bucketName = cj.getOutputBucketName();
-                        String cmd5 = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
+                        String cmdUploadResult = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
                                 + " " + cm.getCurrentCredentials().getSecretKey()
                                 + " " + bucketName
-                                + " " + "/home/ec2-user/output";
-                        log.debug(cmd5);
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmd5, privateKey);
+                                + " " + "/home/ec2-user/result.mzid";
+                        log.debug(cmdUploadResult);
+                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdUploadResult, privateKey);
                         
+                        //terminate master instance
+                        cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(masterId));
                         return instances;
                     }
                 };
@@ -1685,12 +1714,8 @@ public class JobOverviewController implements Initializable {
         
         msSearchService.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
             @Override
-            public void handle(WorkerStateEvent t) {
-                List<String> instances = msSearchService.getValue();
-//                log.info("shutting down instances");
-                cj.setStatus("closing cluster");
-                cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
-                cj.setStatus("retrieving result");
+            public void handle(WorkerStateEvent t) {             
+                cj.setStatus("parsing result");
                 Service<Void> postProcessService = new Service<Void>() {
                     @Override
                     protected Task<Void> createTask() {
@@ -1705,27 +1730,14 @@ public class JobOverviewController implements Initializable {
                                     String endPoint = "http://" + JobOverviewController.this.mainApp.getEucalyptusClcIpAddress() + ":8773/services/Walrus/";
                                     s3Client.setEndpoint(endPoint);
                                 }
-                                writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "output")).getObjectContent(), new File("tmp/output.xml"));
+                                writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "result.mzid")).getObjectContent(), new File("result.mzid"));
                                 
-                                //convert x!tandem output to mzid format, parsing xml is too slow
-                                log.info("Tandem2mzid");
-                                String runPercolator = "java -jar post_process/mzidentml-lib-1.6.10.jar Tandem2mzid tmp/output.xml tmp/output.mzid -outputFragmentation false -decoyRegex ###REV### -databaseFileFormatID MS:1001348 -massSpecFileFormatID MS:1001062 -idsStartAtZero false -compress false";
-//                                log.debug(postProcessCMD);
-                                String cmdLog = executeCommand(runPercolator);
-                                log.info(cmdLog);
-                                //calculate fdr
-                                log.info("FalseDiscoveryRate");
-                                String calculateFdrValue = "java -jar post_process/mzidentml-lib-1.6.10.jar FalseDiscoveryRate tmp/output.mzid tmp/output_fdr.mzid -decoyRegex ###REV### -decoyValue 1 -cvTerm MS:1001330 -betterScoresAreLower true -compress false";
-                                cmdLog = executeCommand(calculateFdrValue);       
-                                log.info(cmdLog);
-                                
-                                //cut off 
-                                log.info("Threshold");
-                                String cmdThresHold = "java -jar post_process/mzidentml-lib-1.6.10.jar Threshold tmp/output_fdr.mzid result.mzid -isPSMThreshold true -cvAccessionForScoreThreshold MS:1002354 -threshValue " + cj.getFdrValue() + " -betterScoresAreLower true -deleteUnderThreshold true -compress false";
-                                cmdLog = executeCommand(cmdThresHold);       
-                                log.info(cmdLog);
 //job specific parser
                                 log.info("Generating Peptide List");
+                                if (cj.isIsFilterSelected()) {
+                                    JobOverviewController.this.rm.loadKnownPeptide(new File("Homo_sapiens.GRCh37.75.pep.all.fa"));
+                                }
+                                
                                 JobOverviewController.this.rm.parse(new File("result.mzid"), cj.getJobType());
                                 
                                 String spectraFilename = cj.getSpectrumObjs().get(0).getName();
@@ -1968,6 +1980,9 @@ public class JobOverviewController implements Initializable {
                     protected Void call() throws Exception {
                         updateMessage("Parsing Result File " + resultFile.getName());
                         updateProgress(-1, 0);
+                        if (jobType == 1) {
+                            JobOverviewController.this.rm.loadKnownPeptide(new File("Homo_sapiens.GRCh37.75.pep.all.fa"));
+                        }
                         
                         JobOverviewController.this.rm.parse(resultFile, jobType);
                         

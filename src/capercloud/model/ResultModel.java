@@ -23,6 +23,10 @@ import javafx.embed.swing.SwingNode;
 import javafx.scene.layout.AnchorPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import net.sf.jfasta.FASTAElement;
+import net.sf.jfasta.FASTAFileReader;
+import net.sf.jfasta.impl.FASTAElementIterator;
+import net.sf.jfasta.impl.FASTAFileReaderImpl;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.basex.core.BaseXException;
@@ -45,6 +49,7 @@ public class ResultModel {
     
     private JMzReader jmzReader;
     private ObservableList<PeptideModel> peptideList;
+    private HashMap<String, List<String>> knownPeptides;
     private Map<String, ObservableList<SpectrumModel>> peptideToSpectrumMap;
     private Context context;
     
@@ -155,7 +160,6 @@ public class ResultModel {
             // real peptide
             if (isDecoy.equals("false")) {     
                 if (jobType == 1) {
-                    
                     Pattern descPattern = Pattern.compile("dbseq_(.*)\\|SIX-FRAME\\|(.*):(-?\\d)\\|orf:(.*)"); 
                     Matcher descMatcher = descPattern.matcher(seqDescription);
                     if (descMatcher.find()) {
@@ -169,6 +173,24 @@ public class ResultModel {
                         Range region = reconstructRanges(genomicRegions).get(0);
                         int nnStartPos = region.getStartPos() + relStartPos * 3;
                         int nnEndPos = region.getStartPos() + relEndPos * 3 + 2;
+                        
+//                        System.out.println(nnStartPos + " " + nnEndPos);
+                        boolean isKnown = false;        
+                        if (this.knownPeptides != null) {
+                            String tmp_id = chrom + "_" + strand;
+                            List<String> rl = this.knownPeptides.get(tmp_id);
+                            for (String i: rl) {
+                                if (i.contains(seq)) {
+                                    isKnown = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (isKnown) {
+                            continue;
+                        }
+                        
                         PeptideModel pm = new PeptideModel(peptideRef, id, chrom, strand, mod.toString(), seq, description);
                         pm.addRegions(new Range(nnStartPos, nnEndPos));
                         this.peptideList.add(pm);
@@ -445,4 +467,40 @@ public class ResultModel {
         }
         return fileName;
     }
+    
+    public void loadKnownPeptide(File knownPeptideFile) {
+        try {
+            this.knownPeptides = new HashMap<>();
+            FASTAFileReader reader = new FASTAFileReaderImpl(knownPeptideFile);
+            FASTAElementIterator it = reader.getIterator();
+            while (it.hasNext()) {
+                FASTAElement el = it.next();
+                String header = el.getHeader();
+                String seq = el.getSequence();
+                if (seq.contains("*")) {
+                    continue;
+                }
+                
+                Pattern p = Pattern.compile("GRCh37:([1-9XY][1-9]?):\\d+:\\d+:(-?1)");
+                Matcher m = p.matcher(header);
+                if (m.find()) {
+                    String chrom = m.group(1);
+                    String strand = m.group(2);
+                    String id = chrom + "_" + strand;
+                    
+                    if (this.knownPeptides.containsKey(id)) {
+                        List l = this.knownPeptides.get(id);
+                        l.add(seq);
+                    } else {
+                        List l = new ArrayList<Range>();
+                        l.add(seq);
+                        this.knownPeptides.put(id, l);
+                    }
+                }
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(ResultModel.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
 }

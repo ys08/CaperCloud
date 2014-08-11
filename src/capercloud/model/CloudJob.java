@@ -50,6 +50,8 @@ public class CloudJob {
     private String fdrValue;
     //job type 4
     private S3Object vcfObject;
+    //job type 1
+    private boolean isFilterSelected;
     
     private File taxonomyFile;
     private List<File> inputFiles;
@@ -69,6 +71,7 @@ public class CloudJob {
         this.spectrumObjs = spectrumObjs;
         this.sp = sp;
         this.jobType = jobType;
+        this.isFilterSelected = false;
         
         this.inputFiles = new ArrayList<>();
         this.tmpPath = "tmp";
@@ -76,6 +79,14 @@ public class CloudJob {
 
         this.timestamp = Long.toString(System.currentTimeMillis());
         this.instanceModelList = new ArrayList<>();
+    }
+
+    public boolean isIsFilterSelected() {
+        return isFilterSelected;
+    }
+
+    public void setIsFilterSelected(boolean isFilterSelected) {
+        this.isFilterSelected = isFilterSelected;
     }
     
     public String getOutputBucketName() {
