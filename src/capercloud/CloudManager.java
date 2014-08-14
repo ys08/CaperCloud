@@ -562,7 +562,7 @@ public class CloudManager {
     }
 
     
-    public void remoteCallByShh(String userName, String ipAddress, String command, File privateKey) throws JSchException, IOException, InterruptedException {
+    public int remoteCallByShh(String userName, String ipAddress, String command, File privateKey) throws JSchException, IOException, InterruptedException {
         JSch jsch = new JSch();
         jsch.addIdentity(privateKey.getAbsolutePath());
         JSch.setConfig("StrictHostKeyChecking", "no");
@@ -598,16 +598,22 @@ public class CloudManager {
                 log.info(new String(tmp, 0, i));
             }
             if (channel.isClosed()){
-                log.info("exit-status: " + channel.getExitStatus());
-                if (channel.getExitStatus() != 0) {
-                    log.error("Error occured on remote machines!!!");
+                
+                if (channel.getExitStatus() == 0) {
+                    log.info("Exit Status: " + channel.getExitStatus() + " SUCCESS!");
+                } else {
+                    log.info("Exit Status: " + channel.getExitStatus() + " FAILED! PLEASE TERMINATE THE RUNNING INSTANCES, AND CONTACT WITH THE AUTHOR!");
                 }
                 break;
             }
             Thread.sleep(1000);
         }
+        
+        int status = channel.getExitStatus();
         channel.disconnect();
         session.disconnect();
+        
+        return status;
     }
     
     public void sftp(String userName, String ipAddress, String lfile, String rfile, File privateKey) {

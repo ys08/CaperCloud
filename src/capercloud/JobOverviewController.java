@@ -138,6 +138,7 @@ public class JobOverviewController implements Initializable {
     private Properties property;
     File historyFile;
     private String bedUrl;
+    private String userName;
     
     private CaperCloud mainApp;
     private TypeOneController t1c;
@@ -211,6 +212,8 @@ public class JobOverviewController implements Initializable {
         } catch (IOException ex) {
             log.debug("history.prop does not exist!");
         }
+        
+        this.userName = "ubuntu";
         
         //set dialog locale
         Localization.setLocale(new Locale("en", "US"));
@@ -1468,7 +1471,15 @@ public class JobOverviewController implements Initializable {
         CloudManager cm = JobOverviewController.this.mainApp.getCloudManager(); 
         Date startTime = Calendar.getInstance().getTime();
         cj.setStartTime(sdf.format(startTime));
-        cj.setStatus("lauching instances");  
+        cj.setStatus("Launching cluster");  
+        
+        //ami username is different from emi
+        boolean eucalyptusEnabled = this.mainApp.getEucalyptusEnabled().get();
+        if (eucalyptusEnabled) {
+            this.userName = "ec2-user";
+        } else {
+            this.userName = "ubuntu";
+        }
         
         Service<List<String>> msSearchService = new Service<List<String>>() {
             @Override
@@ -1484,8 +1495,7 @@ public class JobOverviewController implements Initializable {
                         //create on-demand instances
                         List<String> instances = cm.createOnDemandInstances(imageId, instanceType, clusterSize, keyName, securityGroup);
                         cj.setInstanceId(instances.toString());
-                        //copy file and run it
-                        cj.setStatus("copying config file to cluster");
+                        
                         String masterId = instances.get(0);
                         Instance masterInstance = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(masterId)).getReservations().get(0).getInstances().get(0);
                         String masterPrivateIp = masterInstance.getPrivateIpAddress();
@@ -1511,51 +1521,62 @@ public class JobOverviewController implements Initializable {
                             }
                         }
 //                        log.debug(hosts.toString());
-                        
                         //initialize cloud cluster
+                        String username = JobOverviewController.this.userName;
                         cj.setStatus("initializing cluster");
+                        log.info("***Configuring hadoop***");
                         r = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
                         i = r.getReservations().iterator();
                         while (i.hasNext()) {
                             // on every node
                             Reservation rr = (Reservation) i.next();
                             for (Instance ii : rr.getInstances()) {
-                                //correct time on eucalyptus
-                                String cmdCorrectNtpTime = "sudo chmod 777 /mnt;mkdir /mnt/hadoop;sudo service ntpd stop;sudo ntpdate " + JobOverviewController.this.mainApp.getEucalyptusClcIpAddress() + ";sudo service ntpd start;echo \"export PATH=$PATH:/usr/local/hadoop-1.2.1/bin\" >> /home/ec2-user/.bashrc;source /home/ec2-user/.bashrc;echo '" + hosts.toString() + "' | sudo tee -a /etc/hosts";
-//                                log.info("remote execute: " + cmdCorrectNtpTime);
-                                cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmdCorrectNtpTime, privateKey);
+                                String cmdInitEnv = null;
+                                if (eucalyptusEnabled) {
+                                    //correct time on eucalyptus
+                                    cmdInitEnv = "sudo chmod 777 /mnt;mkdir /mnt/hadoop;sudo service ntpd stop;sudo ntpdate " + JobOverviewController.this.mainApp.getEucalyptusClcIpAddress() + ";sudo service ntpd start;echo \"export PATH=$PATH:/usr/local/hadoop-1.2.1/bin\" >> .bashrc;source .bashrc;echo '" + hosts.toString() + "' | sudo tee -a /etc/hosts";
+                                } else {
+                                    cmdInitEnv = "sudo chmod 777 /mnt;mkdir /mnt/hadoop;echo '" + hosts.toString() + "' | sudo tee -a /etc/hosts";
+                                }
+
+                                cm.remoteCallByShh(username, ii.getPublicIpAddress(), cmdInitEnv, privateKey);
                                 //launching hadoop cluster
 //                                log.info("uploading hadoop-remote-init.sh");
-                                cm.sftp("ec2-user", ii.getPublicIpAddress(), "remote-init/hadoop-remote-init.sh", "/home/ec2-user/hadoop-remote-init.sh", privateKey);
+                                cm.sftp(username, ii.getPublicIpAddress(), "remote-init/hadoop-remote-init.sh", "hadoop-remote-init.sh", privateKey);
                                 String cmdRemoteInit = "chmod 755 hadoop-remote-init.sh;./hadoop-remote-init.sh " + masterPrivateIp;
-                                cm.remoteCallByShh("ec2-user", ii.getPublicIpAddress(), cmdRemoteInit, privateKey);
+                                cm.remoteCallByShh(username, ii.getPublicIpAddress(), cmdRemoteInit, privateKey);
                             }
-                        }     
+                        }   
+                        log.info("***Configuring hadoop finished***");
                         
                         // on master
-                        //download data from s3 and upload to hdfs
-//                        log.info("uploading download_data.py");
-                        cm.sftp("ec2-user", masterPublicIp, "remote-init/download_data.py", "/home/ec2-user/download_data.py", privateKey);
-//                        log.info("uploading upload_data.py");
-                        cm.sftp("ec2-user", masterPublicIp, "remote-init/upload_data.py", "/home/ec2-user/upload_data.py", privateKey);
-//                        log.info("uploading taxonomy file: " + cj.getTaxonomyFile().getAbsolutePath());
-                        String taxonomyFileName =  cj.getTaxonomyFile().getName();
-                        cm.sftp("ec2-user", masterPublicIp, cj.getTaxonomyFile().getAbsolutePath(), "/mnt/" + taxonomyFileName, privateKey);
-//                        log.info("uploading input file: " + cj.getInputFiles().get(0).getAbsolutePath());
-                        String inputXmlFileName = cj.getInputFiles().get(0).getName();
-                        cm.sftp("ec2-user", masterPublicIp, cj.getInputFiles().get(0).getAbsolutePath(), "/mnt/" + inputXmlFileName , privateKey);
-//                        log.info("uploading mrtandem binary file");
-                        cm.sftp("ec2-user", masterPublicIp, "remote-init/mrtandem-centos", "/mnt/mrtandem", privateKey);
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, "chmod 755 /mnt/mrtandem", privateKey); 
-//                        log.info("uploading x!tandem default xml");
-                        cm.sftp("ec2-user", masterPublicIp, "remote-init/default_input.xml", "/mnt/default_input.xml", privateKey);
+                        log.info("***Uploading scripts***");
+                        if (eucalyptusEnabled) {
+                            cm.sftp(username, masterPublicIp, "remote-init/download_data_euca.py", "download_data.py", privateKey);
+                            cm.sftp(username, masterPublicIp, "remote-init/upload_data_euca.py", "upload_data.py", privateKey);
+                        } else {
+                            cm.sftp(username, masterPublicIp, "remote-init/download_data.py", "download_data.py", privateKey);
+                            cm.sftp(username, masterPublicIp, "remote-init/upload_data.py", "upload_data.py", privateKey);
+                        }
                         
-                        //wait hadoop cluster start up
-                        cm.sftp("ec2-user", masterPublicIp, "remote-init/wait_hadoop.sh", "/home/ec2-user/wait_hadoop.sh", privateKey);
+                        String taxonomyFileName =  cj.getTaxonomyFile().getName();
+                        cm.sftp(username, masterPublicIp, cj.getTaxonomyFile().getAbsolutePath(), "/mnt/" + taxonomyFileName, privateKey);
+                        String inputXmlFileName = cj.getInputFiles().get(0).getName();
+                        cm.sftp(username, masterPublicIp, cj.getInputFiles().get(0).getAbsolutePath(), "/mnt/" + inputXmlFileName , privateKey);
+                        cm.sftp(username, masterPublicIp, "remote-init/mrtandem-centos", "/mnt/mrtandem", privateKey);
+                        cm.remoteCallByShh(username, masterPublicIp, "chmod 755 /mnt/mrtandem", privateKey); 
+                        cm.sftp(username, masterPublicIp, "remote-init/default_input.xml", "/mnt/default_input.xml", privateKey);
+                        log.info("***Uploading scripts finished***");
+                        
+                        log.info("***Starting hadoop***");
+                        cm.sftp(username, masterPublicIp, "remote-init/wait_hadoop.sh", "wait_hadoop.sh", privateKey);
                         String cmdWaitHadoopCluster = "chmod 755 wait_hadoop.sh;./wait_hadoop.sh " + cj.getClusterSize().toString() + ";hadoop dfs -mkdir shared";
 //                        log.debug(cmdWaitHadoopCluster);
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdWaitHadoopCluster, privateKey);
+                        cm.remoteCallByShh(username, masterPublicIp, cmdWaitHadoopCluster, privateKey);
+                        log.info("***Starting hadoop finished***");
                         
+                        cj.setStatus("Preparing shared data");
+                        log.info("***Preparing shared data***");
                         int jobType = cj.getJobType();
                         //generate peptide database first in /mnt
                         if (jobType == 4) {
@@ -1565,28 +1586,28 @@ public class JobOverviewController implements Initializable {
                                     + " " + "capercloud-ref"
                                     + " Homo_sapiens.GRCh37.75.cds.all.fa"
                                     + " /mnt";
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadCdsFasta, privateKey); 
+                            cm.remoteCallByShh(username, masterPublicIp, cmdDownloadCdsFasta, privateKey); 
                             String cmdDownloadMapFile = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
                                     + " " + cm.getCurrentCredentials().getSecretKey()
                                     + " " + "capercloud-ref"
                                     + " mrna-cds.txt"
                                     + " /mnt";
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadMapFile, privateKey);
+                            cm.remoteCallByShh(username, masterPublicIp, cmdDownloadMapFile, privateKey);
                             String cmdDownloadVcfFile = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
                                     + " " + cm.getCurrentCredentials().getSecretKey()
                                     + " " + cj.getVcfObject().getBucketName()
                                     + " " + cj.getVcfObject().getName()
                                     + " /mnt";
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadVcfFile, privateKey);
+                            cm.remoteCallByShh(username, masterPublicIp, cmdDownloadVcfFile, privateKey);
                             
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, "mkdir /mnt/lib", privateKey);
-                            cm.sftp("ec2-user", masterPublicIp, "remote-init/CustomVariantProtein.jar", "/mnt/CustomVariantProtein.jar", privateKey);
-                            cm.sftp("ec2-user", masterPublicIp, "remote-init/lib/commons-io-2.4.jar", "/mnt/lib/commons-io-2.4.jar", privateKey);
-                            cm.sftp("ec2-user", masterPublicIp, "remote-init/lib/jfasta-2.1.3-jar-with-dependencies.jar", "/mnt/lib/jfasta-2.1.3-jar-with-dependencies.jar", privateKey);
-                            cm.sftp("ec2-user", masterPublicIp, "remote-init/my_decoy.pl", "/mnt/my_decoy.pl", privateKey);
+                            cm.remoteCallByShh(username, masterPublicIp, "mkdir /mnt/lib", privateKey);
+                            cm.sftp(username, masterPublicIp, "remote-init/CustomVariantProtein.jar", "/mnt/CustomVariantProtein.jar", privateKey);
+                            cm.sftp(username, masterPublicIp, "remote-init/lib/commons-io-2.4.jar", "/mnt/lib/commons-io-2.4.jar", privateKey);
+                            cm.sftp(username, masterPublicIp, "remote-init/lib/jfasta-2.1.3-jar-with-dependencies.jar", "/mnt/lib/jfasta-2.1.3-jar-with-dependencies.jar", privateKey);
+                            cm.sftp(username, masterPublicIp, "remote-init/my_decoy.pl", "/mnt/my_decoy.pl", privateKey);
                             
                             String cmdCreateRefDatabase = "cd /mnt;chmod 755 my_decoy.pl;/usr/local/jdk1.7.0_60/bin/java -Xmx512m -jar CustomVariantProtein.jar Homo_sapiens.GRCh37.75.cds.all.fa mrna-cds.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName() + ";./my_decoy --append " + cj.getRefDatabaseName();
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdCreateRefDatabase, privateKey);
+                            cm.remoteCallByShh(username, masterPublicIp, cmdCreateRefDatabase, privateKey);
                             
 //                            String cmdUploadRefDatabase = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
 //                                    + " " + cm.getCurrentCredentials().getSecretKey()                       
@@ -1605,7 +1626,7 @@ public class JobOverviewController implements Initializable {
                                     + " " + refDatabaseName
                                     + " " + "/mnt";
     //                            log.debug(cmdDownloadRef);
-                            cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadRef, privateKey); 
+                            cm.remoteCallByShh(username, masterPublicIp, cmdDownloadRef, privateKey); 
                         }
 
                         //download spectra file from s3, only support single spectra now
@@ -1615,9 +1636,11 @@ public class JobOverviewController implements Initializable {
                                 + " " + cj.getSpectrumObjs().get(0).getBucketName()
                                 + " " + spectraName
                                 + " " + "/mnt";
-                        log.debug(cmdDownloadSpectra);
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadSpectra, privateKey);
-
+                        
+                        cm.remoteCallByShh(username, masterPublicIp, cmdDownloadSpectra, privateKey);
+                        log.info("***Preparing shared data finished***");
+                        
+                        log.info("***Uploading shared data to HDFS****");
                         String cmdUploadFilesToHDFS = "hadoop dfs -put /mnt/" + taxonomyFileName + " shared/" + taxonomyFileName + ";"
                                 + "hadoop dfs -put /mnt/" + inputXmlFileName + " shared/" + inputXmlFileName + ";"
                                 + "hadoop dfs -put /mnt/mrtandem shared/mrtandem;"
@@ -1625,16 +1648,16 @@ public class JobOverviewController implements Initializable {
                                 + "hadoop dfs -put /mnt/" + refDatabaseName + " shared/" + refDatabaseName + ";"
                                 + "hadoop dfs -put /mnt/" + spectraName + " shared/" + spectraName;
                         log.debug(cmdUploadFilesToHDFS);
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdUploadFilesToHDFS, privateKey);
+                        cm.remoteCallByShh(username, masterPublicIp, cmdUploadFilesToHDFS, privateKey);
+                        log.info("***Uploading shared data to HDFS finished***");
 
-                        String sharedFiles = " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + taxonomyFileName + "#" + taxonomyFileName 
-                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + inputXmlFileName + "#" + inputXmlFileName
-                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/mrtandem#mrtandem"
-                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/default_input.xml#default_input.xml"
-                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + refDatabaseName + "#" + refDatabaseName
-                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/shared/" + spectraName + "#" + spectraName;
+                        String sharedFiles = " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/shared/" + taxonomyFileName + "#" + taxonomyFileName 
+                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/shared/" + inputXmlFileName + "#" + inputXmlFileName
+                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/shared/mrtandem#mrtandem"
+                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/shared/default_input.xml#default_input.xml"
+                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/shared/" + refDatabaseName + "#" + refDatabaseName
+                                + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/shared/" + spectraName + "#" + spectraName;
 
-                        cj.setStatus("x!tandem searching");
                         StringBuilder step1InputLines = new StringBuilder();
                         int multi = 2;
                         int numOfMappers = Integer.parseInt(cj.clusterSizeProperty().get()) * multi;
@@ -1645,33 +1668,33 @@ public class JobOverviewController implements Initializable {
                         step1InputLines.append(numOfMappers).append("    ").append(numOfMappers);
                         File step1InputFile = new File("tmp", "step1input");
                         FileUtils.writeStringToFile(step1InputFile, step1InputLines.toString());
-                        cm.sftp("ec2-user", masterPublicIp, step1InputFile.getAbsolutePath(), "/home/ec2-user/step1input", privateKey);
+                        cm.sftp(username, masterPublicIp, step1InputFile.getAbsolutePath(), "step1input", privateKey);
                         //upload step1input to hdfs
-                        log.info("******************"+Calendar.getInstance().getTime()+"******************");
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, "hadoop dfs -put /home/ec2-user/step1input step1input", privateKey);
+                        
+                        cm.remoteCallByShh(username, masterPublicIp, "hadoop dfs -put step1input step1input", privateKey);
 
                         String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
                         //be careful, it's a mess
-                        cj.setStatus("first stage of mapping and reducing");
-                        String cmdStepOne = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1input -output step1output" + sharedFiles + " -mapper \"mrtandem -mapper1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer1_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
-                        log.debug(cmdStepOne);
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepOne, privateKey);
+                        cj.setStatus("Performing database search");
+                        log.info("***Start MR-Tandem searching***");
+                        log.info("Step 1");
+                        String cmdStepOne = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1input -output step1output" + sharedFiles + " -mapper \"mrtandem -mapper1_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer1_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
+                        cm.remoteCallByShh(username, masterPublicIp, cmdStepOne, privateKey);
 
-                        cj.setStatus("second stage of mapping and reducing");
-                        String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer1_1#reducer1_1 -mapper \"mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer2_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
-                        log.debug(cmdStepTwo);
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepTwo, privateKey);
+                        log.info("Step 2");
+                        String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer1_1#reducer1_1 -mapper \"mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer2_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
+                        cm.remoteCallByShh(username, masterPublicIp, cmdStepTwo, privateKey);
 
-                        cj.setStatus("final stage of mapping and reducing");
-                        String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/ec2-user/reducer2_1#reducer2_1 -mapper \"mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/ec2-user/ " + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/ec2-user/\"" + stepArgs;
-                        log.debug(cmdStepThree);
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdStepThree, privateKey);
+                        String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer2_1#reducer2_1 -mapper \"mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/"+username+"/\"" + stepArgs;
+                        log.info("Step 3");
+                        cm.remoteCallByShh(username, masterPublicIp, cmdStepThree, privateKey);
 
-                        log.info("******************"+Calendar.getInstance().getTime()+"******************");
+                        log.info("Start MR-Tandem searching finished");
                      
+                        
                         //download output(in hdfs) to local
                         String cmdDownloadOutput = "hadoop dfs -copyToLocal output output";
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdDownloadOutput, privateKey);
+                        cm.remoteCallByShh(username, masterPublicIp, cmdDownloadOutput, privateKey);
                         
                         //shut down other instances
                         if (!otherInstances.isEmpty()) {
@@ -1679,30 +1702,30 @@ public class JobOverviewController implements Initializable {
                         }
                         
                         //convert x!tandem output to mzid format, parsing xml is too slow
-                        log.info("post processing");
-                        String cmdTandem2MzId = "java -jar post_process/mzidentml-lib-1.6.10.jar Tandem2mzid output output.mzid -outputFragmentation false -decoyRegex \"###REV###\" -databaseFileFormatID MS:1001348 -massSpecFileFormatID MS:1001062 -idsStartAtZero false -compress false";
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdTandem2MzId, privateKey);
+                        cj.setStatus("Performing FDR control");
+                        log.info("***Post processing by mzidentml-lib***");
+                        String cmdTandem2MzId = "java -Xmx512m -jar post_process/mzidentml-lib-1.6.10.jar Tandem2mzid output output.mzid -outputFragmentation false -decoyRegex \"###REV###\" -databaseFileFormatID MS:1001348 -massSpecFileFormatID MS:1001062 -idsStartAtZero false -compress false";
+                        cm.remoteCallByShh(username, masterPublicIp, cmdTandem2MzId, privateKey);
                         log.info(cmdTandem2MzId);
                         
                         //calculate fdr
-                        log.info("FalseDiscoveryRate");
-                        String cmdCalculateFdrValue = "java -jar post_process/mzidentml-lib-1.6.10.jar FalseDiscoveryRate output.mzid output_fdr.mzid -decoyRegex \"###REV###\" -decoyValue 1 -cvTerm MS:1001330 -betterScoresAreLower true -compress false";
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdCalculateFdrValue, privateKey);      
+                        String cmdCalculateFdrValue = "java -Xmx512m -jar post_process/mzidentml-lib-1.6.10.jar FalseDiscoveryRate output.mzid output_fdr.mzid -decoyRegex \"###REV###\" -decoyValue 1 -cvTerm MS:1001330 -betterScoresAreLower true -compress false";
+                        cm.remoteCallByShh(username, masterPublicIp, cmdCalculateFdrValue, privateKey);      
 
                         //cut off 
-                        log.info("Threshold");
-                        String cmdThresHold = "java -jar post_process/mzidentml-lib-1.6.10.jar Threshold output_fdr.mzid result.mzid -isPSMThreshold true -cvAccessionForScoreThreshold MS:1002354 -threshValue " + cj.getFdrValue() + " -betterScoresAreLower true -deleteUnderThreshold true -compress false";
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdThresHold, privateKey); 
-                        
+                        String cmdThresHold = "java -Xmx512m -jar post_process/mzidentml-lib-1.6.10.jar Threshold output_fdr.mzid result.mzid -isPSMThreshold true -cvAccessionForScoreThreshold MS:1002354 -threshValue " + cj.getFdrValue() + " -betterScoresAreLower true -deleteUnderThreshold true -compress false";
+                        cm.remoteCallByShh(username, masterPublicIp, cmdThresHold, privateKey); 
+                        log.info("***Post processing by mzidentml-lib finished***");
                         // upload result to s3
-                        cj.setStatus("uploading result to s3");
+                        
+                        cj.setStatus("Retrieving result");
                         String bucketName = cj.getOutputBucketName();
                         String cmdUploadResult = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
                                 + " " + cm.getCurrentCredentials().getSecretKey()
                                 + " " + bucketName
-                                + " " + "/home/ec2-user/result.mzid";
+                                + " " + "result.mzid";
                         log.debug(cmdUploadResult);
-                        cm.remoteCallByShh("ec2-user", masterPublicIp, cmdUploadResult, privateKey);
+                        cm.remoteCallByShh(username, masterPublicIp, cmdUploadResult, privateKey);
                         
                         //terminate master instance
                         cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(masterId));
@@ -1715,7 +1738,7 @@ public class JobOverviewController implements Initializable {
         msSearchService.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
             @Override
             public void handle(WorkerStateEvent t) {             
-                cj.setStatus("parsing result");
+                cj.setStatus("Parsing result");
                 Service<Void> postProcessService = new Service<Void>() {
                     @Override
                     protected Task<Void> createTask() {
@@ -1726,14 +1749,14 @@ public class JobOverviewController implements Initializable {
                                 updateMessage("Post Processing");
                                 
                                 AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
-                                if (JobOverviewController.this.mainApp.getEucalyptusEnabled().get()) {
+                                if (eucalyptusEnabled) {
                                     String endPoint = "http://" + JobOverviewController.this.mainApp.getEucalyptusClcIpAddress() + ":8773/services/Walrus/";
                                     s3Client.setEndpoint(endPoint);
                                 }
                                 writeInputStreamToFile(s3Client.getObject(new GetObjectRequest(cj.getOutputBucketName(), "result.mzid")).getObjectContent(), new File("result.mzid"));
                                 
 //job specific parser
-                                log.info("Generating Peptide List");
+                                log.info("***Generating peptide list and BED file***");
                                 if (cj.isIsFilterSelected()) {
                                     JobOverviewController.this.rm.loadKnownPeptide(new File("Homo_sapiens.GRCh37.75.pep.all.fa"));
                                 }
@@ -1750,14 +1773,21 @@ public class JobOverviewController implements Initializable {
                                 }
 
                                 //upload bed file to s3
-                                AmazonS3Client s3ClientTest = new AmazonS3Client(new BasicAWSCredentials("AKIAIWNERGLUEYZL7N7Q", "2vg5/PqUH1DGRTi1ONYRXwf9lfrV6Mblf2vFIb4U"));
+                                AmazonS3Client s3ClientTest = null;
+                                if (eucalyptusEnabled) {
+                                    //testing purpose
+                                    s3ClientTest = new AmazonS3Client(new BasicAWSCredentials("AKIAIWNERGLUEYZL7N7Q", "2vg5/PqUH1DGRTi1ONYRXwf9lfrV6Mblf2vFIb4U"));
+                                } else {
+                                    s3ClientTest = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
+                                }
+                                
                                 //make s3 and object public readable
                         
                                 s3ClientTest.setBucketAcl(cj.getOutputBucketName(), CannedAccessControlList.PublicRead);
                                 File bedFile = new File("result.bed");
                                 s3ClientTest.putObject(new PutObjectRequest(cj.getOutputBucketName(), bedFile.getName(), bedFile).withCannedAcl(CannedAccessControlList.PublicRead));
                                 JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + cj.getOutputBucketName() + "/" + bedFile.getName();
-                                
+                                log.info("***Generating peptide list and BED file finished***");
                                 return null;
                             }
                         };
@@ -1768,9 +1798,10 @@ public class JobOverviewController implements Initializable {
                 postProcessService.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
                     @Override
                     public void handle(WorkerStateEvent t) {
-                        cj.setStatus("job completed");
+                        cj.setStatus("Job finished");
                         Date stopTime = Calendar.getInstance().getTime();       
                         cj.setPassedTime(sdf.format(stopTime));
+                        log.info("JOB END ++++++ Job type=" + cj.getJobType() + ", Cluster size=" + cj.getClusterSize() + ", Instance type=" + cj.getInstanceType().name());
                         JobOverviewController.this.tvResults.setItems(JobOverviewController.this.rm.getPeptideList()); 
                     }
                 });
@@ -1781,6 +1812,8 @@ public class JobOverviewController implements Initializable {
                         .showWorkerProgress(postProcessService);
                 }
         });
+        
+        log.info("JOB START ++++++ Job type=" + cj.getJobType() + ", Cluster size=" + cj.getClusterSize() + ", Instance type=" + cj.getInstanceType().name());
         msSearchService.start();
     }
     private void writeInputStreamToFile(InputStream inputStream, File outFile) {
