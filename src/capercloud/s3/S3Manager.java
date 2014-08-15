@@ -229,7 +229,6 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
             this.transferTask.updateMessage("Failed");
             log.debug("CreateObjectsEvent Error");
         }else if(event.getEventCode() == ServiceEvent.EVENT_IN_PROGRESS) {
-            log.debug("CreateObjectsEvent In Progress");
             ThreadWatcher watcher = event.getThreadWatcher();
             if (watcher.getBytesTransferred() >= watcher.getBytesTotal()) {
                 this.transferTask.updateMessage("Verifying");

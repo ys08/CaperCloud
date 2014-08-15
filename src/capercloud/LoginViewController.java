@@ -8,6 +8,7 @@ package capercloud;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
 import javafx.beans.value.ChangeListener;
@@ -26,6 +27,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.Stage;
 import org.apache.commons.io.filefilter.SuffixFileFilter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -74,6 +76,10 @@ public class LoginViewController implements Initializable {
 
     public void setMainApp(CaperCloud mainApp) {
         this.mainApp = mainApp;
+    }
+    
+    public Stage getNewAccountStage() throws IOException {
+        return this.mainApp.getNewAccountStage();
     }
     
     /**

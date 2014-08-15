@@ -11,6 +11,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.TextField;
@@ -35,15 +37,13 @@ public class AccountManagerViewController implements Initializable {
     
     public void setParentController(LoginViewController parentController) {
         this.parentController = parentController;
+        try {
+            this.me = this.parentController.getNewAccountStage();
+        } catch (IOException ex) {
+            Logger.getLogger(AccountManagerViewController.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
-    public void setStage(Stage me) {
-        this.me = me;
-    }
-    
-    /**
-     * Initializes the controller class.
-     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
     }
@@ -70,7 +70,9 @@ public class AccountManagerViewController implements Initializable {
         
 //save the credentials to file
         File credentialsFile = new File(this.parentController.getHomeFolder(), credentials.getFriendlyName() + ".enc");
-        String algorithm = S3Manager.jets3tProperties.getStringProperty("crypto.algorithm", "PBEWithMD5AndDES");
+        
+//        String algorithm = S3Manager.jets3tProperties.getStringProperty("crypto.algorithm", "PBEWithMD5AndDES");
+        String algorithm = "PBEWithMD5AndDES";
         try {
             credentials.save(this.parentController.getPassword(), credentialsFile, algorithm);
         } catch (Exception e) {
@@ -81,13 +83,12 @@ public class AccountManagerViewController implements Initializable {
         this.parentController.updateCredentialsFiles();   
             
         clear();
-        log.info("A new AWSCredentials is created");
+        log.info("File " + credentialsFile.getName() + " is created in " + credentialsFile.getPath() + ", it is encrypted by " + algorithm);
         this.me.close();
     }
     
     @FXML private void handleCancelAction() {
         clear();
-        log.info("Canceled by user");
         this.me.close();
     }
 }

@@ -7,7 +7,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane id="AnchorPane" prefHeight="400.0" prefWidth="600.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="capercloud.LoginViewController">
+<AnchorPane id="AnchorPane" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="capercloud.LoginViewController">
   <children>
     <BorderPane prefHeight="400.0" prefWidth="600.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
       <bottom>
@@ -15,7 +15,7 @@
           <children>
             <HBox id="HBox" alignment="CENTER" layoutX="394.0" layoutY="0.0" spacing="5.0">
               <children>
-                <Button fx:id="btnSave" disable="false" mnemonicParsing="false" onAction="#handleSaveAction" text="Store Credentials" />
+                <Button fx:id="btnSave" disable="false" mnemonicParsing="false" onAction="#handleSaveAction" text="New account" />
                 <Button fx:id="btnLogin" disable="true" mnemonicParsing="false" onAction="#handleLoginAction" text="Login" />
               </children>
             </HBox>
@@ -30,18 +30,14 @@
               <content>
                 <AnchorPane id="AnchorPane" prefHeight="369.0" prefWidth="600.0">
                   <children>
-                    <TextArea layoutX="23.0" layoutY="25.0" prefHeight="45.0" prefWidth="537.0" text="Your credentials are stored in encrypted files in a folder on your computer. Each stored login has a nickname." wrapText="true" />
-                    <Text layoutX="83.0" layoutY="89.0" scaleX="1.0" scaleY="1.0" strokeType="OUTSIDE" strokeWidth="0.0" text="You need to store your credentials before you can use this login method." />
-                    <HBox id="HBox" alignment="CENTER" layoutX="24.0" layoutY="109.0" spacing="5.0">
-                      <children>
-                        <TextField id="tfHomeFolder" fx:id="tfSelectedFolder" disable="false" editable="false" prefWidth="428.0" />
-                        <Button mnemonicParsing="false" onAction="#handleChooseFolderAction" text="Choose Folder" />
-                      </children>
-                    </HBox>
-                    <Label layoutX="30.0" layoutY="135.0" text="Stored Logins" />
-                    <Label layoutX="30.0" layoutY="282.0" text="Password" />
-                    <ListView id="lvLoginLocalFolder" fx:id="lvCredentialsFile" layoutX="34.0" layoutY="159.0" prefHeight="114.0" prefWidth="524.0" />
-                    <PasswordField fx:id="pfPassword" layoutX="34.0" layoutY="311.0" prefWidth="524.0" text="" />
+                    <HBox id="HBox" alignment="CENTER" layoutX="24.0" layoutY="109.0" spacing="5.0" />
+                    <Label layoutX="30.0" layoutY="116.0" text="Stored encrypted files" />
+                    <Label layoutX="30.0" layoutY="266.0" text="Password" />
+                    <ListView id="lvLoginLocalFolder" fx:id="lvCredentialsFile" layoutX="34.0" layoutY="140.0" prefHeight="114.0" prefWidth="524.0" />
+                    <PasswordField fx:id="pfPassword" layoutX="34.0" layoutY="295.0" prefWidth="524.0" text="" />
+                              <Text layoutX="39.0" layoutY="26.0" strokeType="OUTSIDE" strokeWidth="0.0" text="You need to click &quot;New account&quot; button to create a encrypted file storing your aws/eucalyptus account information. Before click the &quot;New account&quot; button, it is recmmended to specify a password in Password field." wrappingWidth="511.345703125" />
+                  <TextField id="tfHomeFolder" fx:id="tfSelectedFolder" disable="false" editable="false" layoutX="29.0" layoutY="83.0" prefWidth="428.0" />
+                  <Button layoutX="462.0" layoutY="83.0" mnemonicParsing="false" onAction="#handleChooseFolderAction" text="Choose Folder" />
                   </children>
                 </AnchorPane>
               </content>
