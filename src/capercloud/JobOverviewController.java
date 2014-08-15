@@ -1697,9 +1697,9 @@ public class JobOverviewController implements Initializable {
                         cm.remoteCallByShh(username, masterPublicIp, cmdDownloadOutput, privateKey);
                         
                         //shut down other instances
-                        if (!otherInstances.isEmpty()) {
-                            cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(otherInstances));
-                        }
+//                        if (!otherInstances.isEmpty()) {
+//                            cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(otherInstances));
+//                        }
                         
                         //convert x!tandem output to mzid format, parsing xml is too slow
                         cj.setStatus("Performing FDR control");
@@ -1730,7 +1730,7 @@ public class JobOverviewController implements Initializable {
                         cm.remoteCallByShh(username, masterPublicIp, cmdUploadResult, privateKey);
                         
                         //terminate master instance
-                        cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(masterId));
+//                        cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(masterId));
                         return instances;
                     }
                 };
@@ -1968,8 +1968,8 @@ public class JobOverviewController implements Initializable {
         if (resultFile == null) {
             return;
         }
-
         int jobType = this.rm.getJobTypeFromResult(resultFile);
+        System.out.println(jobType);
         if (jobType == 0) {
             Dialogs.create()
                     .owner(this.mainApp.getPrimaryStage())

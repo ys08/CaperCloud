@@ -427,6 +427,7 @@ public class ResultModel {
     }
     
     public int getJobTypeFromResult(File resultFile) {
+        
         String accession = "none";
         String queryDbSequence =
                 "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"

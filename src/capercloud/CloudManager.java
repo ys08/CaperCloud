@@ -726,6 +726,24 @@ public class CloudManager {
         iphttps.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
                 .withFromPort(443).withToPort(443);
         ips.add(iphttps);
+        
+//Permission for port 9000, any one can accesss
+        IpPermission ipHdfs = new IpPermission();
+        iphttps.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
+                .withFromPort(9000).withToPort(9000);
+        ips.add(ipHdfs);
+        
+//Permission for port 9001, any one can accesss
+        IpPermission ipMapreduce = new IpPermission();
+        iphttps.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
+                .withFromPort(9001).withToPort(9001);
+        ips.add(ipMapreduce);
+        
+ //Permission for port 50000-50100, any one can accesss
+        IpPermission ipHadoop = new IpPermission();
+        iphttps.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
+                .withFromPort(50000).withToPort(50100);
+        ips.add(ipHadoop);       
            
         log.info("Attach Owner to security group");
 // Register this security group with owner
