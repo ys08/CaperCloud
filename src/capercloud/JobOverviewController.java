@@ -138,6 +138,7 @@ import org.controlsfx.dialog.Dialog;
 import org.controlsfx.dialog.Dialogs;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
+import org.jets3t.service.security.AWSCredentials;
 import uk.ac.ebi.pride.tools.jmzreader.JMzReaderException;
 
 /**
@@ -718,11 +719,22 @@ public class JobOverviewController implements Initializable {
                             String ucscStart = String.valueOf(ucscRange.getStartPos());
                             String ucscEnd = String.valueOf(ucscRange.getEndPos());
 
+                            String _bedUrl = JobOverviewController.this.tfBedUrl.getText();
+                            boolean _eucalyptusEnabled = JobOverviewController.this.mainApp.getEucalyptusEnabled().get();
+                            
+                            String url = null;
                             //genome.ucsc.edu
                             //61.50.130.100:17436/ucsc
-                            String url = "http://61.50.130.100:17436/ucsc/cgi-bin/hgTracks?org=human&position=chr" 
+                            if (!_eucalyptusEnabled) {
+                                url = "http://61.50.130.100:17436/ucsc/cgi-bin/hgTracks?org=human&position=chr" 
                                     + chrom + ":" + ucscStart + "-" + ucscEnd 
                                     + "&hgt.customText=" + JobOverviewController.this.bedUrl;
+                            } else {
+                                url = "http://61.50.130.100:17436/ucsc/cgi-bin/hgTracks?org=human&position=chr" 
+                                    + chrom + ":" + ucscStart + "-" + ucscEnd 
+                                    + "&hgt.customText=" + _bedUrl;
+                            }
+                            
                             log.debug(url);
                             webEngine.load(url);
                         }      
@@ -2131,15 +2143,16 @@ public class JobOverviewController implements Initializable {
                         
                         JobOverviewController.this.tvResults.setItems(JobOverviewController.this.rm.getPeptideList());
                         
-                        //upload bed file to s3
-                        AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials("AKIAIWNERGLUEYZL7N7Q", "2vg5/PqUH1DGRTi1ONYRXwf9lfrV6Mblf2vFIb4U"));
-                        //make s3 and object public readable
-                        s3Client.setBucketAcl(bucketName, CannedAccessControlList.PublicRead);
-                        File bedFile = new File("result.bed");
-                        s3Client.putObject(new PutObjectRequest(bucketName, bedFile.getName(), bedFile).withCannedAcl(CannedAccessControlList.PublicRead));
-                        JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + bucketName + "/" + bedFile.getName();
-                        
-                        
+                        if (!JobOverviewController.this.mainApp.getEucalyptusEnabled().get()) {
+                            //upload bed file to s3
+                            AWSCredentials _aws = JobOverviewController.this.mainApp.getCloudManager().getCurrentCredentials();
+                            AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(_aws.getAccessKey(), _aws.getSecretKey()));
+                            //make s3 and object public readable
+                            s3Client.setBucketAcl(bucketName, CannedAccessControlList.PublicRead);
+                            File bedFile = new File("result.bed");
+                            s3Client.putObject(new PutObjectRequest(bucketName, bedFile.getName(), bedFile).withCannedAcl(CannedAccessControlList.PublicRead));
+                            JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + bucketName + "/" + bedFile.getName();
+                        }
                         return null;
                     }
                 };
