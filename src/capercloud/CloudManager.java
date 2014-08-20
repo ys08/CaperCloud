@@ -567,6 +567,8 @@ public class CloudManager {
         jsch.addIdentity(privateKey.getAbsolutePath());
         JSch.setConfig("StrictHostKeyChecking", "no");
         Session session=jsch.getSession(userName, ipAddress, 22);
+        //sets the server alive interval property
+        session.setServerAliveInterval(60000);
         for(int i = 0; i < 10; i++) {
             try {
                 session.connect();
@@ -575,7 +577,7 @@ public class CloudManager {
                 if(i == 10 - 1) {
                     throw ex;
                 }
-                log.info("retry " + (i+1) + " times");
+                log.info("Remote invoke retry " + (i+1) + " times");
                 Thread.sleep(20000);
             }
         }
@@ -600,9 +602,9 @@ public class CloudManager {
             if (channel.isClosed()){
                 
                 if (channel.getExitStatus() == 0) {
-                    log.info("Exit Status: " + channel.getExitStatus() + " SUCCESS!");
+                    log.info("Exit Status: SUCCESS!");
                 } else {
-                    log.info("Exit Status: " + channel.getExitStatus() + " FAILED! PLEASE TERMINATE THE RUNNING INSTANCES, AND CONTACT WITH THE AUTHOR!");
+                    log.info("Exit Status: FAILED! PLEASE TERMINATE THE RUNNING INSTANCES, AND CONTACT WITH THE AUTHOR!");
                 }
                 break;
             }
@@ -616,42 +618,35 @@ public class CloudManager {
         return status;
     }
     
-    public void sftp(String userName, String ipAddress, String lfile, String rfile, File privateKey) {
-        Session session = null;
-        ChannelSftp sftpChannel = null;
-        try {
-            JSch jsch = new JSch();
-            jsch.addIdentity(privateKey.getAbsolutePath());
+    public void sftp(String userName, String ipAddress, String lfile, String rfile, File privateKey) throws JSchException, InterruptedException, SftpException {
             
-            session = jsch.getSession(userName, ipAddress, 22);
-            session.setConfig("StrictHostKeyChecking", "no");
-            for(int i = 0; i < 10; i++) {
-                try {
-                    session.connect();
-                    break;
-                } catch(JSchException ex) {
-                    if(i == 10 - 1) {
-                        throw ex;
-                    }
-                    log.info("retry " + (i+1) + " times");
-                    Thread.sleep(20000);
+        JSch jsch = new JSch();
+        jsch.addIdentity(privateKey.getAbsolutePath());
+            
+        Session session = jsch.getSession(userName, ipAddress, 22);
+        session.setConfig("StrictHostKeyChecking", "no");
+        //sets the server alive interval property
+        session.setServerAliveInterval(60000);
+        
+        for(int i = 0; i < 10; i++) {
+            try {
+                session.connect();
+                break;
+            } catch(JSchException ex) {
+                if(i == 10 - 1) {
+                    throw ex;
                 }
+                log.info("Upload data retry " + (i+1) + " times");
+                Thread.sleep(20000);
             }
-            
-            sftpChannel = (ChannelSftp) session.openChannel("sftp");
-            sftpChannel.connect();
-            sftpChannel.put(lfile, rfile);
-            
-        } catch (JSchException ex) {
-            ex.printStackTrace();
-        } catch (SftpException ex) {
-            ex.printStackTrace();
-        } catch (InterruptedException ex) {
-            ex.printStackTrace();
-        }  finally {
-            sftpChannel.disconnect();
-            session.disconnect();
         }
+            
+        ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+        sftpChannel.connect();
+        sftpChannel.put(lfile, rfile);
+            
+        sftpChannel.exit();
+        session.disconnect();
     }
     
     public List<String> getInstanceList() {
@@ -729,19 +724,19 @@ public class CloudManager {
         
 //Permission for port 9000, any one can accesss
         IpPermission ipHdfs = new IpPermission();
-        iphttps.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
+        ipHdfs.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
                 .withFromPort(9000).withToPort(9000);
         ips.add(ipHdfs);
         
 //Permission for port 9001, any one can accesss
         IpPermission ipMapreduce = new IpPermission();
-        iphttps.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
+        ipMapreduce.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
                 .withFromPort(9001).withToPort(9001);
         ips.add(ipMapreduce);
         
  //Permission for port 50000-50100, any one can accesss
         IpPermission ipHadoop = new IpPermission();
-        iphttps.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
+        ipHadoop.withIpRanges("0.0.0.0/0").withIpProtocol("tcp")
                 .withFromPort(50000).withToPort(50100);
         ips.add(ipHadoop);       
            
@@ -753,5 +748,4 @@ public class CloudManager {
         this.ec2Client.authorizeSecurityGroupIngress(authorizeSecurityGroupIngressRequest);
         return groupName;
     }
-    
 }

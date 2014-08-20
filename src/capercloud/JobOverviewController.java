@@ -42,7 +42,13 @@ import com.compomics.util.experiment.identification.SearchParameters;
 import com.compomics.util.experiment.identification.SearchParameters.MassAccuracyType;
 import com.compomics.util.experiment.identification.identification_parameters.XtandemParameters;
 import com.compomics.util.preferences.ModificationProfile;
+import com.wittams.gritty.RequestOrigin;
+import com.wittams.gritty.ResizePanelDelegate;
+import com.wittams.gritty.jsch.JSchTty;
+import com.wittams.gritty.swing.GrittyTerminal;
+import com.wittams.gritty.swing.TermPanel;
 import impl.org.controlsfx.i18n.Localization;
+import java.awt.Dimension;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -79,12 +85,14 @@ import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.concurrent.Worker.State;
 import javafx.concurrent.WorkerStateEvent;
+import javafx.embed.swing.SwingNode;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
@@ -108,6 +116,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.DirectoryChooser;
@@ -115,6 +124,10 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.comparator.DirectoryFileComparator;
@@ -560,6 +573,86 @@ public class JobOverviewController implements Initializable {
                 .setCellValueFactory(new PropertyValueFactory<InstanceModel, String>("blockDevice"));
         this.tvInstanceMonitor.setItems(this.sm.getInstancesCache());
         
+        tvInstanceMonitor.setRowFactory(new Callback<TableView<InstanceModel>, TableRow<InstanceModel>>() {  
+            @Override  
+            public TableRow<InstanceModel> call(TableView<InstanceModel> tableView2) {  
+            final TableRow<InstanceModel> row = new TableRow<>();
+            row.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent event) {
+                    if (event.getClickCount() > 1) {
+                        TableRow tr = (TableRow) event.getSource();
+                        InstanceModel tm = (InstanceModel) tr.getItem();
+                        if (tm == null) {
+                            return;
+                        }
+                        
+                        String privateKeyName = tm.keyNameProperty().get() + ".pem";
+                        File privateKeyFile = new File(System.getProperty("user.home"), privateKeyName);
+//                        File privateKeyFile = new File("/Users/shuai/fasdfasd");
+                        if (!privateKeyFile.exists()) {
+                            Dialogs.create()
+                                    .owner(JobOverviewController.this.mainApp.getPrimaryStage())
+                                    .title("Error")
+                                    .masthead(null)
+                                    .message("Cannot find Private key file " + privateKeyFile.getName() + " in " + privateKeyFile.getParent())
+                                    .showError();
+                            return;
+                        }
+                        
+                        final String host = tm.platformProperty().get();
+                        
+                        String _userName = null;
+                        if (JobOverviewController.this.mainApp.getEucalyptusEnabled().get()) {
+                            _userName = "ec2-user";
+                        } else {
+                            _userName = "ubuntu";
+                        }
+                        final String user = _userName;
+                        
+                        Service s = new Service<Void>() {
+
+                            @Override
+                            protected Task<Void> createTask() {
+                                return new Task<Void>() {
+                                    @Override
+                                    protected Void call() throws Exception {
+                                        GrittyTerminal terminal = new GrittyTerminal();
+                        
+                                        TermPanel termPanel = terminal.getTermPanel();
+                                        final JFrame frame = new JFrame("On host " + host);
+                                        frame.getContentPane().add("Center", terminal);
+
+                                        frame.pack();
+                                        frame.setLocationRelativeTo(null);
+                                        termPanel.setVisible(true);
+                                        frame.setVisible(true);
+                                        frame.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+                                        frame.setResizable(true);
+                        
+                                        termPanel.setResizePanelDelegate(new ResizePanelDelegate(){
+                                            public void resizedPanel(final Dimension pixelDimension, final RequestOrigin origin) {
+                                                    if(origin == RequestOrigin.Remote)
+                                                            sizeFrameForTerm(terminal.getPreferredSize(), frame);
+                                            }
+                                        });
+                                        terminal.setTty(new JSchTty(host, user, privateKeyFile));
+                                        terminal.start();
+                                        return null;
+                                    }
+                                    
+                                };
+                            }
+                            
+                        };
+                        s.start();
+                    }      
+                }
+            });
+            return row;  
+            }
+        });
+        
 //init instance types ComboBox
         this.cbInstanceType.setItems(this.jm.getInstanceTypes());
 //        
@@ -699,6 +792,13 @@ public class JobOverviewController implements Initializable {
         //----------------------------init end-------------------------
         
 //        log.debug("mainApp: " + this.mainApp);
+    }
+    
+    private void sizeFrameForTerm(Dimension d, final JFrame frame) {
+
+            d.width += frame.getWidth() - frame.getContentPane().getWidth();
+            d.height += frame.getHeight() - frame.getContentPane().getHeight(); 
+            frame.setSize(d);
     }
 
     public void enableButton() {
@@ -1606,7 +1706,7 @@ public class JobOverviewController implements Initializable {
                             cm.sftp(username, masterPublicIp, "remote-init/lib/jfasta-2.1.3-jar-with-dependencies.jar", "/mnt/lib/jfasta-2.1.3-jar-with-dependencies.jar", privateKey);
                             cm.sftp(username, masterPublicIp, "remote-init/my_decoy.pl", "/mnt/my_decoy.pl", privateKey);
                             
-                            String cmdCreateRefDatabase = "cd /mnt;chmod 755 my_decoy.pl;/usr/local/jdk1.7.0_60/bin/java -Xmx1536m -jar CustomVariantProtein.jar Homo_sapiens.GRCh37.75.cds.all.fa mrna-cds.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName() + ";./my_decoy --append " + cj.getRefDatabaseName();
+                            String cmdCreateRefDatabase = "cd /mnt;chmod 755 my_decoy.pl;/usr/local/jdk1.7.0_60/bin/java -Xmx1536m -jar CustomVariantProtein.jar Homo_sapiens.GRCh37.75.cds.all.fa mrna-cds.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName() + ";./my_decoy.pl --append " + cj.getRefDatabaseName();
                             cm.remoteCallByShh(username, masterPublicIp, cmdCreateRefDatabase, privateKey);
                             
 //                            String cmdUploadRefDatabase = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
@@ -1679,14 +1779,17 @@ public class JobOverviewController implements Initializable {
                         log.info("***Start MR-Tandem searching***");
                         log.info("Step 1");
                         String cmdStepOne = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1input -output step1output" + sharedFiles + " -mapper \"mrtandem -mapper1_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer1_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
+                        log.debug(cmdStepOne);
                         cm.remoteCallByShh(username, masterPublicIp, cmdStepOne, privateKey);
 
                         log.info("Step 2");
                         String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer1_1#reducer1_1 -mapper \"mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer2_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
+                        log.debug(cmdStepTwo);
                         cm.remoteCallByShh(username, masterPublicIp, cmdStepTwo, privateKey);
-
-                        String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer2_1#reducer2_1 -mapper \"mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/"+username+"/\"" + stepArgs;
+                        
                         log.info("Step 3");
+                        String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer2_1#reducer2_1 -mapper \"mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/"+username+"/\"" + stepArgs;
+                        log.debug(cmdStepThree);
                         cm.remoteCallByShh(username, masterPublicIp, cmdStepThree, privateKey);
 
                         log.info("Start MR-Tandem searching finished");
@@ -2026,6 +2129,8 @@ public class JobOverviewController implements Initializable {
                             bucketName = "capercloud-output";
                         }
                         
+                        JobOverviewController.this.tvResults.setItems(JobOverviewController.this.rm.getPeptideList());
+                        
                         //upload bed file to s3
                         AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials("AKIAIWNERGLUEYZL7N7Q", "2vg5/PqUH1DGRTi1ONYRXwf9lfrV6Mblf2vFIb4U"));
                         //make s3 and object public readable
@@ -2034,7 +2139,7 @@ public class JobOverviewController implements Initializable {
                         s3Client.putObject(new PutObjectRequest(bucketName, bedFile.getName(), bedFile).withCannedAcl(CannedAccessControlList.PublicRead));
                         JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + bucketName + "/" + bedFile.getName();
                         
-                        JobOverviewController.this.tvResults.setItems(JobOverviewController.this.rm.getPeptideList());
+                        
                         return null;
                     }
                 };

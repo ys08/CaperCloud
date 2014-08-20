@@ -16,6 +16,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -209,7 +210,7 @@ public class CaperCloud extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         this.setPrimaryStage(stage);
-        this.getPrimaryStage().setOnHidden(new EventHandler() {
+        this.getPrimaryStage().setOnCloseRequest(new EventHandler() {
             @Override
             public void handle(Event t) {
                 try {
@@ -218,6 +219,9 @@ public class CaperCloud extends Application {
 //                }
                     OutputStream fos = new FileOutputStream(CaperCloud.this.getMainController().getHistoryFile()); 
                     CaperCloud.this.getMainController().getProperty().store(fos, "capercloud history file");
+                    
+                    Platform.exit();
+                    System.exit(0);
                 } catch (FileNotFoundException ex) {
                     Logger.getLogger(CaperCloud.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (IOException ex) {
