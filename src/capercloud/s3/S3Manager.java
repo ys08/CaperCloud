@@ -133,7 +133,7 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
         
         S3Object[] objs = new S3Object[1];
         objs[0] = obj;
-        log.debug(file.getName() + " " + bucket.getName());
+//        log.debug(file.getName() + " " + bucket.getName());
         this.storageService.putObjects(bucket.getName(), objs);
     } 
     
@@ -142,11 +142,11 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
             log.error(folder.getAbsolutePath() + " is not a directory!");
             return;
         }
-        log.debug(obj.getName());
+//        log.debug(obj.getName());
         DownloadPackage[] packages = new DownloadPackage[1];
-        log.debug(folder.getAbsolutePath());
+//        log.debug(folder.getAbsolutePath());
         File outFile = new File(folder, obj.getName());
-        log.debug(outFile.getAbsolutePath());
+//        log.debug(outFile.getAbsolutePath());
         packages[0] = new DownloadPackage(obj, outFile);
         this.storageService.downloadObjects(obj.getBucketName(), packages);
     }
@@ -224,10 +224,10 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
     public void event(CreateObjectsEvent event) {
         if(ServiceEvent.EVENT_STARTED == event.getEventCode()) {
             this.transferTask.updateMessage("starting");
-            log.debug("CreateObjectsEvent Start");
+//            log.debug("CreateObjectsEvent Start");
         }else if(event.getEventCode() == ServiceEvent.EVENT_ERROR) {
             this.transferTask.updateMessage("Failed");
-            log.debug("CreateObjectsEvent Error");
+//            log.debug("CreateObjectsEvent Error");
         }else if(event.getEventCode() == ServiceEvent.EVENT_IN_PROGRESS) {
             ThreadWatcher watcher = event.getThreadWatcher();
             if (watcher.getBytesTransferred() >= watcher.getBytesTotal()) {
@@ -243,7 +243,7 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
         }else if(ServiceEvent.EVENT_COMPLETED == event.getEventCode()) {
             this.transferTask.updateMessage("completed");
             this.transferTask.updateProgress(1, 1);
-            log.debug("CreateObjectsEvent Completed");
+//            log.debug("CreateObjectsEvent Completed");
         }
     }
 
@@ -295,9 +295,9 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
     public void event(DownloadObjectsEvent event) {
         if (ServiceEvent.EVENT_STARTED == event.getEventCode()) {
             this.transferTask.updateMessage("starting");
-            log.debug("DownloadObjectsEvent Start");
+//            log.debug("DownloadObjectsEvent Start");
         } else if (ServiceEvent.EVENT_IN_PROGRESS == event.getEventCode()) {
-            log.debug("DownloadObjectsEvent In Progress");
+//            log.debug("DownloadObjectsEvent In Progress");
             ThreadWatcher watcher = event.getThreadWatcher();
             if (watcher.getBytesTransferred() >= watcher.getBytesTotal()) {
                 this.transferTask.updateMessage("Verifying");
@@ -310,11 +310,11 @@ public class S3Manager implements StorageServiceEventListener, CredentialsProvid
                 this.transferTask.updateMessage(transferDetailsText.toString());
             }
         } else if (ServiceEvent.EVENT_COMPLETED == event.getEventCode()) {
-            log.debug("DownloadObjectsEvent Completed");
+//            log.debug("DownloadObjectsEvent Completed");
             this.transferTask.updateMessage("completed");
             this.transferTask.updateProgress(1, 1);
         } else if (ServiceEvent.EVENT_ERROR == event.getEventCode()) {
-            log.debug("DownloadObjectsEvent Error");
+//            log.debug("DownloadObjectsEvent Error");
             this.transferTask.updateMessage("Failed");
         }
     }

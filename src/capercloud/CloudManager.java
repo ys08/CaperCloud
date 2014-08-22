@@ -119,7 +119,6 @@ public class CloudManager {
     
     public void logoutCloud() {
         if (this.currentCredentials == null) {
-            log.debug("Something goes wrong");
             return;
         }
         this.s3m = null;
@@ -212,7 +211,6 @@ public class CloudManager {
             @Override
             protected void succeeded() {
                 super.succeeded();
-                log.debug("Listing Buckets Success!");
                 progressDialog.close();
                 
             }
@@ -220,14 +218,12 @@ public class CloudManager {
             @Override
             protected void cancelled() {
                 super.cancelled(); 
-                log.debug("Lising Buckets Cancelled!");
                 progressDialog.close();
             }
             
             @Override
             protected void failed() {
                 super.failed(); 
-                log.debug("Lising Buckets Failed!");
                 progressDialog.close();
             }
         };
@@ -268,19 +264,16 @@ public class CloudManager {
             @Override
             protected void succeeded() {
                 super.succeeded();
-                log.debug("Listing Objects Success!");
                 progressDialog.close();
             }
             @Override
             protected void cancelled() {
                 super.cancelled(); 
-                log.debug("Listing Objects Cancelled!");
                 progressDialog.close();
             }
             @Override
             protected void failed() {
                 super.failed(); 
-                log.debug("Lising Objects Failed!");
                 progressDialog.close();
             }
         };
@@ -321,19 +314,16 @@ public class CloudManager {
             @Override
             protected void succeeded() {
                 super.succeeded();
-                log.debug("Create Bucket " + bucketName + " Succeeded!");
                 progressDialog.close();
             }
             @Override
             protected void cancelled() {
                 super.cancelled(); 
-                log.debug("Create Bucket " + bucketName + " Cancelled!");
                 progressDialog.close();
             }
             @Override
             protected void failed() {
                 super.failed(); 
-                log.debug("Create Bucket " + bucketName + " Failed!");
                 progressDialog.close();
             }
         };
@@ -347,7 +337,6 @@ public class CloudManager {
                 return new Task<Void>() {
                     @Override
                     protected Void call() throws Exception {
-                        log.debug(obj.getName());
                         CloudManager.this.deleteObject(obj);
                         return null;
                     }
@@ -356,19 +345,16 @@ public class CloudManager {
             @Override
             protected void succeeded() {
                 super.succeeded();
-                log.debug(this.getState());
                 progressDialog.close();
             }
             @Override
             protected void cancelled() {
                 super.cancelled(); 
-                log.debug(this.getState());
                 progressDialog.close();
             }
             @Override
             protected void failed() {
                 super.failed(); 
-                log.debug(this.getState());
                 progressDialog.close();
             }
         };
@@ -382,7 +368,6 @@ public class CloudManager {
                 return new Task<Void>() {
                     @Override
                     protected Void call() throws Exception {
-                        log.debug(obj.getName());
                         CloudManager.this.deleteObject(obj);
                         return null;
                     }
@@ -405,7 +390,6 @@ public class CloudManager {
                 return new Task<Void>() {
                     @Override
                     protected Void call() throws Exception {
-                        log.debug(bucket.getName());
                         CloudManager.this.deleteBucket(bucket);
                         return null;
                     }
@@ -414,19 +398,16 @@ public class CloudManager {
             @Override
             protected void succeeded() {
                 super.succeeded();
-                log.debug(this.getState());
                 progressDialog.close();
             }
             @Override
             protected void cancelled() {
                 super.cancelled(); 
-                log.debug(this.getState());
                 progressDialog.close();
             }
             @Override
             protected void failed() {
                 super.failed(); 
-                log.debug(this.getState());
                 progressDialog.close();
             }
         };
@@ -439,7 +420,6 @@ public class CloudManager {
                 return new Task<Void>() {
                     @Override
                     protected Void call() throws Exception {
-                        log.debug(bucket.getName());
                         CloudManager.this.deleteBucket(bucket);
                         return null;
                     }
@@ -534,7 +514,7 @@ public class CloudManager {
         Set<String> states = new HashSet<>();
         while (isWaiting) {
             try {
-                log.info("waiting for instances start up...");
+                log.info("Waiting 10s for instances boosting...");
                 //10 secs
                 Thread.sleep(10000);
                 DescribeInstancesResult r = this.ec2Client.describeInstances(new DescribeInstancesRequest().withInstanceIds(instanceIds));
@@ -575,9 +555,10 @@ public class CloudManager {
                 break;
             } catch(JSchException ex) {
                 if(i == 10 - 1) {
+                    log.error("Cannot connect to remote host");
                     throw ex;
                 }
-                log.info("Remote invoke retry " + (i+1) + " times");
+                log.info("Sleeping 20s...");
                 Thread.sleep(20000);
             }
         }
@@ -600,11 +581,10 @@ public class CloudManager {
                 log.info(new String(tmp, 0, i));
             }
             if (channel.isClosed()){
-                
                 if (channel.getExitStatus() == 0) {
-                    log.info("Exit Status: SUCCESS!");
+//                    log.debug("Exit Status: SUCCESS!");
                 } else {
-                    log.info("Exit Status: FAILED! PLEASE TERMINATE THE RUNNING INSTANCES, AND CONTACT WITH THE AUTHOR!");
+                    log.error("Exit Status: FAILED! PLEASE TERMINATE THE RUNNING INSTANCES, AND CONTACT WITH THE AUTHOR!");
                 }
                 break;
             }
@@ -634,9 +614,10 @@ public class CloudManager {
                 break;
             } catch(JSchException ex) {
                 if(i == 10 - 1) {
+                    log.error("Cannot connect to remote host");
                     throw ex;
                 }
-                log.info("Upload data retry " + (i+1) + " times");
+                log.info("Sleeping 20s...");
                 Thread.sleep(20000);
             }
         }
@@ -666,7 +647,7 @@ public class CloudManager {
     public File createKeyPair(String keyName, File directory) {
         DescribeKeyPairsResult r = this.ec2Client.describeKeyPairs(new DescribeKeyPairsRequest().withKeyNames(keyName));
         if (!r.getKeyPairs().isEmpty()) {
-            log.info("delete existing key: " + keyName);
+            log.info("Delete existing key: " + keyName);
             try {
                 this.ec2Client.deleteKeyPair(new DeleteKeyPairRequest().withKeyName(keyName));
             } catch (AmazonServiceException ex) {
@@ -674,7 +655,7 @@ public class CloudManager {
                 System.exit(1);
             }
         }
-        log.info("create new key: " + keyName);
+        log.info("Create new key: " + keyName);
         CreateKeyPairResult rr = this.ec2Client.createKeyPair(new CreateKeyPairRequest().withKeyName(keyName));
         String fileName = keyName + ".pem";
         File outFile = new File(FileUtils.getUserDirectory(), fileName);
@@ -690,10 +671,10 @@ public class CloudManager {
     public String createSecurityGroup(String groupName, String groupDescription) {
         DescribeSecurityGroupsResult r = this.ec2Client.describeSecurityGroups(new DescribeSecurityGroupsRequest().withGroupNames(groupName));
         if (!r.getSecurityGroups().isEmpty()) {
-            log.info("delete existing security group: " + groupName);
+            log.info("Delete existing security group: " + groupName);
             this.ec2Client.deleteSecurityGroup(new DeleteSecurityGroupRequest().withGroupName(groupName));
         }
-        log.info("create new security group: " + groupName);
+        log.info("Create new security group: " + groupName);
         CreateSecurityGroupRequest createSecurityGroupRequest =  new CreateSecurityGroupRequest();
         createSecurityGroupRequest.withGroupName(groupName)
                 .withDescription(groupDescription);
@@ -701,8 +682,8 @@ public class CloudManager {
         CreateSecurityGroupResult csgr = this.ec2Client.createSecurityGroup(createSecurityGroupRequest);
 
         String groupid = csgr.getGroupId();
-        log.info("Security Group Id : " + groupid);
-        log.info("Create Security Group Permission");
+        log.info("Security group id : " + groupid);
+        log.info("Create security group permission");
 
         Collection<IpPermission> ips = new ArrayList<IpPermission>();
 // Permission for SSH only to your ip
@@ -740,7 +721,7 @@ public class CloudManager {
                 .withFromPort(50000).withToPort(50100);
         ips.add(ipHadoop);       
            
-        log.info("Attach Owner to security group");
+        log.info("Attach owner to security group");
 // Register this security group with owner
         AuthorizeSecurityGroupIngressRequest authorizeSecurityGroupIngressRequest = new AuthorizeSecurityGroupIngressRequest();
         authorizeSecurityGroupIngressRequest

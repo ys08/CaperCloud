@@ -426,7 +426,6 @@ public class JobOverviewController implements Initializable {
                         }
                         if (tr.getItem() instanceof S3Object) {
                             S3Object obj = (S3Object) tr.getItem();
-                            log.debug("double click on object " + obj.getName());
                             if (obj.isDirectoryPlaceholder()) {
                                 //TO DO
                             } else {
@@ -824,7 +823,7 @@ public class JobOverviewController implements Initializable {
     private void updateLocalFileCache(File inDirectory) {
         File[] tmp = inDirectory.listFiles();
         if (tmp == null) {
-            log.info("can not access directory");
+            log.error("Can not access directory");
             return;
         }
         Arrays.sort(tmp, DirectoryFileComparator.DIRECTORY_COMPARATOR);
@@ -1144,7 +1143,7 @@ public class JobOverviewController implements Initializable {
     private void handleLocalUpAction() {
         File parentFile = this.fm.getFolderPath().getParentFile();
         if (parentFile == null) {
-            log.info("Root Directory");
+            log.error("Root directory");
             return;
         }
         this.fm.setFolderPath(parentFile);
@@ -1155,7 +1154,7 @@ public class JobOverviewController implements Initializable {
     private void handleLocalDeleteAction() {
         Iterator fileIterator = getSelectedFiles();
         if (!fileIterator.hasNext()) {
-            log.error("no files are selected");
+            log.error("No files are selected");
         }
         
         Action response = Dialogs.create()
@@ -1599,7 +1598,10 @@ public class JobOverviewController implements Initializable {
                 return new Task<List<String>>() {
                     @Override
                     protected List<String> call() throws Exception {    
-
+                        //Timer
+                        long startTime = 0;
+                        long endTime = 0;
+                        
                         //delete and create private key
                         File privateKey = cm.createKeyPair(keyName, FileUtils.getUserDirectory());
                         //delete and create security group
@@ -1634,6 +1636,7 @@ public class JobOverviewController implements Initializable {
                         }
 //                        log.debug(hosts.toString());
                         //initialize cloud cluster
+                        startTime = System.currentTimeMillis();
                         String username = JobOverviewController.this.userName;
                         cj.setStatus("initializing cluster");
                         log.info("***Configuring hadoop***");
@@ -1784,7 +1787,11 @@ public class JobOverviewController implements Initializable {
                         //upload step1input to hdfs
                         
                         cm.remoteCallByShh(username, masterPublicIp, "hadoop dfs -put step1input step1input", privateKey);
+                        
+                        endTime = System.currentTimeMillis();
+                        log.info("*******Preparation time: " + (endTime - startTime) + "ms*******");
 
+                        
                         String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
                         //be careful, it's a mess
                         cj.setStatus("Performing database search");
@@ -1792,19 +1799,27 @@ public class JobOverviewController implements Initializable {
                         log.info("Step 1");
                         String cmdStepOne = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1input -output step1output" + sharedFiles + " -mapper \"mrtandem -mapper1_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer1_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
                         log.debug(cmdStepOne);
+                        startTime = System.currentTimeMillis();
                         cm.remoteCallByShh(username, masterPublicIp, cmdStepOne, privateKey);
+                        endTime = System.currentTimeMillis();
+                        log.info("*******Step 1 running time: " + (endTime - startTime) + "ms*******");
 
                         log.info("Step 2");
                         String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer1_1#reducer1_1 -mapper \"mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer2_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
                         log.debug(cmdStepTwo);
+                        startTime = System.currentTimeMillis();
                         cm.remoteCallByShh(username, masterPublicIp, cmdStepTwo, privateKey);
+                        endTime = System.currentTimeMillis();
+                        log.info("*******Step 2 running time: " + (endTime - startTime) + "ms*******");
                         
                         log.info("Step 3");
                         String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer2_1#reducer2_1 -mapper \"mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/"+username+"/\"" + stepArgs;
                         log.debug(cmdStepThree);
+                        startTime = System.currentTimeMillis();
                         cm.remoteCallByShh(username, masterPublicIp, cmdStepThree, privateKey);
-
-                        log.info("Start MR-Tandem searching finished");
+                        endTime = System.currentTimeMillis();
+                        log.info("*******Step 3 running time: " + (endTime - startTime) + "ms*******");
+                        log.info("**Start MR-Tandem searching finished");
                      
                         
                         //download output(in hdfs) to local
@@ -1812,14 +1827,15 @@ public class JobOverviewController implements Initializable {
                         cm.remoteCallByShh(username, masterPublicIp, cmdDownloadOutput, privateKey);
                         
                         //shut down other instances
-//                        if (!otherInstances.isEmpty()) {
-//                            cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(otherInstances));
-//                        }
+                        if (!otherInstances.isEmpty()) {
+                            cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(otherInstances));
+                        }
                         
                         //convert x!tandem output to mzid format, parsing xml is too slow
                         cj.setStatus("Performing FDR control");
                         log.info("***Post processing by mzidentml-lib***");
                         
+                        startTime = System.currentTimeMillis();
                         //java.lang.OutOfMemoryError, bad implemetation
                         String cmdTandem2MzId = "java -Xmx1536m -jar post_process/mzidentml-lib-1.6.10.jar Tandem2mzid output output.mzid -outputFragmentation false -decoyRegex \"###REV###\" -databaseFileFormatID MS:1001348 -massSpecFileFormatID MS:1001062 -idsStartAtZero false -compress false";
                         cm.remoteCallByShh(username, masterPublicIp, cmdTandem2MzId, privateKey);
@@ -1834,6 +1850,8 @@ public class JobOverviewController implements Initializable {
                         cm.remoteCallByShh(username, masterPublicIp, cmdThresHold, privateKey); 
                         log.info("***Post processing by mzidentml-lib finished***");
                         // upload result to s3
+                        endTime = System.currentTimeMillis();
+                        log.info("*******Post processing time: " + (endTime - startTime) + "ms*******");
                         
                         cj.setStatus("Retrieving result");
                         String bucketName = cj.getOutputBucketName();
@@ -1845,7 +1863,7 @@ public class JobOverviewController implements Initializable {
                         cm.remoteCallByShh(username, masterPublicIp, cmdUploadResult, privateKey);
                         
                         //terminate master instance
-//                        cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(masterId));
+                        cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(masterId));
                         return instances;
                     }
                 };
@@ -1878,7 +1896,10 @@ public class JobOverviewController implements Initializable {
                                     JobOverviewController.this.rm.loadKnownPeptide(new File("Homo_sapiens.GRCh37.75.pep.all.fa"));
                                 }
                                 
+                                long _startTime = System.currentTimeMillis();
                                 JobOverviewController.this.rm.parse(new File("result.mzid"), cj.getJobType());
+                                long _endTime = System.currentTimeMillis();
+                                log.info("*******Result parsing time: " + (_endTime - _startTime) + "ms*******");
                                 
                                 String spectraFilename = cj.getSpectrumObjs().get(0).getName();
                                 String spectraFilePath = JobOverviewController.this.property.getProperty(spectraFilename);
@@ -1918,7 +1939,7 @@ public class JobOverviewController implements Initializable {
                         cj.setStatus("Job finished");
                         Date stopTime = Calendar.getInstance().getTime();       
                         cj.setPassedTime(sdf.format(stopTime));
-                        log.info("JOB END ++++++ Job type=" + cj.getJobType() + ", Cluster size=" + cj.getClusterSize() + ", Instance type=" + cj.getInstanceType().name());
+                        log.info("/**** JOB END ++++++ Job type=" + cj.getJobType() + ", Cluster size=" + cj.getClusterSize() + ", Instance type=" + cj.getInstanceType().name() + ", Eucalyptus enabled=" + eucalyptusEnabled + " ****/");
                         JobOverviewController.this.tvResults.setItems(JobOverviewController.this.rm.getPeptideList()); 
                     }
                 });
@@ -1930,7 +1951,7 @@ public class JobOverviewController implements Initializable {
                 }
         });
         
-        log.info("JOB START ++++++ Job type=" + cj.getJobType() + ", Cluster size=" + cj.getClusterSize() + ", Instance type=" + cj.getInstanceType().name() + ", Eucalyptus enabled=" + eucalyptusEnabled);
+        log.info("/**** JOB START ++++++ Job type=" + cj.getJobType() + ", Cluster size=" + cj.getClusterSize() + ", Instance type=" + cj.getInstanceType().name() + ", Eucalyptus enabled=" + eucalyptusEnabled + " ****/");
         msSearchService.start();
     }
     private void writeInputStreamToFile(InputStream inputStream, File outFile) {
