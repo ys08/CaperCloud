@@ -551,7 +551,7 @@ public class CloudManager {
         session.setServerAliveInterval(60000);
         for(int i = 0; i < 10; i++) {
             try {
-                session.connect();
+                session.connect(30000);
                 break;
             } catch(JSchException ex) {
                 if(i == 10 - 1) {
@@ -610,7 +610,7 @@ public class CloudManager {
         
         for(int i = 0; i < 10; i++) {
             try {
-                session.connect();
+                session.connect(30000);
                 break;
             } catch(JSchException ex) {
                 if(i == 10 - 1) {

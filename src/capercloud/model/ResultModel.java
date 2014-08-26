@@ -292,8 +292,15 @@ public class ResultModel {
                             int firstStartPos = regions.get(0).getStartPos() + (jPos - relStartPos) * 3;
                             int secondEndPos = regions.get(1).getStartPos() + (relEndPos - jPos) * 3 + 2;
                             
-                            Range firstRegion = new Range(firstStartPos, regions.get(0).getEndPos());
-                            Range secondRegion = new Range(regions.get(1).getStartPos(), secondEndPos);
+                            int firstEndPos = regions.get(0).getEndPos();
+                            int secondStartPos = regions.get(1).getStartPos();
+                            
+                            if (firstStartPos > firstEndPos) {
+                                firstStartPos = firstEndPos - 3;
+                            }
+                            
+                            Range firstRegion = new Range(firstStartPos, firstEndPos);
+                            Range secondRegion = new Range(secondStartPos, secondEndPos);
                             
                             PeptideModel pm = new PeptideModel(peptideRef, id, chrom, strand, mod.toString(), seq, description);
                             pm.addRegions(firstRegion);

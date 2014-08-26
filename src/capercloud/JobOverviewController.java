@@ -1721,7 +1721,7 @@ public class JobOverviewController implements Initializable {
                             cm.sftp(username, masterPublicIp, "remote-init/lib/jfasta-2.1.3-jar-with-dependencies.jar", "/mnt/lib/jfasta-2.1.3-jar-with-dependencies.jar", privateKey);
                             cm.sftp(username, masterPublicIp, "remote-init/my_decoy.pl", "/mnt/my_decoy.pl", privateKey);
                             
-                            String cmdCreateRefDatabase = "cd /mnt;chmod 755 my_decoy.pl;/usr/local/jdk1.7.0_60/bin/java -Xmx1536m -jar CustomVariantProtein.jar Homo_sapiens.GRCh37.75.cds.all.fa mrna-cds.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName() + ";./my_decoy.pl --append " + cj.getRefDatabaseName();
+                            String cmdCreateRefDatabase = "cd /mnt;chmod 755 my_decoy.pl;/usr/local/jdk1.7.0_60/bin/java -Xmx2048m -jar CustomVariantProtein.jar Homo_sapiens.GRCh37.75.cds.all.fa mrna-cds.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName() + ";./my_decoy.pl --append " + cj.getRefDatabaseName();
                             cm.remoteCallByShh(username, masterPublicIp, cmdCreateRefDatabase, privateKey);
                             
 //                            String cmdUploadRefDatabase = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
@@ -1837,16 +1837,16 @@ public class JobOverviewController implements Initializable {
                         
                         startTime = System.currentTimeMillis();
                         //java.lang.OutOfMemoryError, bad implemetation
-                        String cmdTandem2MzId = "java -Xmx1536m -jar post_process/mzidentml-lib-1.6.10.jar Tandem2mzid output output.mzid -outputFragmentation false -decoyRegex \"###REV###\" -databaseFileFormatID MS:1001348 -massSpecFileFormatID MS:1001062 -idsStartAtZero false -compress false";
+                        String cmdTandem2MzId = "java -Xmx2048m -jar post_process/mzidentml-lib-1.6.10.jar Tandem2mzid output output.mzid -outputFragmentation false -decoyRegex \"###REV###\" -databaseFileFormatID MS:1001348 -massSpecFileFormatID MS:1001062 -idsStartAtZero false -compress false";
                         cm.remoteCallByShh(username, masterPublicIp, cmdTandem2MzId, privateKey);
                         log.info(cmdTandem2MzId);
                         
                         //calculate fdr
-                        String cmdCalculateFdrValue = "java -Xmx1536m -jar post_process/mzidentml-lib-1.6.10.jar FalseDiscoveryRate output.mzid output_fdr.mzid -decoyRegex \"###REV###\" -decoyValue 1 -cvTerm MS:1001330 -betterScoresAreLower true -compress false";
+                        String cmdCalculateFdrValue = "java -Xmx2048m -jar post_process/mzidentml-lib-1.6.10.jar FalseDiscoveryRate output.mzid output_fdr.mzid -decoyRegex \"###REV###\" -decoyValue 1 -cvTerm MS:1001330 -betterScoresAreLower true -compress false";
                         cm.remoteCallByShh(username, masterPublicIp, cmdCalculateFdrValue, privateKey);      
 
                         //cut off 
-                        String cmdThresHold = "java -Xmx1536m -jar post_process/mzidentml-lib-1.6.10.jar Threshold output_fdr.mzid result.mzid -isPSMThreshold true -cvAccessionForScoreThreshold MS:1002354 -threshValue " + cj.getFdrValue() + " -betterScoresAreLower true -deleteUnderThreshold true -compress false";
+                        String cmdThresHold = "java -Xmx2048m -jar post_process/mzidentml-lib-1.6.10.jar Threshold output_fdr.mzid result.mzid -isPSMThreshold true -cvAccessionForScoreThreshold MS:1002354 -threshValue " + cj.getFdrValue() + " -betterScoresAreLower true -deleteUnderThreshold true -compress false";
                         cm.remoteCallByShh(username, masterPublicIp, cmdThresHold, privateKey); 
                         log.info("***Post processing by mzidentml-lib finished***");
                         // upload result to s3

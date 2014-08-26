@@ -227,14 +227,14 @@ public class LoginViewController implements Initializable {
 //            s.start();
 ////wait for cancel or success event
 //            checkingDialog.showAndWait();
-            final Service<S3Bucket[]> s = this.mainApp.getCloudManager().createCheckingAccountService("checking your account");
+            final Service<S3Bucket[]> s = this.mainApp.getCloudManager().createCheckingAccountService("Connecting...");
             
             s.setOnFailed(new EventHandler<WorkerStateEvent>() {
                 @Override
                 public void handle(WorkerStateEvent event) {
                     Dialogs.create()
                             .title("Error")
-                            .message("Error occured, please retry.")
+                            .message("Connection error, please retry.")
                             .showError();
                 }
             });
@@ -256,7 +256,7 @@ public class LoginViewController implements Initializable {
             
             Dialogs.create()
                     .owner(this.mainApp.getLoginStage())
-                    .title("Checking")
+                    .title("Connecting to the cloud")
                     .showWorkerProgress(s);
             s.start();
             
