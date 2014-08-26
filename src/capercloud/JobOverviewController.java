@@ -1790,7 +1790,6 @@ public class JobOverviewController implements Initializable {
                         
                         endTime = System.currentTimeMillis();
                         log.info("*******Preparation time: " + (endTime - startTime) + "ms*******");
-
                         
                         String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
                         //be careful, it's a mess

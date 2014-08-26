@@ -234,7 +234,7 @@ public class LoginViewController implements Initializable {
                 public void handle(WorkerStateEvent event) {
                     Dialogs.create()
                             .title("Error")
-                            .message("Connection error, please retry.")
+                            .message("Failed, please retry later or check network connection.")
                             .showError();
                 }
             });
