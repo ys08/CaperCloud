@@ -478,7 +478,7 @@
                               <HBox id="HBox" alignment="CENTER" prefHeight="23.0" prefWidth="1294.0" spacing="5.0" BorderPane.margin="$x2">
                                 <children>
                                                 <Label text="image id" />
-                                                <TextField fx:id="tfImageId" text="ami-a401dccc" />
+                                                <TextField fx:id="tfImageId" text="ami-80cf15e8" />
                                                 <Label text="Key Name" />
                                                 <TextField fx:id="tfKeyName" prefHeight="26.0" prefWidth="126.0" text="capercloud" />
                                                 <Label text="Security Group" />

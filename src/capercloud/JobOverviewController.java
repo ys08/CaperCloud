@@ -1620,10 +1620,11 @@ public class JobOverviewController implements Initializable {
                             otherInstances.add(instances.get(i));
                         }
                         
-                        //make hosts file
+                        //configure hadoop 
                         DescribeInstancesResult r = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
                         Iterator i = r.getReservations().iterator();
                         StringBuilder hosts = new StringBuilder();
+                        StringBuilder slaves = new StringBuilder();
                         while (i.hasNext()) {
                             Reservation rr = (Reservation) i.next();
                             for (Instance ii : rr.getInstances()) {
@@ -1632,63 +1633,36 @@ public class JobOverviewController implements Initializable {
                                 hostName = hostName.replaceAll("\\.", "-");
 //                                log.debug("hostname: " + hostName);
                                 hosts.append(hostIp).append("    ").append(hostName).append("\n");
+                                slaves.append(hostName).append("\n");
                             }
                         }
 //                        log.debug(hosts.toString());
-                        //initialize cloud cluster
+                        //on master node
                         startTime = System.currentTimeMillis();
                         String username = JobOverviewController.this.userName;
                         cj.setStatus("initializing cluster");
-                        log.info("***Configuring hadoop***");
-                        r = cm.getEc2Client().describeInstances(new DescribeInstancesRequest().withInstanceIds(instances));
-                        i = r.getReservations().iterator();
-                        while (i.hasNext()) {
-                            // on every node
-                            Reservation rr = (Reservation) i.next();
-                            for (Instance ii : rr.getInstances()) {
-                                String cmdInitEnv = null;
-                                if (eucalyptusEnabled) {
-                                    //correct time on eucalyptus
-                                    cmdInitEnv = "sudo chmod 777 /mnt;mkdir /mnt/hadoop;sudo service ntpd stop;sudo ntpdate " + JobOverviewController.this.mainApp.getEucalyptusClcIpAddress() + ";sudo service ntpd start;echo \"export PATH=$PATH:/usr/local/hadoop-1.2.1/bin\" >> .bashrc;source .bashrc;echo '" + hosts.toString() + "' | sudo tee -a /etc/hosts";
-                                } else {
-                                    cmdInitEnv = "sudo chmod 777 /mnt;mkdir /mnt/hadoop;echo '" + hosts.toString() + "' | sudo tee -a /etc/hosts";
-                                }
-
-                                cm.remoteCallByShh(username, ii.getPublicIpAddress(), cmdInitEnv, privateKey);
-                                //launching hadoop cluster
-//                                log.info("uploading hadoop-remote-init.sh");
-                                cm.sftp(username, ii.getPublicIpAddress(), "remote-init/hadoop-remote-init.sh", "hadoop-remote-init.sh", privateKey);
-                                String cmdRemoteInit = "chmod 755 hadoop-remote-init.sh;./hadoop-remote-init.sh " + masterPrivateIp;
-                                cm.remoteCallByShh(username, ii.getPublicIpAddress(), cmdRemoteInit, privateKey);
-                            }
-                        }   
-                        log.info("***Configuring hadoop finished***");
+                        String cmdConfigureHadoop = null;
+                        if (eucalyptusEnabled) {
+                        } else {
+                            //configure and start hadoop
+                            cmdConfigureHadoop = "hostname > /usr/local/hadoop-1.2.1/conf/masters;echo '" + hosts.toString() + "' | sudo tee -a /etc/hosts;echo '" + slaves.toString() + "' | tee /usr/local/hadoop-1.2.1/conf/slaves;./hadoop-remote-init.sh " + masterPrivateIp;
+                        }
                         
-                        // on master
-                        log.info("***Uploading scripts***");
+                        cm.remoteCallByShh(username, masterPublicIp, cmdConfigureHadoop, privateKey);
                         if (eucalyptusEnabled) {
                             cm.sftp(username, masterPublicIp, "remote-init/download_data_euca.py", "download_data.py", privateKey);
                             cm.sftp(username, masterPublicIp, "remote-init/upload_data_euca.py", "upload_data.py", privateKey);
                         } else {
-                            cm.sftp(username, masterPublicIp, "remote-init/download_data.py", "download_data.py", privateKey);
-                            cm.sftp(username, masterPublicIp, "remote-init/upload_data.py", "upload_data.py", privateKey);
                         }
                         
                         String taxonomyFileName =  cj.getTaxonomyFile().getName();
-                        cm.sftp(username, masterPublicIp, cj.getTaxonomyFile().getAbsolutePath(), "/mnt/" + taxonomyFileName, privateKey);
+                        cm.sftp(username, masterPublicIp, cj.getTaxonomyFile().getAbsolutePath(), taxonomyFileName, privateKey);
                         String inputXmlFileName = cj.getInputFiles().get(0).getName();
-                        cm.sftp(username, masterPublicIp, cj.getInputFiles().get(0).getAbsolutePath(), "/mnt/" + inputXmlFileName , privateKey);
-                        cm.sftp(username, masterPublicIp, "remote-init/mrtandem-centos", "/mnt/mrtandem", privateKey);
-                        cm.remoteCallByShh(username, masterPublicIp, "chmod 755 /mnt/mrtandem", privateKey); 
-                        cm.sftp(username, masterPublicIp, "remote-init/default_input.xml", "/mnt/default_input.xml", privateKey);
-                        log.info("***Uploading scripts finished***");
-                        
-                        log.info("***Starting hadoop***");
-                        cm.sftp(username, masterPublicIp, "remote-init/wait_hadoop.sh", "wait_hadoop.sh", privateKey);
-                        String cmdWaitHadoopCluster = "chmod 755 wait_hadoop.sh;./wait_hadoop.sh " + cj.getClusterSize().toString() + ";hadoop dfs -mkdir shared";
+                        cm.sftp(username, masterPublicIp, cj.getInputFiles().get(0).getAbsolutePath(), inputXmlFileName , privateKey);
+                        //config master, slave file, copy mater config to slaves
+                        String cmdWaitHadoopCluster = "./wait_hadoop.sh " + cj.getClusterSize().toString() + ";hadoop dfs -mkdir shared";
 //                        log.debug(cmdWaitHadoopCluster);
                         cm.remoteCallByShh(username, masterPublicIp, cmdWaitHadoopCluster, privateKey);
-                        log.info("***Starting hadoop finished***");
                         
                         cj.setStatus("Preparing shared data");
                         log.info("***Preparing shared data***");
@@ -1715,13 +1689,7 @@ public class JobOverviewController implements Initializable {
                                     + " /mnt";
                             cm.remoteCallByShh(username, masterPublicIp, cmdDownloadVcfFile, privateKey);
                             
-                            cm.remoteCallByShh(username, masterPublicIp, "mkdir /mnt/lib", privateKey);
-                            cm.sftp(username, masterPublicIp, "remote-init/CustomVariantProtein.jar", "/mnt/CustomVariantProtein.jar", privateKey);
-                            cm.sftp(username, masterPublicIp, "remote-init/lib/commons-io-2.4.jar", "/mnt/lib/commons-io-2.4.jar", privateKey);
-                            cm.sftp(username, masterPublicIp, "remote-init/lib/jfasta-2.1.3-jar-with-dependencies.jar", "/mnt/lib/jfasta-2.1.3-jar-with-dependencies.jar", privateKey);
-                            cm.sftp(username, masterPublicIp, "remote-init/my_decoy.pl", "/mnt/my_decoy.pl", privateKey);
-                            
-                            String cmdCreateRefDatabase = "cd /mnt;chmod 755 my_decoy.pl;/usr/local/jdk1.7.0_60/bin/java -Xmx2048m -jar CustomVariantProtein.jar Homo_sapiens.GRCh37.75.cds.all.fa mrna-cds.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName() + ";./my_decoy.pl --append " + cj.getRefDatabaseName();
+                            String cmdCreateRefDatabase = "mv my_decoy.pl /mnt;mv CustomVariantProtein.jar /mnt;mv lib /mnt/;cd /mnt;java -Xmx2048m -jar CustomVariantProtein.jar Homo_sapiens.GRCh37.75.cds.all.fa mrna-cds.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName() + ";./my_decoy.pl --append " + cj.getRefDatabaseName();
                             cm.remoteCallByShh(username, masterPublicIp, cmdCreateRefDatabase, privateKey);
                             
 //                            String cmdUploadRefDatabase = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
@@ -1756,10 +1724,10 @@ public class JobOverviewController implements Initializable {
                         log.info("***Preparing shared data finished***");
                         
                         log.info("***Uploading shared data to HDFS****");
-                        String cmdUploadFilesToHDFS = "hadoop dfs -put /mnt/" + taxonomyFileName + " shared/" + taxonomyFileName + ";"
-                                + "hadoop dfs -put /mnt/" + inputXmlFileName + " shared/" + inputXmlFileName + ";"
-                                + "hadoop dfs -put /mnt/mrtandem shared/mrtandem;"
-                                + "hadoop dfs -put /mnt/default_input.xml shared/default_input.xml;"
+                        String cmdUploadFilesToHDFS = "hadoop dfs -put " + taxonomyFileName + " shared/" + taxonomyFileName + ";"
+                                + "hadoop dfs -put " + inputXmlFileName + " shared/" + inputXmlFileName + ";"
+                                + "hadoop dfs -put mrtandem-debian shared/mrtandem;"
+                                + "hadoop dfs -put default_input.xml shared/default_input.xml;"
                                 + "hadoop dfs -put /mnt/" + refDatabaseName + " shared/" + refDatabaseName + ";"
                                 + "hadoop dfs -put /mnt/" + spectraName + " shared/" + spectraName;
                         log.debug(cmdUploadFilesToHDFS);
@@ -1777,10 +1745,12 @@ public class JobOverviewController implements Initializable {
                         int multi = 2;
                         int numOfMappers = Integer.parseInt(cj.clusterSizeProperty().get()) * multi;
                         for (int j=1; j<numOfMappers; j++) {
-                            step1InputLines.append(j).append("    ").append(numOfMappers).append("\n");
+//                            step1InputLines.append("    ").append(j).append("    ").append(numOfMappers).append("\n");
+                            step1InputLines.append(String.format("%5d %5d", j, numOfMappers)).append("\n");
                         }
                         
-                        step1InputLines.append(numOfMappers).append("    ").append(numOfMappers);
+//                        step1InputLines.append("    ").append(numOfMappers).append("    ").append(numOfMappers);
+                        step1InputLines.append(String.format("%5d %5d", numOfMappers, numOfMappers));
                         File step1InputFile = new File("tmp", "step1input");
                         FileUtils.writeStringToFile(step1InputFile, step1InputLines.toString());
                         cm.sftp(username, masterPublicIp, step1InputFile.getAbsolutePath(), "step1input", privateKey);
@@ -1791,7 +1761,7 @@ public class JobOverviewController implements Initializable {
                         endTime = System.currentTimeMillis();
                         log.info("*******Preparation time: " + (endTime - startTime) + "ms*******");
                         
-                        String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
+                        String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=true -jobconf mapred.map.tasks.speculative.execution=true";
                         //be careful, it's a mess
                         cj.setStatus("Performing database search");
                         log.info("***Start MR-Tandem searching***");

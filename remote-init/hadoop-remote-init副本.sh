@@ -2,7 +2,12 @@
 
 HADOOP_HOME="/usr/local/hadoop-1.2.1"
 MASTER_IP=$1
-HOST_NAME=`hostname`
+LOCAL_IP=`curl http://169.254.169.254/latest/meta-data/local-ipv4`
+IS_MASTER=false
+
+if [ $MASTER_IP == $LOCAL_IP ]; then
+  IS_MASTER=true
+fi
 
 cat > $HADOOP_HOME/conf/core-site.xml <<EOF
 <?xml version="1.0"?>
@@ -55,26 +60,14 @@ cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
 </configuration>
 EOF
 
-for HOST in `cat $HADOOP_HOME/conf/slaves`
-    do
-        if  [ -n $HOST ] && [[ $HOST != $HOST_NAME ]]; then
-            while true; do
-                scp $HADOOP_HOME/conf/core-site.xml $HOST:$HADOOP_HOME/conf
-                myResult=$?
-                if [ $myResult -eq 0 ]; then
-                    break
-                else
-                    echo "Retrying scp...sleep 5s"
-                    sleep 5
-                fi
-            done
-            scp $HADOOP_HOME/conf/hdfs-site.xml $HOST:$HADOOP_HOME/conf
-            scp $HADOOP_HOME/conf/mapred-site.xml $HOST:$HADOOP_HOME/conf
-            scp $HADOOP_HOME/conf/masters $HOST:$HADOOP_HOME/conf
-            scp $HADOOP_HOME/conf/slaves $HOST:$HADOOP_HOME/conf
-        fi
-    done
-
-[ ! -e /mnt/hadoop/dfs ] && "$HADOOP_HOME"/bin/hadoop namenode -format
-"$HADOOP_HOME"/bin/start-all.sh
+if [ "$IS_MASTER" == "true" ]; then
+  [ ! -e /mnt/hadoop/dfs ] && "$HADOOP_HOME"/bin/hadoop namenode -format
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start namenode
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start jobtracker
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start tasktracker
+else
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start tasktracker
+fi
 
