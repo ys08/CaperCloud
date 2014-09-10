@@ -540,7 +540,6 @@ public class CloudManager {
         }
         return instanceIds;
     }
-
     
     public int remoteCallByShh(String userName, String ipAddress, String command, File privateKey) throws JSchException, IOException, InterruptedException {
         JSch jsch = new JSch();
