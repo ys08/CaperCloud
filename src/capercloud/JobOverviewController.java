@@ -1867,7 +1867,7 @@ public class JobOverviewController implements Initializable {
                         searchExecutions.add("stop=`date +%s`");
                         searchExecutions.add("echo \"*******Post processing time: $[ stop - start ]s*******\"");
  
-                        FileUtils.writeLines(ppScript, searchExecutions);
+                        FileUtils.writeLines(ppScript, postExecutions);
                         cm.sftp(username, masterPublicIp, ppScript.getAbsolutePath(), "post.sh", privateKey);
                         log.info("***Post processing by mzidentml-lib***");
                         cm.remoteCallByShh(username, masterPublicIp, "chmod 755 post.sh;./post.sh", privateKey);
