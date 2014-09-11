@@ -1755,14 +1755,13 @@ public class JobOverviewController implements Initializable {
                         endTime = System.currentTimeMillis();
                         log.info("*******Preparation time: " + (endTime - startTime) + "ms*******");
                         
-                        //generate mr-tandem batch file
-                        File searchScript = new File("tmp", "search.sh");
-                        ArrayList<String> searchExecutions = new ArrayList<>();
-                        searchExecutions.add("#!/bin/bash");
+                        //generate remote batch file
+                        File remoteScript = new File("tmp", "remote.sh");
+                        ArrayList<String> remoteSteps = new ArrayList<>();
+                        remoteSteps.add("#!/bin/bash");
                        
                         String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
-                        //be careful, it's a mess
-                        cj.setStatus("Performing database search");
+                        
                         
 //                        log.info("Step 1");
                         String cmdStepOne = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1input -output step1output" + sharedFiles + " -mapper \"mrtandem -mapper1_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer1_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
@@ -1772,10 +1771,10 @@ public class JobOverviewController implements Initializable {
 //                        endTime = System.currentTimeMillis();
 //                        log.info("*******Step 1 running time: " + (endTime - startTime) + "ms*******");
                         
-                        searchExecutions.add("start=`date +%s`");
-                        searchExecutions.add(cmdStepOne);
-                        searchExecutions.add("stop=`date +%s`");
-                        searchExecutions.add("echo \"*******Step 1 running time: $[ stop - start ]s*******\"");
+                        remoteSteps.add("start=`date +%s`");
+                        remoteSteps.add(cmdStepOne);
+                        remoteSteps.add("stop=`date +%s`");
+                        remoteSteps.add("echo \"*******Step 1 running time: $[ stop - start ]s*******\"");
 
 //                        log.info("Step 2");
                         String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer1_1#reducer1_1 -mapper \"mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer2_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
@@ -1785,10 +1784,10 @@ public class JobOverviewController implements Initializable {
 //                        endTime = System.currentTimeMillis();
 //                        log.info("*******Step 2 running time: " + (endTime - startTime) + "ms*******");
                         
-                        searchExecutions.add("start=`date +%s`");
-                        searchExecutions.add(cmdStepTwo);
-                        searchExecutions.add("stop=`date +%s`");
-                        searchExecutions.add("echo \"*******Step 2 running time: $[ stop - start ]s*******\"");
+                        remoteSteps.add("start=`date +%s`");
+                        remoteSteps.add(cmdStepTwo);
+                        remoteSteps.add("stop=`date +%s`");
+                        remoteSteps.add("echo \"*******Step 2 running time: $[ stop - start ]s*******\"");
                         
 //                        log.info("Step 3");
                         String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer2_1#reducer2_1 -mapper \"mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/"+username+"/\"" + stepArgs;
@@ -1799,22 +1798,22 @@ public class JobOverviewController implements Initializable {
 //                        log.info("*******Step 3 running time: " + (endTime - startTime) + "ms*******");
                         
                         
-                        searchExecutions.add("start=`date +%s`");
-                        searchExecutions.add(cmdStepThree);
-                        searchExecutions.add("stop=`date +%s`");
-                        searchExecutions.add("echo \"*******Step 3 running time: $[ stop - start ]s*******\"");
+                        remoteSteps.add("start=`date +%s`");
+                        remoteSteps.add(cmdStepThree);
+                        remoteSteps.add("stop=`date +%s`");
+                        remoteSteps.add("echo \"*******Step 3 running time: $[ stop - start ]s*******\"");
 
                         //download output(in hdfs) to local
                         String cmdDownloadOutput = "hadoop dfs -copyToLocal output output";
 //                        cm.remoteCallByShh(username, masterPublicIp, cmdDownloadOutput, privateKey);
                         
-                        searchExecutions.add(cmdDownloadOutput);
+                        remoteSteps.add(cmdDownloadOutput);
                         
-                        FileUtils.writeLines(searchScript, searchExecutions);
-                        cm.sftp(username, masterPublicIp, searchScript.getAbsolutePath(), "search.sh", privateKey);
-                        log.info("***Start MR-Tandem searching***");
-                        cm.remoteCallByShh(username, masterPublicIp, "chmod 755 search.sh;./search.sh", privateKey);
-                        log.info("**Start MR-Tandem searching finished");
+//                        FileUtils.writeLines(searchScript, searchExecutions);
+//                        cm.sftp(username, masterPublicIp, searchScript.getAbsolutePath(), "search.sh", privateKey);
+//                        log.info("***Start MR-Tandem searching***");
+//                        cm.remoteCallByShh(username, masterPublicIp, "chmod 755 search.sh;./search.sh", privateKey);
+//                        log.info("**Start MR-Tandem searching finished");
                         
                         //shut down other instances
 //                        if (!otherInstances.isEmpty()) {
@@ -1822,12 +1821,11 @@ public class JobOverviewController implements Initializable {
 //                        }
                         
                         //generate post process batch file
-                        File ppScript = new File("tmp", "post.sh");
-                        ArrayList<String> postExecutions = new ArrayList<>();
-                        postExecutions.add("#!/bin/bash");
+//                        File ppScript = new File("tmp", "post.sh");
+//                        ArrayList<String> postExecutions = new ArrayList<>();
+//                        remoteSteps.add("#!/bin/bash");
                         
                         //convert x!tandem output to mzid format, parsing xml is too slow
-                        cj.setStatus("Performing FDR control");
   
 //                        startTime = System.currentTimeMillis();
                         //java.lang.OutOfMemoryError, bad implemetation
@@ -1835,14 +1833,14 @@ public class JobOverviewController implements Initializable {
 //                        cm.remoteCallByShh(username, masterPublicIp, cmdTandem2MzId, privateKey);
 //                        log.info(cmdTandem2MzId);
                         
-                        searchExecutions.add("start=`date +%s`");
-                        postExecutions.add(cmdTandem2MzId);
+                        remoteSteps.add("start=`date +%s`");
+                        remoteSteps.add(cmdTandem2MzId);
                         
                         //calculate fdr
                         String cmdCalculateFdrValue = "java -Xmx2048m -jar post_process/mzidentml-lib-1.6.10.jar FalseDiscoveryRate output.mzid output_fdr.mzid -decoyRegex \"###REV###\" -decoyValue 1 -cvTerm MS:1001330 -betterScoresAreLower true -compress false";
 //                        cm.remoteCallByShh(username, masterPublicIp, cmdCalculateFdrValue, privateKey);    
                         
-                        postExecutions.add(cmdCalculateFdrValue);
+                        remoteSteps.add(cmdCalculateFdrValue);
 
                         //cut off 
                         String cmdThresHold = "java -Xmx2048m -jar post_process/mzidentml-lib-1.6.10.jar Threshold output_fdr.mzid result.mzid -isPSMThreshold true -cvAccessionForScoreThreshold MS:1002354 -threshValue " + cj.getFdrValue() + " -betterScoresAreLower true -deleteUnderThreshold true -compress false";
@@ -1852,7 +1850,7 @@ public class JobOverviewController implements Initializable {
 //                        endTime = System.currentTimeMillis();
 //                        log.info("*******Post processing time: " + (endTime - startTime) + "ms*******");
                         
-                        postExecutions.add(cmdThresHold);
+                        remoteSteps.add(cmdThresHold);
                         
                         cj.setStatus("Uploading result to S3");
                         String bucketName = cj.getOutputBucketName();
@@ -1863,18 +1861,29 @@ public class JobOverviewController implements Initializable {
 //                        log.debug(cmdUploadResult);
 //                        cm.remoteCallByShh(username, masterPublicIp, cmdUploadResult, privateKey);
                         
-                        postExecutions.add(cmdUploadResult);
-                        searchExecutions.add("stop=`date +%s`");
-                        searchExecutions.add("echo \"*******Post processing time: $[ stop - start ]s*******\"");
+                        remoteSteps.add(cmdUploadResult);
+                        remoteSteps.add("stop=`date +%s`");
+                        remoteSteps.add("echo \"*******Post processing time: $[ stop - start ]s*******\"");
  
-                        FileUtils.writeLines(ppScript, postExecutions);
-                        cm.sftp(username, masterPublicIp, ppScript.getAbsolutePath(), "post.sh", privateKey);
-                        log.info("***Post processing by mzidentml-lib***");
-                        cm.remoteCallByShh(username, masterPublicIp, "chmod 755 post.sh;./post.sh", privateKey);
-                        log.info("***Post processing by mzidentml-lib finished***");
+                        FileUtils.writeLines(remoteScript, remoteSteps);
+                        cm.sftp(username, masterPublicIp, remoteScript.getAbsolutePath(), "remote.sh", privateKey);
+//                        log.info("***Post processing by mzidentml-lib***");
+                        int status = cm.remoteCallByShh(username, masterPublicIp, "chmod 755 remote.sh;screen ./remote.sh", privateKey);
+                        //confirm exit status
+                        if (status != 0) {
+                            log.info("Try to recover previous state");
+                            status = cm.remoteCallByShh(username, masterPublicIp, "screen -D -r", privateKey);
+                            if (status !=0) {
+                                log.error("Fail to recover previous state!");
+                                log.error("Please run \"screen -D -r\" on " + masterPublicIp + " to see the job status, and shutdown the ec2 instances manually");
+                            }
+                        }
+                        
+//                        log.info("***Post processing by mzidentml-lib finished***");
                         
                         //terminate master instance
 //                        cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(masterId));
+                        
                         return instances;
                     }
                 };

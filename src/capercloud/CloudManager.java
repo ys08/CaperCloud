@@ -583,7 +583,7 @@ public class CloudManager {
                 if (channel.getExitStatus() == 0) {
 //                    log.debug("Exit Status: SUCCESS!");
                 } else {
-                    log.error("Exit Status: FAILED! PLEASE TERMINATE THE RUNNING INSTANCES, AND CONTACT WITH THE AUTHOR!");
+                    log.error("Execute command: " + command + " failed!");
                 }
                 break;
             }
