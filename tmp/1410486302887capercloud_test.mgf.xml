@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <bioml>
 	<note type="input" label="list path, default parameters">default_input.xml</note>
-	<note type="input" label="list path, taxonomy information">1410351028671taxonomy.xml</note>
+	<note type="input" label="list path, taxonomy information">1410486302887taxonomy.xml</note>
 	<note type="input" label="protein, taxon">all</note>
 	<note type="input" label="protein, cleavage site">[RK]|{P}</note>
 	<note type="input" label="protein, cleavage semi">no</note>

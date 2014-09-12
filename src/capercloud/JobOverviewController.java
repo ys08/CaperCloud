@@ -1758,7 +1758,15 @@ public class JobOverviewController implements Initializable {
                         //generate remote batch file
                         File remoteScript = new File("tmp", "remote.sh");
                         ArrayList<String> remoteSteps = new ArrayList<>();
+                        File reduce2Script = new File("tmp", "r2.sh");
+                        ArrayList<String> r2 = new ArrayList<>();
                         remoteSteps.add("#!/bin/bash");
+                        r2.add("#!/bin/bash");
+                        r2.add("cat /dev/null > r2.tmp");
+                        r2.add("while read i");
+                        r2.add("do");
+                        r2.add("echo $i>>r2.tmp");
+                        r2.add("done");
                        
                         String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
                         
@@ -1777,17 +1785,20 @@ public class JobOverviewController implements Initializable {
                         remoteSteps.add("echo \"*******Step 1 running time: $[ stop - start ]s*******\"");
 
 //                        log.info("Step 2");
-                        String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer1_1#reducer1_1 -mapper \"mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer2_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\"" + stepArgs;
+                        String cmdStepTwo = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step1output -output step2output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer1_1#reducer1_1 -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/r2.sh#r2.sh -mapper \"mrtandem -mapper2_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"./r2.sh\"" + stepArgs;
 //                        log.info(cmdStepTwo);
 //                        startTime = System.currentTimeMillis();
 //                        cm.remoteCallByShh(username, masterPublicIp, cmdStepTwo, privateKey);
 //                        endTime = System.currentTimeMillis();
 //                        log.info("*******Step 2 running time: " + (endTime - startTime) + "ms*******");
                         
+                        remoteSteps.add("hadoop dfs -put r2.sh .");
                         remoteSteps.add("start=`date +%s`");
                         remoteSteps.add(cmdStepTwo);
                         remoteSteps.add("stop=`date +%s`");
                         remoteSteps.add("echo \"*******Step 2 running time: $[ stop - start ]s*******\"");
+                        r2.add("cat r2.tmp|sed 's/ /\\t/'|./mrtandem -reducer2_1 " + "hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName());
+                        r2.add("hadoop dfs -put ../../work/reducer2_1 . || true");
                         
 //                        log.info("Step 3");
                         String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer2_1#reducer2_1 -mapper \"mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/"+username+"/\"" + stepArgs;
@@ -1866,9 +1877,12 @@ public class JobOverviewController implements Initializable {
                         remoteSteps.add("echo \"*******Post processing time: $[ stop - start ]s*******\"");
  
                         FileUtils.writeLines(remoteScript, remoteSteps);
+                        FileUtils.writeLines(reduce2Script, r2);
+                        
                         cm.sftp(username, masterPublicIp, remoteScript.getAbsolutePath(), "remote.sh", privateKey);
+                        cm.sftp(username, masterPublicIp, reduce2Script.getAbsolutePath(), "r2.sh", privateKey);
 //                        log.info("***Post processing by mzidentml-lib***");
-                        int status = cm.remoteCallByShh(username, masterPublicIp, "chmod 755 remote.sh;screen ./remote.sh", privateKey);
+                        int status = cm.remoteCallByShh(username, masterPublicIp, "chmod 755 remote.sh;chmod 755 r2.sh;screen ./remote.sh", privateKey);
                         //confirm exit status
                         if (status != 0) {
                             log.info("Try to recover previous state");
