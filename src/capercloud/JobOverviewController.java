@@ -1889,7 +1889,11 @@ public class JobOverviewController implements Initializable {
                             status = cm.remoteCallByShh(username, masterPublicIp, "screen -D -r", privateKey);
                             if (status !=0) {
                                 log.error("Fail to recover previous state!");
-                                log.error("Please run \"screen -D -r\" on " + masterPublicIp + " to see the job status, and shutdown the ec2 instances manually");
+                                log.error("Please run \"screen -D -r\" on " + masterPublicIp + " to see the job status, and shutdown the ec2 instances manually.");
+                                throw new Exception("Fail to recover previous state!");
+                            } else {
+                                //shutdown instances
+                                cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
                             }
                         }
                         
@@ -1897,7 +1901,7 @@ public class JobOverviewController implements Initializable {
                         
                         //terminate master instance
 //                        cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(masterId));
-                        
+
                         return instances;
                     }
                 };
@@ -1983,6 +1987,13 @@ public class JobOverviewController implements Initializable {
                         .title("Parsing result")
                         .showWorkerProgress(postProcessService);
                 }
+        });
+        
+        msSearchService.setOnFailed(new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent t) {
+                log.info("/**** JOB FAILED ++++++ Job type=" + cj.getJobType() + ", Cluster size=" + cj.getClusterSize() + ", Instance type=" + cj.getInstanceType().name() + ", Eucalyptus enabled=" + eucalyptusEnabled + " ****/");
+            }
         });
         
         log.info("/**** JOB START ++++++ Job type=" + cj.getJobType() + ", Cluster size=" + cj.getClusterSize() + ", Instance type=" + cj.getInstanceType().name() + ", Eucalyptus enabled=" + eucalyptusEnabled + " ****/");
