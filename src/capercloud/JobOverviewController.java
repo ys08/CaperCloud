@@ -1760,6 +1760,9 @@ public class JobOverviewController implements Initializable {
                         ArrayList<String> remoteSteps = new ArrayList<>();
                         File reduce2Script = new File("tmp", "r2.sh");
                         ArrayList<String> r2 = new ArrayList<>();
+                        File reduce3Script = new File("tmp", "r3.sh");
+                        ArrayList<String> r3 = new ArrayList<>();
+                        
                         remoteSteps.add("#!/bin/bash");
                         r2.add("#!/bin/bash");
                         r2.add("cat /dev/null > r2.tmp");
@@ -1767,6 +1770,13 @@ public class JobOverviewController implements Initializable {
                         r2.add("do");
                         r2.add("echo $i>>r2.tmp");
                         r2.add("done");
+                        
+                        r3.add("#!/bin/bash");
+                        r3.add("cat /dev/null > r3.tmp");
+                        r3.add("while read i");
+                        r3.add("do");
+                        r3.add("echo $i>>r3.tmp");
+                        r3.add("done");
                        
                         String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
                         
@@ -1801,18 +1811,20 @@ public class JobOverviewController implements Initializable {
                         r2.add("hadoop dfs -put ../../work/reducer2_1 . || true");
                         
 //                        log.info("Step 3");
-                        String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer2_1#reducer2_1 -mapper \"mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"mrtandem -reducer3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/"+username+"/\"" + stepArgs;
+                        String cmdStepThree = "hadoop jar /usr/local/hadoop-1.2.1/contrib/streaming/hadoop-streaming-1.2.1.jar -input step2output -output step3output" + sharedFiles + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/reducer2_1#reducer2_1 -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/r3.sh#r3.sh -mapper \"mrtandem -mapper3_1 hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + "\" -reducer \"./r3.sh\"" + stepArgs;
 //                        log.info(cmdStepThree);
 //                        startTime = System.currentTimeMillis();
 //                        cm.remoteCallByShh(username, masterPublicIp, cmdStepThree, privateKey);
 //                        endTime = System.currentTimeMillis();
 //                        log.info("*******Step 3 running time: " + (endTime - startTime) + "ms*******");
                         
-                        
+                        remoteSteps.add("hadoop dfs -put r3.sh .");
                         remoteSteps.add("start=`date +%s`");
                         remoteSteps.add(cmdStepThree);
                         remoteSteps.add("stop=`date +%s`");
                         remoteSteps.add("echo \"*******Step 3 running time: $[ stop - start ]s*******\"");
+                        r3.add("cat r3.tmp|sed 's/ /\\t/'|./mrtandem -reducer3_1 " + "hdfs://" + masterPrivateIp + ":9000/user/"+username+"/ " + cj.getInputFiles().get(0).getName() + " -reportURL hdfs://" + masterPrivateIp + ":9000/user/"+username+"/");
+                        r3.add("hadoop dfs -put ../../work/output . || true");
 
                         //download output(in hdfs) to local
                         String cmdDownloadOutput = "hadoop dfs -copyToLocal output output";
@@ -1878,11 +1890,13 @@ public class JobOverviewController implements Initializable {
  
                         FileUtils.writeLines(remoteScript, remoteSteps);
                         FileUtils.writeLines(reduce2Script, r2);
+                        FileUtils.writeLines(reduce3Script, r3);
                         
                         cm.sftp(username, masterPublicIp, remoteScript.getAbsolutePath(), "remote.sh", privateKey);
                         cm.sftp(username, masterPublicIp, reduce2Script.getAbsolutePath(), "r2.sh", privateKey);
+                        cm.sftp(username, masterPublicIp, reduce3Script.getAbsolutePath(), "r3.sh", privateKey);
 //                        log.info("***Post processing by mzidentml-lib***");
-                        int status = cm.remoteCallByShh(username, masterPublicIp, "chmod 755 remote.sh;chmod 755 r2.sh;screen ./remote.sh", privateKey);
+                        int status = cm.remoteCallByShh(username, masterPublicIp, "chmod 755 remote.sh;chmod 755 r2.sh;chmod 755 r3.sh;screen ./remote.sh", privateKey);
                         //confirm exit status
                         if (status != 0) {
                             log.info("Try to recover previous state");
@@ -1893,8 +1907,10 @@ public class JobOverviewController implements Initializable {
                                 throw new Exception("Fail to recover previous state!");
                             } else {
                                 //shutdown instances
-                                cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
+//                                cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
                             }
+                        } else {
+//                            cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
                         }
                         
 //                        log.info("***Post processing by mzidentml-lib finished***");
