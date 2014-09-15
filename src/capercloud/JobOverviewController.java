@@ -1736,7 +1736,7 @@ public class JobOverviewController implements Initializable {
                                 + " -cacheFile hdfs://" + masterPrivateIp + ":9000/user/"+username+"/shared/" + spectraName + "#" + spectraName;
 
                         StringBuilder step1InputLines = new StringBuilder();
-                        int multi = 4;
+                        int multi = 2;
                         int nmappers = Integer.parseInt(cj.clusterSizeProperty().get());
                         int numOfMappers = nmappers * multi;
                         for (int j=1; j<numOfMappers; j++) {
@@ -1935,7 +1935,7 @@ public class JobOverviewController implements Initializable {
                             @Override
                             protected Void call() throws Exception {
                                 updateProgress(-1, 0);
-                                updateMessage("Post Processing");
+                                updateMessage("Local progress");
                                 
                                 AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
                                 if (eucalyptusEnabled) {
@@ -1953,7 +1953,7 @@ public class JobOverviewController implements Initializable {
                                 long _startTime = System.currentTimeMillis();
                                 JobOverviewController.this.rm.parse(new File("result.mzid"), cj.getJobType());
                                 long _endTime = System.currentTimeMillis();
-                                log.info("*******Result parsing time: " + (_endTime - _startTime) + "ms*******");
+                                log.info("*******Local parsing time: " + (_endTime - _startTime) + "ms*******");
                                 
                                 String spectraFilename = cj.getSpectrumObjs().get(0).getName();
                                 String spectraFilePath = JobOverviewController.this.property.getProperty(spectraFilename);
