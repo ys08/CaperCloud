@@ -171,11 +171,11 @@ public class ResultModel {
                         String genomicRegions = descMatcher.group(4);
                         
                         Range region = reconstructRanges(genomicRegions).get(0);
-                        int nnStartPos = region.getStartPos() + relStartPos * 3 - 3;
+                        int nnStartPos = region.getStartPos() + relStartPos * 3 - 4;
                         int nnEndPos = region.getStartPos() + relEndPos * 3 - 1;
                         
                         if ("-1".equals(strand)) {
-                            nnStartPos = region.getEndPos() - relEndPos * 3 + 3;
+                            nnStartPos = region.getEndPos() - relEndPos * 3 + 2;
                             nnEndPos = region.getEndPos() - relStartPos * 3 + 5;
                         }
 //                        System.out.println(nnStartPos + " " + nnEndPos);
@@ -259,7 +259,6 @@ public class ResultModel {
                                     startPos = leftInOffset + regions.get(leftCrIndex).getStartPos() - 1;
                                     endPos = rightInOffset + regions.get(rightCrIndex).getStartPos() + 2;
                                 } else {
-                                    System.out.println(seq + " " + genomicRegions);
                                     startPos = regions.get(rightCrIndex).getEndPos() - rightInOffset - 3;
                                     endPos = regions.get(leftCrIndex).getEndPos() - leftInOffset;
                                 }
