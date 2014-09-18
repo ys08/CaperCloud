@@ -171,9 +171,13 @@ public class ResultModel {
                         String genomicRegions = descMatcher.group(4);
                         
                         Range region = reconstructRanges(genomicRegions).get(0);
-                        int nnStartPos = region.getStartPos() + relStartPos * 3;
-                        int nnEndPos = region.getStartPos() + relEndPos * 3 + 2;
+                        int nnStartPos = region.getStartPos() + relStartPos * 3 - 3;
+                        int nnEndPos = region.getStartPos() + relEndPos * 3 - 1;
                         
+                        if ("-1".equals(strand)) {
+                            nnStartPos = region.getEndPos() - relEndPos * 3 + 3;
+                            nnEndPos = region.getEndPos() - relStartPos * 3 + 5;
+                        }
 //                        System.out.println(nnStartPos + " " + nnEndPos);
                         boolean isKnown = false;        
                         if (this.knownPeptides != null) {
@@ -212,18 +216,23 @@ public class ResultModel {
                         
                         PeptideModel pm = new PeptideModel(peptideRef, id, chrom, strand, mod.toString(), seq, description);
                         
-//                        System.out.println(relStartPos + " " + varPos + " " + relEndPos);
                         //variant point in peptide
-                        if (relStartPos<=varPos && varPos<=relEndPos) {
-//                            System.out.println(seqDescription);
+                        if (relStartPos<varPos && varPos<relEndPos) {
+                            
                             ArrayList<Range> regions = this.reconstructRanges(genomicRegions);
+                            if ("-1".equals(strand) && regions.size() < 3) {
+                                continue;
+                            }
                             //0-based
                             int nnStartPos = relStartPos * 3 - 3;
                             int nnEndPos = relEndPos * 3 - 3;
                             
-                            int window = 0;
                             int leftCrIndex = -1;
                             int leftInOffset = 0;
+                            int rightCrIndex = -2;
+                            int rightInOffset = 0;
+                            
+                            int window = 0;
                             for (int i=0; i<regions.size(); i++) {
                                 window = window + regions.get(i).getLength();
                                 if (nnStartPos <= window) {
@@ -232,10 +241,8 @@ public class ResultModel {
                                     break;
                                 }
                             }
-                            
+
                             window = 0;
-                            int rightCrIndex = -2;
-                            int rightInOffset = 0;
                             for (int i=0; i<regions.size(); i++) {
                                 window = window + regions.get(i).getLength();
                                 if (nnEndPos <= window) {
@@ -244,28 +251,54 @@ public class ResultModel {
                                     break;
                                 }
                             }
-                            
+
                             if (leftCrIndex == rightCrIndex) {
-                                System.out.println(leftCrIndex+" "+rightCrIndex+" "+nnStartPos+" "+nnEndPos+" "+genomicRegions+" "+window);
-                                int startPos = leftInOffset + regions.get(leftCrIndex).getStartPos();
-                                int endPos = rightInOffset + regions.get(rightCrIndex).getStartPos() + 2;
+                                int startPos = 0;
+                                int endPos = 0;
+                                if ("1".equals(strand)) {
+                                    startPos = leftInOffset + regions.get(leftCrIndex).getStartPos() - 1;
+                                    endPos = rightInOffset + regions.get(rightCrIndex).getStartPos() + 2;
+                                } else {
+                                    System.out.println(seq + " " + genomicRegions);
+                                    startPos = regions.get(rightCrIndex).getEndPos() - rightInOffset - 3;
+                                    endPos = regions.get(leftCrIndex).getEndPos() - leftInOffset;
+                                }
                                 Range r = new Range(startPos, endPos);
                                 pm.addRegions(r);
                             } else {
-                                System.out.println(leftCrIndex+" "+rightCrIndex+" "+nnStartPos+" "+nnEndPos+" "+genomicRegions+" "+window);
-                                int leftStartPos = leftInOffset + regions.get(leftCrIndex).getStartPos();
-                                int leftEndPos = regions.get(leftCrIndex).getEndPos();
-                                Range newLeftCr = new Range(leftStartPos, leftEndPos);
-                                pm.addRegions(newLeftCr);
-                                
-                                for (int i=leftCrIndex+1; i<rightCrIndex; i++) {
-                                    pm.addRegions(regions.get(i));
+                                if ("1".equals(strand)) {
+                                    int leftStartPos = leftInOffset + regions.get(leftCrIndex).getStartPos() - 1;
+                                    int leftEndPos = regions.get(leftCrIndex).getEndPos() - 2;
+                                    Range newLeftCr = new Range(leftStartPos, leftEndPos);
+                                    pm.addRegions(newLeftCr);
+
+                                    for (int i=leftCrIndex+1; i<rightCrIndex; i++) {
+                                        pm.addRegions(regions.get(i));
+                                    }
+
+                                    int rightStartPos = regions.get(rightCrIndex).getStartPos() - 3;
+                                    int rightEndPos = rightInOffset + regions.get(rightCrIndex).getStartPos() + 2;
+                                    Range newRightCr = new Range(rightStartPos, rightEndPos);
+                                    pm.addRegions(newRightCr);
+                                } else {
+                                    //ignore negtive strand peptide with gap, hard to determin coordinates
+                                    continue;
+//                                    int rightStartPos = regions.get(leftCrIndex).getStartPos();
+//                                    int rightEndPos = regions.get(leftCrIndex).getEndPos() - leftInOffset;
+//
+//                                    Range newRightCr = new Range(rightStartPos, rightEndPos);
+//                                    pm.addRegions(newRightCr);
+//
+//                                    for (int i=leftCrIndex+1; i<rightCrIndex; i++) {
+//                                        pm.addRegions(regions.get(i));
+//                                    }
+//                                    
+//                                    int leftStartPos = regions.get(rightCrIndex).getEndPos() - rightInOffset;
+//                                    int leftEndPos = regions.get(rightCrIndex).getEndPos();
+//                                    
+//                                    Range newLeftCr = new Range(leftStartPos, leftEndPos);
+//                                    pm.addRegions(newLeftCr);
                                 }
-                                
-                                int rightStartPos = regions.get(rightCrIndex).getStartPos();
-                                int rightEndPos = rightInOffset + regions.get(rightCrIndex).getStartPos() + 2;
-                                Range newRightCr = new Range(rightStartPos, rightEndPos);
-                                pm.addRegions(newRightCr);
                             }
                             this.peptideList.add(pm);
                         } else {
@@ -275,25 +308,44 @@ public class ResultModel {
                 }
                 
                 if (jobType == 3) {
-                    Pattern descPattern = Pattern.compile("dbseq_(.*)\\|EEJ\\|(.*):(-?\\d)\\|(.*/[012])/(\\d+)\\|cds:(.*)"); 
+                    Pattern descPattern = Pattern.compile("dbseq_(.*)\\|EEJ\\|(.*):(-?\\d)\\|(.*/)([012])/(\\d+)\\|cds:(.*)"); 
                     Matcher descMatcher = descPattern.matcher(seqDescription);
                     if (descMatcher.find()) {
                         String id = descMatcher.group(1);
                         String chrom = descMatcher.group(2);
                         String strand = descMatcher.group(3);
+                        
+                        //ignore negtive strand
+                        if ("-1".equals(strand)) {
+                            continue;
+                        }
+                        
                         String description = descMatcher.group(4);
-                        int jPos = Integer.parseInt(descMatcher.group(5));
-                        String genomicRegions = descMatcher.group(6);
+                        int phase = Integer.parseInt(descMatcher.group(5));
+                        description = description + "/" + phase;
+                        int jPos = Integer.parseInt(descMatcher.group(6));
+                        String genomicRegions = descMatcher.group(7);
                         
                         //junction site in peptide
-                        if (relStartPos<=jPos && jPos<=relEndPos) {
+                        if (relStartPos<jPos && jPos<relEndPos) {
 //                            System.out.println(seqDescription);
                             ArrayList<Range> regions = reconstructRanges(genomicRegions);
-                            int firstStartPos = regions.get(0).getStartPos() + (jPos - relStartPos) * 3;
+                            int firstStartPos = regions.get(0).getStartPos() + relStartPos * 3 - 4;
                             int secondEndPos = regions.get(1).getStartPos() + (relEndPos - jPos) * 3 + 2;
                             
                             int firstEndPos = regions.get(0).getEndPos();
-                            int secondStartPos = regions.get(1).getStartPos();
+                            int secondStartPos = regions.get(1).getStartPos() - 1;
+                            
+                            if (phase == 1) {
+                                firstEndPos = firstEndPos + 2;
+                                secondStartPos = secondStartPos - 1;
+                                secondEndPos = secondEndPos - 1;
+                            } else if (phase == 2) {
+                                firstStartPos = firstStartPos + 3;
+                                firstEndPos = firstEndPos + 1;
+                                secondStartPos = secondStartPos + 1;
+                                secondEndPos = secondEndPos + 1;
+                            }
                             
                             if (firstStartPos > firstEndPos) {
                                 firstStartPos = firstEndPos - 3;

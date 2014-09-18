@@ -1875,7 +1875,6 @@ public class JobOverviewController implements Initializable {
                         
                         remoteSteps.add(cmdThresHold);
                         
-                        cj.setStatus("Uploading result to S3");
                         String bucketName = cj.getOutputBucketName();
                         String cmdUploadResult = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
                                 + " " + cm.getCurrentCredentials().getSecretKey()
@@ -1896,6 +1895,7 @@ public class JobOverviewController implements Initializable {
                         cm.sftp(username, masterPublicIp, reduce2Script.getAbsolutePath(), "r2.sh", privateKey);
                         cm.sftp(username, masterPublicIp, reduce3Script.getAbsolutePath(), "r3.sh", privateKey);
 //                        log.info("***Post processing by mzidentml-lib***");
+                        cj.setStatus("database searching");
                         int status = cm.remoteCallByShh(username, masterPublicIp, "chmod 755 remote.sh;chmod 755 r2.sh;chmod 755 r3.sh;screen ./remote.sh", privateKey);
                         //confirm exit status
                         if (status != 0) {
@@ -1907,10 +1907,10 @@ public class JobOverviewController implements Initializable {
                                 throw new Exception("Fail to recover previous state!");
                             } else {
                                 //shutdown instances
-//                                cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
+                                cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
                             }
                         } else {
-//                            cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
+                            cm.getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instances));
                         }
                         
 //                        log.info("***Post processing by mzidentml-lib finished***");
@@ -1953,7 +1953,7 @@ public class JobOverviewController implements Initializable {
                                 long _startTime = System.currentTimeMillis();
                                 JobOverviewController.this.rm.parse(new File("result.mzid"), cj.getJobType());
                                 long _endTime = System.currentTimeMillis();
-                                log.info("*******Local parsing time: " + (_endTime - _startTime) + "ms*******");
+                                log.info("*******Visualizing result takes: " + (_endTime - _startTime) + "ms*******");
                                 
                                 String spectraFilename = cj.getSpectrumObjs().get(0).getName();
                                 String spectraFilePath = JobOverviewController.this.property.getProperty(spectraFilename);
