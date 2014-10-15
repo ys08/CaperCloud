@@ -395,6 +395,7 @@ public class ResultModel {
         }
         
         StringBuilder line = new StringBuilder();
+        line.append("browser hide CCPDPeptides CCPDProteins EnsemblmRNA ensembleProtein").append(IOUtils.LINE_SEPARATOR);
         line.append("track name=\"capercloud\" description=\"capercloud-generated track\" visibility=1 itemRgb=\"On\"")
                 .append(IOUtils.LINE_SEPARATOR);
         
