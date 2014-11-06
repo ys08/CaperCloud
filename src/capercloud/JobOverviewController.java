@@ -1976,10 +1976,10 @@ public class JobOverviewController implements Initializable {
                                 //make s3 and object public readable
                         
                                 s3ClientTest.setBucketAcl(cj.getOutputBucketName(), CannedAccessControlList.PublicRead);
-                                File bedFile = new File("result.bed");
-                                s3ClientTest.putObject(new PutObjectRequest(cj.getOutputBucketName(), bedFile.getName(), bedFile).withCannedAcl(CannedAccessControlList.PublicRead));
-                                JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + cj.getOutputBucketName() + "/" + bedFile.getName();
-                                log.info("***Generating peptide list and BED file finished***");
+                                File gffFile = new File("result.gff");
+                                s3ClientTest.putObject(new PutObjectRequest(cj.getOutputBucketName(), gffFile.getName(), gffFile).withCannedAcl(CannedAccessControlList.PublicRead));
+                                JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + cj.getOutputBucketName() + "/" + gffFile.getName();
+                                log.info("***Generating peptide list and GFF file finished***");
                                 return null;
                             }
                         };

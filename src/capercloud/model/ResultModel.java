@@ -362,7 +362,7 @@ public class ResultModel {
                 }
             }
         }
-        generateBed();
+        generateGff();
     }
     
     private ArrayList<Range> reconstructRanges(String regions) {
@@ -386,6 +386,54 @@ public class ResultModel {
         SwingNode swingNode = new SwingNode();
         this.createSwingContent(swingNode, spectrumPanel);
         pane.getChildren().add(swingNode);
+    }
+    
+    public void generateGff() {
+        File gffFile = new File("result.gff");
+        if (gffFile.exists()) {
+            FileUtils.deleteQuietly(gffFile);
+        }
+        
+        StringBuilder line = new StringBuilder();
+        
+        for (PeptideModel pm : this.peptideList) {
+            String strand = null;
+            if (pm.strandProperty().get().equals("1")) {
+                strand = "+";
+            } else {
+                strand = "-";
+            }
+        
+            line = new StringBuilder();
+            ArrayList<Range> regions = pm.getRegions();
+            for (Range r : regions) {
+                line.append("chr")
+                    .append(pm.chromProperty().get())
+                    .append("\t")
+                    .append("capercloud")
+                    .append("\t")
+                    .append(".")
+                    .append("\t")
+                    .append(r.getStartPos())
+                    .append("\t")
+                    .append(r.getEndPos())
+                    .append("\t")
+                    .append(".")
+                    .append("\t")
+                    .append(strand)
+                    .append("\t")
+                    .append(".")
+                    .append("\t")
+                    .append(pm.idProperty().get())
+                    .append(";")
+                    .append(IOUtils.LINE_SEPARATOR);
+            }
+            try {
+                FileUtils.writeStringToFile(gffFile , line.toString(), true);
+            } catch (IOException ex) {
+                Logger.getLogger(ResultModel.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
     
     public void generateBed() {
