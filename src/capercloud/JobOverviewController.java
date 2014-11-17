@@ -85,14 +85,12 @@ import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.concurrent.Worker.State;
 import javafx.concurrent.WorkerStateEvent;
-import javafx.embed.swing.SwingNode;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
@@ -116,7 +114,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.DirectoryChooser;
@@ -124,12 +121,8 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
-import javax.swing.JComponent;
 import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.comparator.DirectoryFileComparator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -595,7 +588,7 @@ public class JobOverviewController implements Initializable {
                                     .owner(JobOverviewController.this.mainApp.getPrimaryStage())
                                     .title("Error")
                                     .masthead(null)
-                                    .message("Cannot find Private key file " + privateKeyFile.getName() + " in " + privateKeyFile.getParent())
+                                    .message("Cannot find private key file " + privateKeyFile.getName() + " in " + privateKeyFile.getParent())
                                     .showError();
                             return;
                         }
@@ -1052,12 +1045,12 @@ public class JobOverviewController implements Initializable {
         ObservableList<File> selectedFiles = this.tvLocal.getSelectionModel().getSelectedItems();
 // do nothing if no files are selected
         if (selectedFiles.isEmpty()) {
-            log.warn("No files are selected");
+            log.warn("No file selected");
             return;
         }
         
         if (this.fm.getBucketPath() == null) {
-            log.warn("No bucket is selected");
+            log.warn("No bucket selected");
             return;
         }
         
@@ -1094,11 +1087,11 @@ public class JobOverviewController implements Initializable {
         log.debug("Selected " + selectedObjects.get(0).getName());
 // do nothing if no files are selected
         if (selectedObjects.isEmpty()) {
-            log.warn("No s3objects are selected");
+            log.warn("No s3object selected");
             return;
         }
         if (this.fm.getFolderPath() == null) {
-            log.warn("No download directory is selected");
+            log.warn("No directory selected");
             return;
         }
         
@@ -1154,13 +1147,13 @@ public class JobOverviewController implements Initializable {
     private void handleLocalDeleteAction() {
         Iterator fileIterator = getSelectedFiles();
         if (!fileIterator.hasNext()) {
-            log.error("No files are selected");
+            log.error("No file selected");
         }
         
         Action response = Dialogs.create()
                 .owner(this.mainApp.getPrimaryStage())
                 .title("Do you want to delete?")
-                .message("Selected files will be deleted.")
+                .message("Selected file will be deleted.")
                 .actions(Dialog.Actions.OK, Dialog.Actions.CANCEL)
                 .showConfirm();
         
@@ -1493,7 +1486,7 @@ public class JobOverviewController implements Initializable {
         
         if (cj.getJobType() == 2) {
             try {
-                String refDatabaseName = "missense_snv_protein_40.fa";
+                String refDatabaseName = "missense_snv_protein_40_new.fa";
                 cj.createTaxonomyFile(refDatabaseName);
                 cj.setRefDatabaseName(refDatabaseName);
                 cj.setFdrValue(this.t2c.getFdr());
@@ -1505,7 +1498,7 @@ public class JobOverviewController implements Initializable {
         
         if (cj.getJobType() == 3) {
             try {
-                String refDatabaseName = "EEJ_peptide.fa";
+                String refDatabaseName = "EEJ_peptide_new.fa";
                 cj.createTaxonomyFile(refDatabaseName);
                 cj.setRefDatabaseName(refDatabaseName);
                 cj.setFdrValue(this.t3c.getFdr());
@@ -1538,7 +1531,7 @@ public class JobOverviewController implements Initializable {
                 .owner(this.mainApp.getPrimaryStage())
                 .title("Information")
                 .masthead(null)
-                .message("Job is saved!")
+                .message("Job saved!")
                 .showInformation();
     }
     
@@ -1549,7 +1542,7 @@ public class JobOverviewController implements Initializable {
                     .owner(this.mainApp.getPrimaryStage())
                     .title("Error")
                     .masthead(null)
-                    .message("Job is not saved!")
+                    .message("Please save the job first!")
                     .showError();
             return;
         }
@@ -1663,7 +1656,8 @@ public class JobOverviewController implements Initializable {
                         int jobType = cj.getJobType();
                         //generate peptide database first in /mnt
                         if (jobType == 4) {
-                            
+                            //TO DO
+                            cm.sftp(username, masterPublicIp, "remote-init/VCFProcessor.jar", "VCFProcessor.jar", privateKey);
                             String cmdDownloadCdsFasta = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
                                     + " " + cm.getCurrentCredentials().getSecretKey()
                                     + " " + "capercloud-ref"
@@ -1673,7 +1667,7 @@ public class JobOverviewController implements Initializable {
                             String cmdDownloadMapFile = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
                                     + " " + cm.getCurrentCredentials().getSecretKey()
                                     + " " + "capercloud-ref"
-                                    + " mrna-cds.txt"
+                                    + " transcript_coordinate_.txt"
                                     + " /mnt";
                             cm.remoteCallByShh(username, masterPublicIp, cmdDownloadMapFile, privateKey);
                             String cmdDownloadVcfFile = "python download_data.py " + cm.getCurrentCredentials().getAccessKey()
@@ -1683,7 +1677,7 @@ public class JobOverviewController implements Initializable {
                                     + " /mnt";
                             cm.remoteCallByShh(username, masterPublicIp, cmdDownloadVcfFile, privateKey);
                             
-                            String cmdCreateRefDatabase = "mv my_decoy.pl /mnt;mv CustomVariantProtein.jar /mnt;mv lib /mnt/;cd /mnt;java -Xmx2048m -jar CustomVariantProtein.jar Homo_sapiens.GRCh37.75.cds.all.fa mrna-cds.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName() + ";./my_decoy.pl --append " + cj.getRefDatabaseName();
+                            String cmdCreateRefDatabase = "mv my_decoy.pl /mnt;mv VCFProcessor.jar /mnt;mv lib /mnt/;cd /mnt;java -Xmx2048m -jar VCFProcessor.jar Homo_sapiens.GRCh37.75.cds.all.fa transcript_coordinate_.txt " + cj.getVcfObject().getName() + " " + cj.getRefDatabaseName() + ";./my_decoy.pl --append " + cj.getRefDatabaseName();
                             cm.remoteCallByShh(username, masterPublicIp, cmdCreateRefDatabase, privateKey);
                             
 //                            String cmdUploadRefDatabase = "python upload_data.py " + cm.getCurrentCredentials().getAccessKey()
@@ -1778,7 +1772,7 @@ public class JobOverviewController implements Initializable {
                         r3.add("echo $i>>r3.tmp");
                         r3.add("done");
                        
-                        String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false";
+                        String stepArgs = " -jobconf mapred.task.timeout=36000000 -jobconf mapred.reduce.tasks=1 -jobconf mapred.map.tasks=" + cj.clusterSizeProperty().get() + " -jobconf mapred.reduce.tasks.speculative.execution=false -jobconf mapred.map.tasks.speculative.execution=false -jobconf keep.task.files.pattern=.*";
                         
                         
 //                        log.info("Step 1");
@@ -1947,7 +1941,7 @@ public class JobOverviewController implements Initializable {
 //job specific parser
                                 log.info("***Generating peptide list and BED file***");
                                 if (cj.isIsFilterSelected()) {
-                                    JobOverviewController.this.rm.loadKnownPeptide(new File("Homo_sapiens.GRCh37.75.pep.all.fa"));
+                                    JobOverviewController.this.rm.loadKnownPeptide(new File("uniprot-all.fasta"));
                                 }
                                 
                                 long _startTime = System.currentTimeMillis();
@@ -1976,7 +1970,7 @@ public class JobOverviewController implements Initializable {
                                 //make s3 and object public readable
                         
                                 s3ClientTest.setBucketAcl(cj.getOutputBucketName(), CannedAccessControlList.PublicRead);
-                                File gffFile = new File("result.gff");
+                                File gffFile = new File("result.bed");
                                 s3ClientTest.putObject(new PutObjectRequest(cj.getOutputBucketName(), gffFile.getName(), gffFile).withCannedAcl(CannedAccessControlList.PublicRead));
                                 JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + cj.getOutputBucketName() + "/" + gffFile.getName();
                                 log.info("***Generating peptide list and GFF file finished***");
@@ -2166,7 +2160,6 @@ public class JobOverviewController implements Initializable {
             return;
         }
         int jobType = this.rm.getJobTypeFromResult(resultFile);
-        System.out.println(jobType);
         if (jobType == 0) {
             Dialogs.create()
                     .owner(this.mainApp.getPrimaryStage())
@@ -2202,7 +2195,6 @@ public class JobOverviewController implements Initializable {
         
         this.tvResults.setItems(null);
         this.tvPSMs.setItems(null);
-
             
         Service<Void> parseResultService = new Service<Void>() {
             @Override
@@ -2213,7 +2205,7 @@ public class JobOverviewController implements Initializable {
                         updateMessage("Parsing Result File " + resultFile.getName());
                         updateProgress(-1, 0);
                         if (jobType == 1) {
-                            JobOverviewController.this.rm.loadKnownPeptide(new File("Homo_sapiens.GRCh37.75.pep.all.fa"));
+                            JobOverviewController.this.rm.loadKnownPeptide(new File("known_peptides.fa"));
                         }
                         
                         JobOverviewController.this.rm.parse(resultFile, jobType);

@@ -94,11 +94,11 @@ public class ResultModel {
     
     public void parse(File resultFile, int jobType) throws BaseXException {
         this.peptideList.clear();
-        this.peptideToSpectrumMap.clear();
-        
-        String querySpectrumIdentificationResult =
-                "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
-                + "for $sir in doc('" + resultFile.getAbsolutePath() + "')//SpectrumIdentificationResult "
+        this.peptideToSpectrumMap.clear();        
+        if (jobType == 1) {
+            String querySpectrumIdentificationResult =
+                    "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                    + "for $sir in doc('" + resultFile.getAbsolutePath() + "')//SpectrumIdentificationResult "
                 + "for $sii in $sir//SpectrumIdentificationItem "
                 + "where $sii/@rank=1 and count($sii/PeptideEvidenceRef)=1 "//rank 1 and unique genome location
                 + "let $spectrumId:=data($sir/@spectrumID) "
@@ -108,77 +108,74 @@ public class ResultModel {
                 + "let $chargeState:=data($sii/@chargeState) "
                 + "let $score:=string-join(data($sii//cvParam/@value), \",\") "
                 + "return string-join(($spectrumId, $pr, $calMZ, $expMZ, $chargeState, $score),',')";
-        String[] sirs = query(querySpectrumIdentificationResult).split(" ");
-        for (String sir : sirs) {
-            String[] tokens = sir.split(",");
-            String spectrumId = tokens[0].substring(6);
-            String peptideRef = tokens[1];
-            String calculatedMassToCharge = tokens[2];
-            String experimentalMassToCharge = tokens[3];
-            String chargeState = tokens[4];
-            String xExpect = tokens[5];
-            String xScore = tokens[6];
-            String localFdr = tokens[7];
-            String qValue = tokens[8];
-            String fdrScore = tokens[9];
-            if (this.peptideToSpectrumMap.containsKey(peptideRef)) {
-                ObservableList ol = this.peptideToSpectrumMap.get(peptideRef);
-                ol.add(new SpectrumModel(spectrumId, calculatedMassToCharge, experimentalMassToCharge, chargeState, xExpect, xScore, localFdr, qValue, fdrScore));
-            } else {
-                ObservableList ol = FXCollections.observableArrayList();
-                ol.add(new SpectrumModel(spectrumId, calculatedMassToCharge, experimentalMassToCharge, chargeState, xExpect, xScore, localFdr, qValue, fdrScore));
-                this.peptideToSpectrumMap.put(peptideRef, ol);
+            String[] sirs = query(querySpectrumIdentificationResult).split(" ");
+            for (String sir : sirs) {
+                String[] tokens = sir.split(",");
+                String spectrumId = tokens[0].substring(6);
+                String peptideRef = tokens[1];
+                String calculatedMassToCharge = tokens[2];
+                String experimentalMassToCharge = tokens[3];
+                String chargeState = tokens[4];
+                String xExpect = tokens[5];
+                String xScore = tokens[6];
+                String localFdr = tokens[7];
+                String qValue = tokens[8];
+                String fdrScore = tokens[9];
+                if (this.peptideToSpectrumMap.containsKey(peptideRef)) {
+                    ObservableList ol = this.peptideToSpectrumMap.get(peptideRef);
+                    ol.add(new SpectrumModel(spectrumId, calculatedMassToCharge, experimentalMassToCharge, chargeState, xExpect, xScore, localFdr, qValue, fdrScore));
+                } else {
+                    ObservableList ol = FXCollections.observableArrayList();
+                    ol.add(new SpectrumModel(spectrumId, calculatedMassToCharge, experimentalMassToCharge, chargeState, xExpect, xScore, localFdr, qValue, fdrScore));
+                    this.peptideToSpectrumMap.put(peptideRef, ol);
+                }
             }
-        }
-        
-        for (String peptideRef: this.peptideToSpectrumMap.keySet()) {
-            String queryPeptideEvidence = "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
-                    + "for $pe in doc('" + resultFile.getAbsolutePath() + "')//PeptideEvidence "
-                    + "where $pe/@peptide_ref=\"" + peptideRef + "\" "
-                    + "let $isDecoy:=data($pe/@isDecoy) "
-                    + "let $end:=data($pe/@end) "
-                    + "let $start:=data($pe/@start) "
-                    + "let $dBSequenceRef:=data($pe/@dBSequence_ref) "
-                    + "return ($isDecoy,$start,$end,$dBSequenceRef)";
-            String pe = query(queryPeptideEvidence);
-            String[] tokens = pe.split(" ");
-            String isDecoy = tokens[0];
-            int relStartPos = Integer.parseInt(tokens[1]);
-            int relEndPos = Integer.parseInt(tokens[2]);
-            String seqDescription = tokens[3];
-            
-            String[] peptide = peptideRef.split("_");
-            StringBuilder mod = new StringBuilder();
-            String seq = peptide[0];
-            if (peptide.length == 2) {
-                mod.append(peptide[1]);
-            }
-            if (peptide.length == 3) {
-                mod.append(peptide[1]).append(peptide[2]);
-            }
-            
-            // real peptide
-            if (isDecoy.equals("false")) {     
-                if (jobType == 1) {
+
+            for (String peptideRef: this.peptideToSpectrumMap.keySet()) {
+                String queryPeptideEvidence = "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                        + "for $pe in doc('" + resultFile.getAbsolutePath() + "')//PeptideEvidence "
+                        + "where $pe/@peptide_ref=\"" + peptideRef + "\" "
+                        + "let $isDecoy:=data($pe/@isDecoy) "
+                        + "let $end:=data($pe/@end) "
+                        + "let $start:=data($pe/@start) "
+                        + "let $dBSequenceRef:=data($pe/@dBSequence_ref) "
+                        + "return ($isDecoy,$start,$end,$dBSequenceRef)";
+                String pe = query(queryPeptideEvidence);
+                String[] tokens = pe.split(" ");
+                String isDecoy = tokens[0];
+                int relStartPos = Integer.parseInt(tokens[1]);
+                int relEndPos = Integer.parseInt(tokens[2]);
+                String seqDescription = tokens[3];
+
+                String[] peptide = peptideRef.split("_");
+                StringBuilder mod = new StringBuilder();
+                String seq = peptide[0];
+                if (peptide.length == 2) {
+                    mod.append(peptide[1]);
+                }
+                if (peptide.length == 3) {
+                    mod.append(peptide[1]).append(peptide[2]);
+                }
+                if (isDecoy.equals("false")) { 
                     Pattern descPattern = Pattern.compile("dbseq_(.*)\\|SIX-FRAME\\|(.*):(-?\\d)\\|orf:(.*)"); 
                     Matcher descMatcher = descPattern.matcher(seqDescription);
                     if (descMatcher.find()) {
-//                        System.out.println(seqDescription);
+    //                        System.out.println(seqDescription);
                         String id = descMatcher.group(1) + "_" + descMatcher.group(4);
                         String chrom = descMatcher.group(2);
                         String strand = descMatcher.group(3);
                         String description = "ORF:" + descMatcher.group(4);
                         String genomicRegions = descMatcher.group(4);
-                        
+
                         Range region = reconstructRanges(genomicRegions).get(0);
                         int nnStartPos = region.getStartPos() + relStartPos * 3 - 4;
                         int nnEndPos = region.getStartPos() + relEndPos * 3 - 1;
-                        
+
                         if ("-1".equals(strand)) {
                             nnStartPos = region.getEndPos() - relEndPos * 3 + 2;
                             nnEndPos = region.getEndPos() - relStartPos * 3 + 5;
                         }
-//                        System.out.println(nnStartPos + " " + nnEndPos);
+    //                        System.out.println(nnStartPos + " " + nnEndPos);
                         boolean isKnown = false;        
                         if (this.knownPeptides != null) {
                             String tmp_id = chrom + "_" + strand;
@@ -190,113 +187,349 @@ public class ResultModel {
                                 }
                             }
                         }
-                        
+
                         if (isKnown) {
                             continue;
                         }
-                        
+
                         PeptideModel pm = new PeptideModel(peptideRef, id, chrom, strand, mod.toString(), seq, description);
                         pm.addRegions(new Range(nnStartPos, nnEndPos));
                         this.peptideList.add(pm);
                     }
                 }
-                
-                if (jobType == 2 || jobType == 4) {
-                    Pattern descPattern = Pattern.compile("dbseq_(.*)\\|(VAR|VCF)\\|(.*):(-?\\d)\\|(.*:\\w/\\w)/(\\d+)\\|cds:(.*)"); 
+            }
+        }
+
+        if (jobType == 2) {
+            String querySpectrumIdentificationResult =
+                    "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                    + "for $sir in doc('" + resultFile.getAbsolutePath() + "')//SpectrumIdentificationResult "
+                + "for $sii in $sir//SpectrumIdentificationItem "
+                + "where $sii/@rank=1 and count($sii/PeptideEvidenceRef)=1 "//rank 1 and unique genome location
+                + "let $spectrumId:=data($sir/@spectrumID) "
+                + "let $pr:=data($sii/@peptide_ref) "
+                + "let $calMZ:=data($sii/@calculatedMassToCharge) "
+                + "let $expMZ:=data($sii/@experimentalMassToCharge) "
+                + "let $chargeState:=data($sii/@chargeState) "
+                + "let $score:=string-join(data($sii//cvParam/@value), \",\") "
+                + "return string-join(($spectrumId, $pr, $calMZ, $expMZ, $chargeState, $score),',')";
+            String[] sirs = query(querySpectrumIdentificationResult).split(" ");
+            for (String sir : sirs) {
+                String[] tokens = sir.split(",");
+                String spectrumId = tokens[0].substring(6);
+                String peptideRef = tokens[1];
+                String calculatedMassToCharge = tokens[2];
+                String experimentalMassToCharge = tokens[3];
+                String chargeState = tokens[4];
+                String xExpect = tokens[5];
+                String xScore = tokens[6];
+                String localFdr = tokens[7];
+                String qValue = tokens[8];
+                String fdrScore = tokens[9];
+                if (this.peptideToSpectrumMap.containsKey(peptideRef)) {
+                    ObservableList ol = this.peptideToSpectrumMap.get(peptideRef);
+                    ol.add(new SpectrumModel(spectrumId, calculatedMassToCharge, experimentalMassToCharge, chargeState, xExpect, xScore, localFdr, qValue, fdrScore));
+                } else {
+                    ObservableList ol = FXCollections.observableArrayList();
+                    ol.add(new SpectrumModel(spectrumId, calculatedMassToCharge, experimentalMassToCharge, chargeState, xExpect, xScore, localFdr, qValue, fdrScore));
+                    this.peptideToSpectrumMap.put(peptideRef, ol);
+                }
+            }
+            
+            for (String peptideRef: this.peptideToSpectrumMap.keySet()) {
+                String queryPeptideEvidence = "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                        + "for $pe in doc('" + resultFile.getAbsolutePath() + "')//PeptideEvidence "
+                        + "where $pe/@peptide_ref=\"" + peptideRef + "\" "
+                        + "let $isDecoy:=data($pe/@isDecoy) "
+                        + "let $end:=data($pe/@end) "
+                        + "let $start:=data($pe/@start) "
+                        + "let $dBSequenceRef:=data($pe/@dBSequence_ref) "
+                        + "return ($isDecoy,$start,$end,$dBSequenceRef)";
+                String pe = query(queryPeptideEvidence);
+                String[] tokens = pe.split(" ");
+                String isDecoy = tokens[0];
+                int relStartPos = Integer.parseInt(tokens[1]);
+                int relEndPos = Integer.parseInt(tokens[2]);
+                String seqDescription = tokens[3];
+
+                String[] peptide = peptideRef.split("_");
+                StringBuilder mod = new StringBuilder();
+                String seq = peptide[0];
+                if (peptide.length == 2) {
+                    mod.append(peptide[1]);
+                }
+                if (peptide.length == 3) {
+                    mod.append(peptide[1]).append(peptide[2]);
+                }
+            
+                if (isDecoy.equals("false")) { 
+                    Pattern descPattern = Pattern.compile("dbseq_(.*)\\|(VAR)\\|(.*):(-?\\d)\\|(.*:\\w/\\w)/(\\d+)\\|cds:(.*)"); 
                     Matcher descMatcher = descPattern.matcher(seqDescription);
                     if (descMatcher.find()) {
-//                        System.out.println(seqDescription);
-//                        System.out.println(descMatcher.group(1) + " " + descMatcher.group(2) + " " + descMatcher.group(3) + " " + descMatcher.group(4) + " " + descMatcher.group(5));
+    //                        System.out.println(seqDescription);
+    //                        System.out.println(descMatcher.group(1) + " " + descMatcher.group(2) + " " + descMatcher.group(3) + " " + descMatcher.group(4) + " " + descMatcher.group(5));
                         String id = descMatcher.group(1);
                         String chrom = descMatcher.group(3);
                         String strand = descMatcher.group(4);
                         String description = descMatcher.group(5);
                         int varPos = Integer.parseInt(descMatcher.group(6));
                         String genomicRegions = descMatcher.group(7);
-                        
+
                         PeptideModel pm = new PeptideModel(peptideRef, id, chrom, strand, mod.toString(), seq, description);
                         
                         //variant point in peptide
                         if (relStartPos<varPos && varPos<relEndPos) {
-                            
-                            ArrayList<Range> regions = this.reconstructRanges(genomicRegions);
-                            if ("-1".equals(strand) && regions.size() < 3) {
-                                continue;
-                            }
+                            CodingRegion cr = this.reconstructCodingRegion(genomicRegions);
                             //0-based
                             int nnStartPos = relStartPos * 3 - 3;
-                            int nnEndPos = relEndPos * 3 - 3;
-                            
-                            int leftCrIndex = -1;
-                            int leftInOffset = 0;
-                            int rightCrIndex = -2;
-                            int rightInOffset = 0;
-                            
-                            int window = 0;
-                            for (int i=0; i<regions.size(); i++) {
-                                window = window + regions.get(i).getLength();
-                                if (nnStartPos <= window) {
-                                    leftCrIndex = i;
-                                    leftInOffset = nnStartPos - window + regions.get(i).getLength();
-                                    break;
+                            int nnEndPos = relEndPos * 3 - 1;
+                            if (strand.equals("1")) {
+                                String codingRegion = cr.intervalsOf(nnStartPos, nnEndPos);
+//                                System.out.println("1");
+//                                System.out.println("chr"+chrom+":"+codingRegion);
+//                                System.out.println(pm.getPeptideRef());
+                                String[] manyRegions = codingRegion.split(",");
+                                for (String r : manyRegions) {
+                                    String[] tmpR = r.split("-");
+                                    pm.addRegions(new Range(Integer.parseInt(tmpR[0]), Integer.parseInt(tmpR[1])));
                                 }
-                            }
-
-                            window = 0;
-                            for (int i=0; i<regions.size(); i++) {
-                                window = window + regions.get(i).getLength();
-                                if (nnEndPos <= window) {
-                                    rightCrIndex = i;
-                                    rightInOffset = nnEndPos - window + regions.get(i).getLength();
-                                    break;
-                                }
-                            }
-
-                            if (leftCrIndex == rightCrIndex) {
-                                int startPos = 0;
-                                int endPos = 0;
-                                if ("1".equals(strand)) {
-                                    startPos = leftInOffset + regions.get(leftCrIndex).getStartPos() - 1;
-                                    endPos = rightInOffset + regions.get(rightCrIndex).getStartPos() + 2;
-                                } else {
-                                    startPos = regions.get(rightCrIndex).getEndPos() - rightInOffset - 3;
-                                    endPos = regions.get(leftCrIndex).getEndPos() - leftInOffset;
-                                }
-                                Range r = new Range(startPos, endPos);
-                                pm.addRegions(r);
                             } else {
-                                if ("1".equals(strand)) {
-                                    int leftStartPos = leftInOffset + regions.get(leftCrIndex).getStartPos() - 1;
-                                    int leftEndPos = regions.get(leftCrIndex).getEndPos() - 2;
-                                    Range newLeftCr = new Range(leftStartPos, leftEndPos);
-                                    pm.addRegions(newLeftCr);
+                                String codingRegion = cr.negtiveIntervalsOf(nnStartPos, nnEndPos);
+//                                System.out.println("-1");
+//                                System.out.println("chr"+chrom+":"+codingRegion);
+//                                System.out.println(pm.getPeptideRef());
+                                String[] manyRegions = codingRegion.split(",");
+                                for (String r : manyRegions) {
+                                    String[] tmpR = r.split("-");
+                                    pm.addRegions(new Range(Integer.parseInt(tmpR[0]), Integer.parseInt(tmpR[1])));
+                                }
+                            }
+                            this.peptideList.add(pm);
+                        } else {
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
 
-                                    for (int i=leftCrIndex+1; i<rightCrIndex; i++) {
-                                        pm.addRegions(regions.get(i));
-                                    }
+        if (jobType == 3) {
+            String querySpectrumIdentificationResult =
+                    "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                    + "for $sir in doc('" + resultFile.getAbsolutePath() + "')//SpectrumIdentificationResult "
+                + "for $sii in $sir//SpectrumIdentificationItem "
+                + "where $sii/@rank=1 and count($sii/PeptideEvidenceRef)=1 "//rank 1 and unique genome location
+                + "let $spectrumId:=data($sir/@spectrumID) "
+                + "let $pr:=data($sii/@peptide_ref) "
+                + "let $calMZ:=data($sii/@calculatedMassToCharge) "
+                + "let $expMZ:=data($sii/@experimentalMassToCharge) "
+                + "let $chargeState:=data($sii/@chargeState) "
+                + "let $score:=string-join(data($sii//cvParam/@value), \",\") "
+                + "return string-join(($spectrumId, $pr, $calMZ, $expMZ, $chargeState, $score),',')";
+            String[] sirs = query(querySpectrumIdentificationResult).split(" ");
+            for (String sir : sirs) {
+                String[] tokens = sir.split(",");
+                String spectrumId = tokens[0].substring(6);
+                String peptideRef = tokens[1];
+                String calculatedMassToCharge = tokens[2];
+                String experimentalMassToCharge = tokens[3];
+                String chargeState = tokens[4];
+                String xExpect = tokens[5];
+                String xScore = tokens[6];
+                String localFdr = tokens[7];
+                String qValue = tokens[8];
+                String fdrScore = tokens[9];
+                if (this.peptideToSpectrumMap.containsKey(peptideRef)) {
+                    ObservableList ol = this.peptideToSpectrumMap.get(peptideRef);
+                    ol.add(new SpectrumModel(spectrumId, calculatedMassToCharge, experimentalMassToCharge, chargeState, xExpect, xScore, localFdr, qValue, fdrScore));
+                } else {
+                    ObservableList ol = FXCollections.observableArrayList();
+                    ol.add(new SpectrumModel(spectrumId, calculatedMassToCharge, experimentalMassToCharge, chargeState, xExpect, xScore, localFdr, qValue, fdrScore));
+                    this.peptideToSpectrumMap.put(peptideRef, ol);
+                }
+            }
 
-                                    int rightStartPos = regions.get(rightCrIndex).getStartPos() - 3;
-                                    int rightEndPos = rightInOffset + regions.get(rightCrIndex).getStartPos() + 2;
-                                    Range newRightCr = new Range(rightStartPos, rightEndPos);
-                                    pm.addRegions(newRightCr);
-                                } else {
-                                    //ignore negtive strand peptide with gap, hard to determin coordinates
-                                    continue;
-//                                    int rightStartPos = regions.get(leftCrIndex).getStartPos();
-//                                    int rightEndPos = regions.get(leftCrIndex).getEndPos() - leftInOffset;
-//
-//                                    Range newRightCr = new Range(rightStartPos, rightEndPos);
-//                                    pm.addRegions(newRightCr);
-//
-//                                    for (int i=leftCrIndex+1; i<rightCrIndex; i++) {
-//                                        pm.addRegions(regions.get(i));
-//                                    }
-//                                    
-//                                    int leftStartPos = regions.get(rightCrIndex).getEndPos() - rightInOffset;
-//                                    int leftEndPos = regions.get(rightCrIndex).getEndPos();
-//                                    
-//                                    Range newLeftCr = new Range(leftStartPos, leftEndPos);
-//                                    pm.addRegions(newLeftCr);
+            for (String peptideRef: this.peptideToSpectrumMap.keySet()) {
+                String queryPeptideEvidence = "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                        + "for $pe in doc('" + resultFile.getAbsolutePath() + "')//PeptideEvidence "
+                        + "where $pe/@peptide_ref=\"" + peptideRef + "\" "
+                        + "let $isDecoy:=data($pe/@isDecoy) "
+                        + "let $end:=data($pe/@end) "
+                        + "let $start:=data($pe/@start) "
+                        + "let $dBSequenceRef:=data($pe/@dBSequence_ref) "
+                        + "return ($isDecoy,$start,$end,$dBSequenceRef)";
+                String pe = query(queryPeptideEvidence);
+                String[] tokens = pe.split(" ");
+                String isDecoy = tokens[0];
+                int relStartPos = Integer.parseInt(tokens[1]);
+                int relEndPos = Integer.parseInt(tokens[2]);
+                String seqDescription = tokens[3];
+
+                String[] peptide = peptideRef.split("_");
+                StringBuilder mod = new StringBuilder();
+                String seq = peptide[0];
+                if (peptide.length == 2) {
+                    mod.append(peptide[1]);
+                }
+                if (peptide.length == 3) {
+                    mod.append(peptide[1]).append(peptide[2]);
+                }
+                if (isDecoy.equals("false")) {
+                    Pattern descPattern = Pattern.compile("dbseq_(.*)\\|EEJ\\|(.*):(\\d)\\|(.*/)([012])/(\\d+)\\|cds:(.*)"); 
+                    Matcher descMatcher = descPattern.matcher(seqDescription);
+                    if (descMatcher.find()) {
+                        String id = descMatcher.group(1);
+                        String chrom = descMatcher.group(2);
+                        String strand = descMatcher.group(3);
+
+                        String description = descMatcher.group(4);
+                        int phase = Integer.parseInt(descMatcher.group(5));
+                        description = description + "/" + phase;
+                        int jPos = Integer.parseInt(descMatcher.group(6));
+                        String genomicRegions = descMatcher.group(7);
+
+                        //junction site in peptide
+                        if (relStartPos<jPos && jPos<relEndPos) {
+                            PeptideModel pm = new PeptideModel(peptideRef, id, chrom, strand, mod.toString(), seq, description);
+                            String[] twoRegions = genomicRegions.split(",");
+                            String[] first = twoRegions[0].split("-");
+                            String[] second = twoRegions[1].split("-");
+                            int firstRight = Integer.parseInt(first[1]);
+                            int secondLeft = Integer.parseInt(second[0]);
+                            
+                            int firstLeft = 0;
+                            int secondRight = 0;
+                            switch (phase) {
+                                case 0: {
+                                    firstLeft = firstRight - 3 * (jPos - relStartPos) + 1;
+                                    secondRight = secondLeft + 3 * (relEndPos - jPos + 1) - 1;
+                                    break;
+                                }
+                                case 1: {
+                                    firstLeft = firstRight - 3 * (jPos - relStartPos);
+                                    secondRight = secondLeft + 3 * (relEndPos - jPos) + 1;
+                                    break;
+                                }
+                                case 2: {
+                                    firstLeft = firstRight - 3 * (jPos - relStartPos) + 2;
+                                    secondRight = secondLeft + 3 * (relEndPos - jPos + 1);
+                                    break;
+                                }
+                                default: break;
+                            }
+//                            System.out.println(phase);
+//                            System.out.println("chr"+chrom+":"+firstLeft+"-"+firstRight+","+secondLeft+"-"+secondRight);
+//                            System.out.println(pm.getPeptideRef());
+                            pm.addRegions(new Range(firstLeft, firstRight));
+                            pm.addRegions(new Range(secondLeft, secondRight));
+                            this.peptideList.add(pm);
+                        }
+                    }
+                }
+            }
+        }
+        if (jobType == 4) {
+            String querySpectrumIdentificationResult =
+                    "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                    + "for $sir in doc('" + resultFile.getAbsolutePath() + "')//SpectrumIdentificationResult "
+                + "for $sii in $sir//SpectrumIdentificationItem "
+                + "where $sii/@rank=1 "//only rank1
+                + "let $spectrumId:=data($sir/@spectrumID) "
+                + "let $pr:=data($sii/@peptide_ref) "
+                + "let $calMZ:=data($sii/@calculatedMassToCharge) "
+                + "let $expMZ:=data($sii/@experimentalMassToCharge) "
+                + "let $chargeState:=data($sii/@chargeState) "
+                + "let $score:=string-join(data($sii//cvParam/@value), \",\") "
+                + "return string-join(($spectrumId, $pr, $calMZ, $expMZ, $chargeState, $score),',')";
+            String[] sirs = query(querySpectrumIdentificationResult).split(" ");
+            for (String sir : sirs) {
+                String[] tokens = sir.split(",");
+                String spectrumId = tokens[0].substring(6);
+                String peptideRef = tokens[1];
+                String calculatedMassToCharge = tokens[2];
+                String experimentalMassToCharge = tokens[3];
+                String chargeState = tokens[4];
+                String xExpect = tokens[5];
+                String xScore = tokens[6];
+                String localFdr = tokens[7];
+                String qValue = tokens[8];
+                String fdrScore = tokens[9];
+                if (this.peptideToSpectrumMap.containsKey(peptideRef)) {
+                    ObservableList ol = this.peptideToSpectrumMap.get(peptideRef);
+                    ol.add(new SpectrumModel(spectrumId, calculatedMassToCharge, experimentalMassToCharge, chargeState, xExpect, xScore, localFdr, qValue, fdrScore));
+                } else {
+                    ObservableList ol = FXCollections.observableArrayList();
+                    ol.add(new SpectrumModel(spectrumId, calculatedMassToCharge, experimentalMassToCharge, chargeState, xExpect, xScore, localFdr, qValue, fdrScore));
+                    this.peptideToSpectrumMap.put(peptideRef, ol);
+                }
+            }
+
+            for (String peptideRef: this.peptideToSpectrumMap.keySet()) {
+                String queryPeptideEvidence = "declare default element namespace \"http://psidev.info/psi/pi/mzIdentML/1.1\";"
+                        + "for $pe in doc('" + resultFile.getAbsolutePath() + "')//PeptideEvidence "
+                        + "where $pe/@peptide_ref=\"" + peptideRef + "\" "
+                        + "let $isDecoy:=data($pe/@isDecoy) "
+                        + "let $end:=data($pe/@end) "
+                        + "let $start:=data($pe/@start) "
+                        + "let $dBSequenceRef:=data($pe/@dBSequence_ref) "
+                        + "return ($isDecoy,$start,$end,$dBSequenceRef)";
+                //query the first protein that generate the reference peptide
+                String pe = query(queryPeptideEvidence);
+                String[] tokens = pe.split(" ");
+                String isDecoy = tokens[0];
+                int relStartPos = Integer.parseInt(tokens[1]);
+                int relEndPos = Integer.parseInt(tokens[2]);
+                String seqDescription = tokens[3];
+
+                String[] peptide = peptideRef.split("_");
+                StringBuilder mod = new StringBuilder();
+                String seq = peptide[0];
+                if (peptide.length == 2) {
+                    mod.append(peptide[1]);
+                }
+                if (peptide.length == 3) {
+                    mod.append(peptide[1]).append(peptide[2]);
+                }
+                if (isDecoy.equals("false")) {
+                    Pattern descPattern = Pattern.compile("dbseq_(.*)\\|(VCF)\\|(.*):(-?\\d)\\|(.*):(\\d+)\\|cds:(.*)"); 
+                    Matcher descMatcher = descPattern.matcher(seqDescription);
+                    if (descMatcher.find()) {
+    //                        System.out.println(seqDescription);
+    //                        System.out.println(descMatcher.group(1) + " " + descMatcher.group(2) + " " + descMatcher.group(3) + " " + descMatcher.group(4) + " " + descMatcher.group(5));
+                        String id = descMatcher.group(1);
+                        String chrom = descMatcher.group(3);
+                        String strand = descMatcher.group(4);
+                        String description = descMatcher.group(5);
+                        int varPos = Integer.parseInt(descMatcher.group(6));
+                        String genomicRegions = descMatcher.group(7);
+
+                        PeptideModel pm = new PeptideModel(peptideRef, id, chrom, strand, mod.toString(), seq, description);
+
+                        //variant point in peptide
+                        if (relStartPos<varPos && varPos<relEndPos) {
+                            CodingRegion cr = this.reconstructCodingRegion(genomicRegions);
+                            //0-based
+                            int nnStartPos = relStartPos * 3 - 3;
+                            int nnEndPos = relEndPos * 3 - 1;
+                            if (strand.equals("1")) {
+                                String codingRegion = cr.intervalsOf(nnStartPos, nnEndPos);
+//                                System.out.println("1");
+//                                System.out.println("chr"+chrom+":"+codingRegion);
+//                                System.out.println(pm.getPeptideRef());
+                                String[] manyRegions = codingRegion.split(",");
+                                for (String r : manyRegions) {
+                                    String[] tmpR = r.split("-");
+                                    pm.addRegions(new Range(Integer.parseInt(tmpR[0]), Integer.parseInt(tmpR[1])));
+                                }
+                            } else {
+                                String codingRegion = cr.negtiveIntervalsOf(nnStartPos, nnEndPos);
+//                                System.out.println("-1");
+//                                System.out.println("chr"+chrom+":"+codingRegion);
+//                                System.out.println(pm.getPeptideRef());
+                                String[] manyRegions = codingRegion.split(",");
+                                for (String r : manyRegions) {
+                                    String[] tmpR = r.split("-");
+                                    pm.addRegions(new Range(Integer.parseInt(tmpR[0]), Integer.parseInt(tmpR[1])));
                                 }
                             }
                             this.peptideList.add(pm);
@@ -304,65 +537,10 @@ public class ResultModel {
                             continue;
                         }  
                     }
-                }
-                
-                if (jobType == 3) {
-                    Pattern descPattern = Pattern.compile("dbseq_(.*)\\|EEJ\\|(.*):(-?\\d)\\|(.*/)([012])/(\\d+)\\|cds:(.*)"); 
-                    Matcher descMatcher = descPattern.matcher(seqDescription);
-                    if (descMatcher.find()) {
-                        String id = descMatcher.group(1);
-                        String chrom = descMatcher.group(2);
-                        String strand = descMatcher.group(3);
-                        
-                        //ignore negtive strand
-                        if ("-1".equals(strand)) {
-                            continue;
-                        }
-                        
-                        String description = descMatcher.group(4);
-                        int phase = Integer.parseInt(descMatcher.group(5));
-                        description = description + "/" + phase;
-                        int jPos = Integer.parseInt(descMatcher.group(6));
-                        String genomicRegions = descMatcher.group(7);
-                        
-                        //junction site in peptide
-                        if (relStartPos<jPos && jPos<relEndPos) {
-//                            System.out.println(seqDescription);
-                            ArrayList<Range> regions = reconstructRanges(genomicRegions);
-                            int firstStartPos = regions.get(0).getStartPos() + relStartPos * 3 - 4;
-                            int secondEndPos = regions.get(1).getStartPos() + (relEndPos - jPos) * 3 + 2;
-                            
-                            int firstEndPos = regions.get(0).getEndPos();
-                            int secondStartPos = regions.get(1).getStartPos() - 1;
-                            
-                            if (phase == 1) {
-                                firstEndPos = firstEndPos + 2;
-                                secondStartPos = secondStartPos - 1;
-                                secondEndPos = secondEndPos - 1;
-                            } else if (phase == 2) {
-                                firstStartPos = firstStartPos + 3;
-                                firstEndPos = firstEndPos + 1;
-                                secondStartPos = secondStartPos + 1;
-                                secondEndPos = secondEndPos + 1;
-                            }
-                            
-                            if (firstStartPos > firstEndPos) {
-                                firstStartPos = firstEndPos - 3;
-                            }
-                            
-                            Range firstRegion = new Range(firstStartPos, firstEndPos);
-                            Range secondRegion = new Range(secondStartPos, secondEndPos);
-                            
-                            PeptideModel pm = new PeptideModel(peptideRef, id, chrom, strand, mod.toString(), seq, description);
-                            pm.addRegions(firstRegion);
-                            pm.addRegions(secondRegion);
-                            this.peptideList.add(pm);
-                        }
-                    }
-                }
+                } 
             }
         }
-        generateGff();
+        generateBed();
     }
     
     private ArrayList<Range> reconstructRanges(String regions) {
@@ -375,6 +553,18 @@ public class ResultModel {
             res.add(new Range(startPos, endPos));
         }
         return res;
+    }
+    
+    private CodingRegion reconstructCodingRegion(String regions) {
+        CodingRegion cr = new CodingRegion();
+        Pattern p = Pattern.compile("(\\d+)-(\\d*)");
+        Matcher m = p.matcher(regions);
+        while (m.find()) {
+            int startPos = Integer.parseInt(m.group(1));
+            int endPos = Integer.parseInt(m.group(2));
+            cr.addInterval(startPos, endPos);
+        }
+        return cr;
     }
     
     private String query(String query) throws BaseXException {

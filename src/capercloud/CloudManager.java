@@ -40,9 +40,12 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpException;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -566,35 +569,62 @@ public class CloudManager {
         //run stuff
         ChannelExec channel = (ChannelExec) session.openChannel("exec");
         channel.setCommand(command);
-        channel.setErrStream(System.err);
+//        channel.setErrStream(System.err);
         channel.setPty(true);
         channel.connect();
                 
         InputStream input = channel.getInputStream();
-//start reading the input from the executed commands on the shell
-        byte[] tmp = new byte[1024];
+        Reader reader=new InputStreamReader(input);
+        BufferedReader buffered=new BufferedReader(reader);
         while (true) {
-            while (input.available() > 0) {
-                int i = input.read(tmp, 0, 1024);
-                if (i < 0) break;
-                log.info(new String(tmp, 0, i));
-            }
-            if (channel.isClosed()){
-                if (channel.getExitStatus() == 0) {
-//                    log.debug("Exit Status: SUCCESS!");
-                } else {
-                    log.error("Execute command: " + command + " failed!");
-                }
+            String line=buffered.readLine();
+            if (line == null) {
                 break;
             }
-            Thread.sleep(1000);
+            log.info(">>> " + line);
         }
-        
-        int status = channel.getExitStatus();
+        input.close();
+        int count=50;
+        int delay=1000;
+        while (true) {
+            if (channel.isClosed()) {
+                break;
+            }
+            if (count-- < 0) {
+                break;
+            }
+            Thread.sleep(delay);
+        }
+        log.info("exec channel closed: " + channel.isClosed());
+        int status=channel.getExitStatus();
+        log.info("exec exit status: " + status);
         channel.disconnect();
         session.disconnect();
-        
         return status;
+//start reading the input from the executed commands on the shell
+//        byte[] tmp = new byte[1024];
+//        while (true) {
+//            while (input.available() > 0) {
+//                int i = input.read(tmp, 0, 1024);
+//                if (i < 0) break;
+//                log.info(new String(tmp, 0, i));
+//            }
+//            
+//            if (channel.isClosed()){
+//                if (channel.getExitStatus() == 0) {
+//                } else {
+//                    log.error("Execute command: " + command + " failed!");
+//                }
+//                break;
+//            }
+//            Thread.sleep(1000);
+//        }
+        
+//        int status = channel.getExitStatus();
+//        channel.disconnect();
+//        session.disconnect();
+        
+//        return status;
     }
     
     public void sftp(String userName, String ipAddress, String lfile, String rfile, File privateKey) throws JSchException, InterruptedException, SftpException {
