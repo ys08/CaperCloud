@@ -92,4 +92,19 @@ public class PeptideModel {
             return new Range(rightStart, leftEnd);
         }
     }
+    
+    public Range getParentRange() {
+        int size = this.regions.size();
+        if (size == 1) {
+            return this.regions.get(0);
+        } else {
+            Range rf = this.regions.get(0);
+            Range rl = this.regions.get(size - 1);
+            if ("1".equals(strand.get())) {
+                return new Range(rf.getStartPos(), rl.getEndPos());
+            } else {
+                return new Range(rl.getStartPos(), rf.getEndPos());
+            }
+        }
+    }
 }

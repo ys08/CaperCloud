@@ -707,9 +707,9 @@ public class JobOverviewController implements Initializable {
                             
                             String chrom = item.chromProperty().get();
 
-                            Range ucscRange = item.getUcscRange();
-                            String ucscStart = String.valueOf(ucscRange.getStartPos());
-                            String ucscEnd = String.valueOf(ucscRange.getEndPos());
+                            Range parentRange = item.getParentRange();
+                            String ucscStart = String.valueOf(parentRange.getStartPos());
+                            String ucscEnd = String.valueOf(parentRange.getEndPos());
 
                             String _bedUrl = JobOverviewController.this.tfBedUrl.getText();
                             boolean _eucalyptusEnabled = JobOverviewController.this.mainApp.getEucalyptusEnabled().get();
@@ -717,16 +717,19 @@ public class JobOverviewController implements Initializable {
                             String url = null;
                             //genome.ucsc.edu
                             //61.50.130.100:17436/ucsc
-                            if (!_eucalyptusEnabled) {
-                                url = "http://61.50.130.100:17436/ucsc/cgi-bin/hgTracks?org=human&position=chr" 
-                                    + chrom + ":" + ucscStart + "-" + ucscEnd 
-                                    + "&hgt.customText=" + JobOverviewController.this.bedUrl;
-                            } else {
-                                url = "http://61.50.130.100:17436/ucsc/cgi-bin/hgTracks?org=human&position=chr" 
-                                    + chrom + ":" + ucscStart + "-" + ucscEnd 
-                                    + "&hgt.customText=" + _bedUrl;
-                            }
+                            //http://61.50.130.100:17436/JBrowse-1.11.5-dev/?data=hg19
                             
+                            if (!_eucalyptusEnabled) {
+                                String addTrackString = "&addStores={\"url\":{\"type\":\"JBrowse/Store/SeqFeature/GFF3\",\"urlTemplate\":\"" + "https://s3.amazonaws.com/capercloud-output/result.gtf" + "\"}}&addTracks=[{\"label\":\"Identified Peptides\",\"type\":\"JBrowse/View/Track/CanvasFeatures\",\"store\":\"url\"}]";
+                                url = "http://61.50.130.100:17436/JBrowse-1.11.5-dev/?data=hg19&loc=chr" 
+                                    + chrom + ":" + ucscStart + ".." + ucscEnd + addTrackString
+                                    + "&tracks=Identified Peptides,Ensembl Protein Coding Gene,Transcript Evidence,Protein Evidence";
+                            } else {
+                                String addTrackString = "&addStores={\"url\":{\"type\":\"JBrowse/Store/SeqFeature/GFF3\",\"urlTemplate\":\"" + "https://s3.amazonaws.com/capercloud-output/result.gtf" + "\"}}&addTracks=[{\"label\":\"Identified Peptides\",\"type\":\"JBrowse/View/Track/CanvasFeatures\",\"store\":\"url\"}]";
+                                url = "http://61.50.130.100:17436/JBrowse-1.11.5-dev/?data=hg19&loc=chr" 
+                                    + chrom + ":" + ucscStart + ".." + ucscEnd + addTrackString
+                                    + "&tracks=Identified Peptides,Ensembl Protein Coding Gene,Transcript Evidence,Protein Evidence";
+                            }
                             log.debug(url);
                             webEngine.load(url);
                         }      

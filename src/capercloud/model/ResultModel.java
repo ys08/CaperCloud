@@ -540,7 +540,7 @@ public class ResultModel {
                 } 
             }
         }
-        generateBed();
+        generateGff();
     }
     
     private ArrayList<Range> reconstructRanges(String regions) {
@@ -584,8 +584,6 @@ public class ResultModel {
             FileUtils.deleteQuietly(gffFile);
         }
         
-        StringBuilder line = new StringBuilder();
-        
         for (PeptideModel pm : this.peptideList) {
             String strand = null;
             if (pm.strandProperty().get().equals("1")) {
@@ -593,20 +591,18 @@ public class ResultModel {
             } else {
                 strand = "-";
             }
-        
-            line = new StringBuilder();
-            ArrayList<Range> regions = pm.getRegions();
-            for (Range r : regions) {
-                line.append("chr")
+            StringBuilder parentLine = new StringBuilder();
+            Range parentRange = pm.getParentRange();
+            parentLine.append("chr")
                     .append(pm.chromProperty().get())
                     .append("\t")
                     .append("capercloud")
                     .append("\t")
-                    .append(".")
+                    .append("mRNA")
                     .append("\t")
-                    .append(r.getStartPos())
+                    .append(parentRange.getStartPos())
                     .append("\t")
-                    .append(r.getEndPos())
+                    .append(parentRange.getEndPos())
                     .append("\t")
                     .append(".")
                     .append("\t")
@@ -614,12 +610,34 @@ public class ResultModel {
                     .append("\t")
                     .append(".")
                     .append("\t")
-                    .append(pm.idProperty().get())
-                    .append(";")
+                    .append("ID=").append(pm.peptideSeqProperty().get())
+                    .append(IOUtils.LINE_SEPARATOR);
+            StringBuilder childLine = new StringBuilder();
+            ArrayList<Range> regions = pm.getRegions();
+            for (Range childRange : regions) {
+                childLine.append("chr")
+                    .append(pm.chromProperty().get())
+                    .append("\t")
+                    .append("capercloud")
+                    .append("\t")
+                    .append("CDS")
+                    .append("\t")
+                    .append(childRange.getStartPos())
+                    .append("\t")
+                    .append(childRange.getEndPos())
+                    .append("\t")
+                    .append(".")
+                    .append("\t")
+                    .append(strand)
+                    .append("\t")
+                    .append(".")
+                    .append("\t")
+                    .append("Parent=").append(pm.peptideSeqProperty().get())
                     .append(IOUtils.LINE_SEPARATOR);
             }
             try {
-                FileUtils.writeStringToFile(gffFile , line.toString(), true);
+                FileUtils.writeStringToFile(gffFile , parentLine.toString(), true);
+                FileUtils.writeStringToFile(gffFile , childLine.toString(), true);
             } catch (IOException ex) {
                 Logger.getLogger(ResultModel.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -800,5 +818,4 @@ public class ResultModel {
             Logger.getLogger(ResultModel.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
 }
