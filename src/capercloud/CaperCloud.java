@@ -79,6 +79,8 @@ public class CaperCloud extends Application {
         this.eucalyptusEnabled = new SimpleBooleanProperty(false);
         this.cloudManager = CloudManager.getInstance();
         this.cloudManager.setMainApp(this);  
+        //Allow CORS in JavaFX Webview
+        System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
     }
     
     //geters and setters

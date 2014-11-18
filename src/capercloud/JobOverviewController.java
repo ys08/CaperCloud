@@ -708,8 +708,8 @@ public class JobOverviewController implements Initializable {
                             String chrom = item.chromProperty().get();
 
                             Range parentRange = item.getParentRange();
-                            String ucscStart = String.valueOf(parentRange.getStartPos());
-                            String ucscEnd = String.valueOf(parentRange.getEndPos());
+                            String ucscStart = String.valueOf(parentRange.getStartPos() - 200);
+                            String ucscEnd = String.valueOf(parentRange.getEndPos() + 200);
 
                             String _bedUrl = JobOverviewController.this.tfBedUrl.getText();
                             boolean _eucalyptusEnabled = JobOverviewController.this.mainApp.getEucalyptusEnabled().get();
@@ -720,17 +720,18 @@ public class JobOverviewController implements Initializable {
                             //http://61.50.130.100:17436/JBrowse-1.11.5-dev/?data=hg19
                             
                             if (!_eucalyptusEnabled) {
-                                String addTrackString = "&addStores={\"url\":{\"type\":\"JBrowse/Store/SeqFeature/GFF3\",\"urlTemplate\":\"" + "https://s3.amazonaws.com/capercloud-output/result.gtf" + "\"}}&addTracks=[{\"label\":\"Identified Peptides\",\"type\":\"JBrowse/View/Track/CanvasFeatures\",\"store\":\"url\"}]";
+                                String addTrackString = "&addStores={\"url\":{\"type\":\"JBrowse/Store/SeqFeature/GFF3\",\"urlTemplate\":\"" + JobOverviewController.this.bedUrl + "\"}}&addTracks=[{\"label\":\"Identified Peptides\",\"type\":\"JBrowse/View/Track/CanvasFeatures\",\"store\":\"url\"}]";
                                 url = "http://61.50.130.100:17436/JBrowse-1.11.5-dev/?data=hg19&loc=chr" 
                                     + chrom + ":" + ucscStart + ".." + ucscEnd + addTrackString
                                     + "&tracks=Identified Peptides,Ensembl Protein Coding Gene,Transcript Evidence,Protein Evidence";
                             } else {
-                                String addTrackString = "&addStores={\"url\":{\"type\":\"JBrowse/Store/SeqFeature/GFF3\",\"urlTemplate\":\"" + "https://s3.amazonaws.com/capercloud-output/result.gtf" + "\"}}&addTracks=[{\"label\":\"Identified Peptides\",\"type\":\"JBrowse/View/Track/CanvasFeatures\",\"store\":\"url\"}]";
+                                String addTrackString = "&addStores={\"url\":{\"type\":\"JBrowse/Store/SeqFeature/GFF3\",\"urlTemplate\":\"" + _bedUrl + "\"}}&addTracks=[{\"label\":\"Identified Peptides\",\"type\":\"JBrowse/View/Track/CanvasFeatures\",\"store\":\"url\"}]";
                                 url = "http://61.50.130.100:17436/JBrowse-1.11.5-dev/?data=hg19&loc=chr" 
                                     + chrom + ":" + ucscStart + ".." + ucscEnd + addTrackString
                                     + "&tracks=Identified Peptides,Ensembl Protein Coding Gene,Transcript Evidence,Protein Evidence";
                             }
                             log.debug(url);
+                            
                             webEngine.load(url);
                         }      
                     });
@@ -1965,17 +1966,17 @@ public class JobOverviewController implements Initializable {
                                 AmazonS3Client s3ClientTest = null;
                                 if (eucalyptusEnabled) {
                                     //testing purpose
-                                    s3ClientTest = new AmazonS3Client(new BasicAWSCredentials("AKIAIWNERGLUEYZL7N7Q", "2vg5/PqUH1DGRTi1ONYRXwf9lfrV6Mblf2vFIb4U"));
+//                                    s3ClientTest = new AmazonS3Client(new BasicAWSCredentials("AKIAIWNERGLUEYZL7N7Q", "2vg5/PqUH1DGRTi1ONYRXwf9lfrV6Mblf2vFIb4U"));
                                 } else {
                                     s3ClientTest = new AmazonS3Client(new BasicAWSCredentials(cm.getCurrentCredentials().getAccessKey(), cm.getCurrentCredentials().getSecretKey()));
+                                    
+//make s3 and object public readable
+                                    s3ClientTest.setBucketAcl(cj.getOutputBucketName(), CannedAccessControlList.PublicRead);
+                                    File gffFile = new File("result.gff");
+                                    s3ClientTest.putObject(new PutObjectRequest(cj.getOutputBucketName(), gffFile.getName(), gffFile).withCannedAcl(CannedAccessControlList.PublicRead));
+                                    JobOverviewController.this.bedUrl = "http://" + cj.getOutputBucketName() + ".s3.amazonaws.com/" + gffFile.getName();
                                 }
                                 
-                                //make s3 and object public readable
-                        
-                                s3ClientTest.setBucketAcl(cj.getOutputBucketName(), CannedAccessControlList.PublicRead);
-                                File gffFile = new File("result.bed");
-                                s3ClientTest.putObject(new PutObjectRequest(cj.getOutputBucketName(), gffFile.getName(), gffFile).withCannedAcl(CannedAccessControlList.PublicRead));
-                                JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + cj.getOutputBucketName() + "/" + gffFile.getName();
                                 log.info("***Generating peptide list and GFF file finished***");
                                 return null;
                             }
@@ -2226,9 +2227,9 @@ public class JobOverviewController implements Initializable {
                             AmazonS3Client s3Client = new AmazonS3Client(new BasicAWSCredentials(_aws.getAccessKey(), _aws.getSecretKey()));
                             //make s3 and object public readable
                             s3Client.setBucketAcl(bucketName, CannedAccessControlList.PublicRead);
-                            File bedFile = new File("result.bed");
+                            File bedFile = new File("result.gff");
                             s3Client.putObject(new PutObjectRequest(bucketName, bedFile.getName(), bedFile).withCannedAcl(CannedAccessControlList.PublicRead));
-                            JobOverviewController.this.bedUrl = "http://s3.amazonaws.com/" + bucketName + "/" + bedFile.getName();
+                            JobOverviewController.this.bedUrl = "http://" + bucketName + ".s3.amazonaws.com/" + bedFile.getName();
                         }
                         return null;
                     }
