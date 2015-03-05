@@ -19,7 +19,7 @@
       </HBox>
       <Separator layoutX="2.0" layoutY="93.0" prefWidth="454.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="80.0" />
       <Label layoutX="10.0" layoutY="10.0" text="Database Selection" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="15.0" />
-      <Label layoutX="10.0" layoutY="106.0" text="Filter Stage" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="96.0" />
+      <Label layoutX="10.0" layoutY="106.0" text="Filter" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="96.0" />
       <ComboBox fx:id="cbDatabase" layoutX="102.0" layoutY="50.0" prefHeight="26.0" prefWidth="197.0" promptText="ensembl missense snv" visibleRowCount="25" AnchorPane.topAnchor="40.0">
          <items>
             <FXCollections fx:factory="observableArrayList">

@@ -13,7 +13,7 @@
 
 <AnchorPane id="AnchorPane" maxWidth="-Infinity" minHeight="-1.0" minWidth="-Infinity" prefHeight="470.0" prefWidth="450.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="capercloud.TypeOneController">
   <children>
-    <ComboBox fx:id="cbChromNum" layoutX="115.0" layoutY="40.0" prefHeight="26.0" prefWidth="207.0" promptText="Select chromosome(s)" visibleRowCount="25" AnchorPane.topAnchor="40.0">
+    <ComboBox fx:id="cbChromNum" layoutX="80.0" layoutY="40.0" prefHeight="26.0" prefWidth="269.0" promptText="Select a chromosome" visibleRowCount="25" AnchorPane.topAnchor="40.0">
       <items>
         <FXCollections fx:factory="observableArrayList">
           <String fx:value="all" />
@@ -23,7 +23,7 @@
         </FXCollections>
       </items>
     </ComboBox>
-    <Label layoutY="96.0" text="Filter Stage" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="96.0" />
+    <Label layoutY="96.0" text="Filter" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="96.0" />
     <Label text="Database Selection" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="15.0" />
     <Separator prefWidth="454.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="80.0" />
       <HBox alignment="CENTER_LEFT" layoutX="115.0" layoutY="167.0" spacing="20.0" AnchorPane.leftAnchor="110.0" AnchorPane.topAnchor="160.0">
@@ -39,7 +39,7 @@
       </Text>
       <Separator layoutX="12.0" layoutY="269.0" prefWidth="454.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="269.0" />
       <Label layoutX="10.0" layoutY="279.0" text="Analysis Protocol" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="279.0" />
-      <CheckBox fx:id="cbFilter" layoutX="110.0" layoutY="208.0" mnemonicParsing="false" selected="true" text="Filter known peptides" />
+      <CheckBox fx:id="cbFilter" disable="true" layoutX="110.0" layoutY="208.0" mnemonicParsing="false" selected="true" text="Filter known peptides" />
   </children>
   <padding>
     <Insets />

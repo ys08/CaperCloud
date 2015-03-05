@@ -341,8 +341,8 @@
                                         <top>
                                           <HBox id="HBox" alignment="CENTER" spacing="20.0">
                                             <children>
-                                              <Label text="Job Type" />
-                                              <ComboBox fx:id="cbJobType" onAction="#handleJobTypeChange" prefHeight="29.0" prefWidth="276.0" promptText="Seletc a Job Type">
+                                              <Label text="Workflow" />
+                                              <ComboBox fx:id="cbJobType" onAction="#handleJobTypeChange" prefHeight="29.0" prefWidth="276.0" promptText="Seletc a workflow">
                                                 <items>
                                                   <FXCollections fx:factory="observableArrayList">
                                                     <String fx:value="项 1" />

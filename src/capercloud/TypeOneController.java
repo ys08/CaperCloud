@@ -33,7 +33,7 @@ public class TypeOneController implements Initializable {
     @FXML CheckBox cbFilter;
     
     public TypeOneController() {
-        this.chromNumList = FXCollections.observableArrayList("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y");
+        this.chromNumList = FXCollections.observableArrayList("Chr 1 (6-frame translation)", "Chr 2 (6-frame translation)", "Chr 3 (6-frame translation)", "Chr 4 (6-frame translation)", "Chr 5 (6-frame translation)", "Chr 6 (6-frame translation)", "Chr 7 (6-frame translation)", "Chr 8 (6-frame translation)", "Chr 9 (6-frame translation)", "Chr 10 (6-frame translation)", "Chr 11 (6-frame translation)", "Chr 12 (6-frame translation)", "Chr 13 (6-frame translation)", "Chr 14 (6-frame translation)", "Chr 15 (6-frame translation)", "Chr 16 (6-frame translation)", "Chr 17 (6-frame translation)", "Chr 18 (6-frame translation)", "Chr 19 (6-frame translation)", "Chr 20 (6-frame translation)", "Chr 21 (6-frame translation)", "Chr 22 (6-frame translation)", "Chr X (6-frame translation)", "Chr Y (6-frame translation)");
     }
     
     @Override
@@ -43,7 +43,17 @@ public class TypeOneController implements Initializable {
     }    
     
     public String getSelectedChromosomeNumber() {
-        return (String) this.cbChromNum.getSelectionModel().getSelectedItem();
+        int i = this.cbChromNum.getSelectionModel().getSelectedIndex();
+        String chrom = null;
+        if (i < 22) {
+            chrom = Integer.toString(i+1);   
+        } else if (i == 22) {
+            chrom = "X";
+        } else {
+            chrom = "Y";
+        }
+        System.out.println(chrom);
+        return chrom;
     }
     
     public String getFdr() {

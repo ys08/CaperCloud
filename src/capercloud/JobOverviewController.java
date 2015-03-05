@@ -721,12 +721,12 @@ public class JobOverviewController implements Initializable {
                             
                             if (!_eucalyptusEnabled) {
                                 String addTrackString = "&addStores={\"url\":{\"type\":\"JBrowse/Store/SeqFeature/GFF3\",\"urlTemplate\":\"" + JobOverviewController.this.bedUrl + "\"}}&addTracks=[{\"label\":\"Identified Peptides\",\"type\":\"JBrowse/View/Track/CanvasFeatures\",\"store\":\"url\"}]";
-                                url = "http://61.50.130.100:17436/JBrowse-1.11.5-dev/?data=hg19&loc=chr" 
+                                url = "http://61.50.130.101:17436/JBrowse-1.11.5-dev/?data=hg19&loc=chr" 
                                     + chrom + ":" + ucscStart + ".." + ucscEnd + addTrackString
                                     + "&tracks=Identified Peptides,Ensembl Protein Coding Gene,Transcript Evidence,Protein Evidence";
                             } else {
                                 String addTrackString = "&addStores={\"url\":{\"type\":\"JBrowse/Store/SeqFeature/GFF3\",\"urlTemplate\":\"" + _bedUrl + "\"}}&addTracks=[{\"label\":\"Identified Peptides\",\"type\":\"JBrowse/View/Track/CanvasFeatures\",\"store\":\"url\"}]";
-                                url = "http://61.50.130.100:17436/JBrowse-1.11.5-dev/?data=hg19&loc=chr" 
+                                url = "http://61.50.130.101:17436/JBrowse-1.11.5-dev/?data=hg19&loc=chr" 
                                     + chrom + ":" + ucscStart + ".." + ucscEnd + addTrackString
                                     + "&tracks=Identified Peptides,Ensembl Protein Coding Gene,Transcript Evidence,Protein Evidence";
                             }

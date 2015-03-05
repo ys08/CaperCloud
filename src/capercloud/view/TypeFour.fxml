@@ -11,8 +11,8 @@
 
 <AnchorPane id="AnchorPane" maxWidth="-Infinity" minWidth="-Infinity" prefHeight="470.0" prefWidth="450.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="capercloud.TypeFourController">
    <children>
-      <Label layoutX="20.0" layoutY="116.0" text="Filter Stage" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="96.0" />
-      <Label layoutX="20.0" layoutY="20.0" text="Database Selection" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="15.0" />
+      <Label layoutX="20.0" layoutY="116.0" text="Filter" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="96.0" />
+      <Label layoutX="20.0" layoutY="20.0" text="Specify a VCF file" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="15.0" />
       <Separator layoutX="12.0" layoutY="103.0" prefWidth="454.0" AnchorPane.leftAnchor="12.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="80.0" />
       <HBox alignment="CENTER_LEFT" layoutX="135.0" layoutY="187.0" spacing="20.0" AnchorPane.leftAnchor="110.0" AnchorPane.topAnchor="160.0">
          <children>
